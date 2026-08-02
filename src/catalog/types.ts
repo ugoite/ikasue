@@ -2,7 +2,6 @@ export type CatalogCategoryId =
   | "philosophy"
   | "foundation"
   | "layout"
-  | "navigation"
   | "action"
   | "input"
   | "data"
@@ -16,15 +15,8 @@ export type CatalogComponentId =
   | "text"
   | "rule"
   | "status-icon"
-  | "stack"
-  | "cluster"
-  | "focus-plane"
-  | "focus-region"
-  | "axis-flow"
-  | "edge-region"
-  | "bottom-dock"
-  | "edge-nav"
-  | "elastic-tabs"
+  | "vertical"
+  | "horizontal"
   | "icon-action"
   | "action-strip"
   | "boolean-text"
@@ -73,12 +65,3 @@ export type CatalogPageMetadata =
   CatalogComponentMetadata | CatalogConceptMetadata;
 
 export type CatalogProps = Record<string, CatalogPropertyValue>;
-
-export interface LayoutRequestDetail {
-  readonly target:
-    "primary" | "balanced" | "secondary" | "primary-only" | "secondary-only";
-}
-
-export interface CommitDetail {
-  readonly value: string;
-}
