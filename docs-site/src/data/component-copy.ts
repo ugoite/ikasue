@@ -24,7 +24,9 @@ export interface ComponentUiCopy {
   readonly useWhen: string;
   readonly avoidWhen: string;
   readonly implementation: string;
-  readonly integrationSketch: string;
+  readonly implementationUsage: string;
+  readonly javascript: string;
+  readonly rust: string;
   readonly properties: string;
   readonly propertiesCaption: (name: string) => string;
   readonly key: string;
@@ -39,12 +41,14 @@ export interface ComponentUiCopy {
   readonly keyboard: string;
   readonly accessibility: string;
   readonly matrixNote: string;
+  readonly matrixContract: string;
   readonly matrixCaption: string;
   readonly component: string;
   readonly category: string;
   readonly summary: string;
   readonly demo: string;
   readonly openCatalog: string;
+  readonly matrixLink: string;
 }
 
 export const COMPONENT_COPY = {
@@ -52,39 +56,39 @@ export const COMPONENT_COPY = {
     "developer-model": {
       category: "思想と契約",
       summary:
-        "表示と編集を別の種類に分けず、情報へ編集能力を加える。配置は固定列ではなく軸と焦点の要求で決める。",
+        "開発者は子の順序、軸、適応方針を宣言し、ランタイムは同じ平面で空間を解決する。",
       philosophy:
-        "情報、編集能力、配置要求を一つの契約で扱う。見た目のwrapperではなく、近い配置所有者が要求に答える。",
-      useWhen: "情報の読み取り、編集、配置要求を同じ語彙で設計したいとき。",
+        "ikasueのcomponentは見た目の箱ではなく、情報、操作、配置要求を一つの契約として持つ。近いplane ownerが要求を解決し、子は親の実装詳細を知らない。",
+      useWhen: "情報の表示、編集、配置を同じplane modelで組み立てたいとき。",
       avoidWhen:
-        "見た目だけのwrapperや、特定frameworkのcomponentモデルの代わりには使わない。",
+        "framework固有のwidget階層や、装飾だけのwrapperを新しい公開componentとして増やしたいとき。",
       implementation:
-        "まず情報componentを置き、必要なworkflowの境界だけに`editable`とeditor種別を加える。近い配置所有者に`ikasue:layout-request`を処理させる。",
+        "まず意味のあるcomponent contractを選び、`vertical`または`horizontal`で順序を宣言する。必要な空間は`resolvePlane`の結果として扱い、DOMの重なりで隠さない。",
       keyboard:
-        "キーボードの順序を視覚的な読み順と揃える。編集はEnter、F2、Escape、Tabの契約に従う。",
+        "DOMの読み順をplaneの順序と一致させる。各widgetのTab、矢印、Escape、Enterの意味を、配置の都合で上書きしない。",
       accessibility:
-        "情報の役割と編集可能状態を分けて公開し、読み取り中か編集中かをスクリーンリーダーが識別できるようにする。",
-      goodFor: "情報表示、編集可能な値、領域間の配置交渉",
-      avoidFor: "装飾用wrapper、framework固有の状態管理の置き換え",
-      interaction: "情報を読み、必要なときだけ編集能力を有効にする。",
+        "planeはsemantic landmarkの代わりではない。見出し、label、role、状態名をcomponent contract側で公開し、構造を支援技術にも伝える。",
+      goodFor: "情報密度の高い業務画面、編集と配置の組み合わせ",
+      avoidFor: "装飾用container、自由な重なり、framework依存の状態管理",
+      interaction:
+        "情報を読み、選択や編集が必要なときだけ面積と操作能力を渡す。",
       propertyLabels: {},
     },
     "theme-root": {
       category: "基盤",
       summary:
-        "OSフォント、白いcanvas、黒い構造線、状態色、密度、motionをdocument単位で供給する。",
+        "OS font、白いcanvas、黒い構造線、意味のある状態色、密度、motionをdocument単位で供給する。",
       philosophy:
-        "themeは装飾presetではなく、全componentが共有する判断規則。選択面、線、密度、motionだけを調整する。",
-      useWhen:
-        "document全体の密度、motion、選択面、構造線を一つの規則で揃えるとき。",
+        "themeは装飾paletteではなく、すべてのcomponentが共有する判断規則。選択面、線、密度、motionだけを調整し、状態色を飾りにしない。",
+      useWhen: "document全体の密度、選択、線、motionを一つの規則で揃えるとき。",
       avoidWhen:
-        "theme tokenを装飾paletteにしたり、canvasと矛盾するcomponent固有の上書きを重ねたりしない。",
+        "componentごとに任意色を足したり、canvasと矛盾するsurface階層を作ったりするとき。",
       implementation:
-        "アプリケーション境界に一つの`ThemeRoot`を置き、子孫へCSS custom propertyを継承させる。任意色ではなく意味のある状態tokenを使う。",
+        "アプリケーション境界に一つの`ThemeRoot`を置き、子孫へ意味のあるCSS tokenを継承させる。`motion: off`でも状態と方向は残す。",
       keyboard:
         "`ThemeRoot`はfocusを所有しない。子孫のfocus ring、Tab順、入力の手掛かりをそのまま保つ。",
       accessibility:
-        "motionがoffまたは減速指定のときも状態変化を構造的な手掛かりで示し、動きだけを情報にしない。",
+        "色とmotionだけに状態を預けない。減速やmotion offのときも、文章、icon、線、選択面で変化を示す。",
       goodFor: "document全体の表示規則、密度、状態表現の統一",
       avoidFor: "component単位の装飾テーマ、任意色のpalette管理",
       interaction: "子孫componentへ共通の表示規則を継承する。",
@@ -98,20 +102,19 @@ export const COMPONENT_COPY = {
     text: {
       category: "基盤",
       summary:
-        "静的な文章と入力欄を同じ情報componentとして扱う。編集可能なときだけ破線と編集cursorを持つ。",
+        "静的な文章と編集欄を同じ情報componentとして扱い、editable capabilityがあるときだけ編集状態を持つ。",
       philosophy:
-        "情報は最初からeditorではない。読む状態を標準にし、編集可能な情報だけが編集の手掛かりを持つ。",
-      useWhen:
-        "metadata、form値、table cell、短いcommandのように、通常は読み、必要時だけ編集する値に使う。",
+        "情報は最初からeditorではない。読む状態を標準にし、変更が必要な境界にだけ編集能力を加える。",
+      useWhen: "metadata、短いform値、table cellのように通常は読む値に使う。",
       avoidWhen:
-        "長い段階的form、rich text、常に入力状態を見せる必要がある欄には使わない。",
+        "長文編集、rich text、常に入力状態を見せることが主目的のfieldには使わない。",
       implementation:
-        "既定では値を文章として描画し、必要な境界だけに`editable`と最小限のeditor種別を加える。検証後に一度だけcommit eventを送る。",
+        "値を文章として描画し、必要な箇所に`editable`と最小限の`editor`種別を加える。確定した値は通常の状態更新として親へ返し、独自イベント名に依存しない。",
       keyboard:
-        "EnterまたはF2で編集を開始し、Escapeで取消、Enterで確定する。Tabは確定して次の編集可能な値へ移る。",
+        "EnterまたはF2で編集を開始し、Escapeで取消、Enterで確定する。Tabは確定して次のeditable valueへ移る。",
       accessibility:
-        "編集時は実際のinputを使い、accessible nameを保つ。検証エラーは値を黙って置き換えずに通知する。",
-      goodFor: "metadata、form値、table cell、短いcommand",
+        "編集時は実際のinputを使い、labelとエラーを読み上げ可能にする。表示時と編集時でaccessible nameを失わない。",
+      goodFor: "metadata、短いform値、table cell、短いcommand",
       avoidFor: "長文編集、rich text、常時入力を主役にするfield",
       interaction: "読む状態から編集状態へ移り、確定または取消して戻る。",
       propertyLabels: {
@@ -125,348 +128,191 @@ export const COMPONENT_COPY = {
       category: "基盤",
       summary: "cardを作らず、意味の切れ目だけを一枚の線と余白で示す。",
       philosophy:
-        "境界線はcontainerを作るためではなく、意味の切れ目を一度だけ示す。二重囲いと階層surfaceを作らない。",
-      useWhen: "意味のある境界を、余白と一本の線で一度だけ示したいとき。",
-      avoidWhen: "すべての領域を線で囲み、cardの分類を増やすためには使わない。",
+        "境界線はcontainerを増やすためではなく、隣り合う意味の差を一度だけ示す。二重囲いとsurface階層を作らない。",
+      useWhen: "意味のある境界を余白と一本の線で示したいとき。",
+      avoidWhen: "すべての領域を囲み、cardの分類を増やしたいとき。",
       implementation:
-        "意味のある兄弟要素の間に`Rule`を置き、layoutの向きに合わせて軸を選ぶ。見出しが境界を示すなら装飾線に留める。",
+        "意味のある兄弟要素の間に`Rule`を置き、planeの向きに合わせて`axis`を選ぶ。見出し自体が境界を示すなら線を追加しない。",
       keyboard: "操作対象ではないため、Tab順に入れない。",
       accessibility:
-        "構造を伝えるときは意味のあるseparatorを使い、装飾だけの線は読み上げさせない。",
+        "構造を伝えるときはsemantic separatorを使い、装飾だけの線は支援技術から隠す。",
       goodFor: "章や領域の境界、方向を示す線",
-      avoidFor: "cardの枠、装飾目的の反復border",
+      avoidFor: "cardの枠、反復する装飾border",
       interaction: "操作は持たず、余白と線で読みの境界を示す。",
       propertyLabels: { axis: "方向", weight: "太さ" },
     },
     "status-icon": {
       category: "基盤",
       summary:
-        "status chipの代わりに、意味のあるiconと状態色を表示し、詳しい説明は必要時に示す。",
+        "status chipの代わりに、意味のあるicon、状態色、説明を組み合わせて状態を短く示す。",
       philosophy:
-        "反復業務では状態をiconと色で素早く認識できるようにする。ただし言語による説明をaccessible nameに残す。",
-      useWhen: "反復する状態をiconと意味のある色で短く示せるとき。",
-      avoidWhen:
-        "重要な状態を色だけ、または名前のないglyphだけで伝えるためには使わない。",
+        "反復業務では状態を素早く認識できることが重要。ただし色や形だけに頼らず、accessible nameに言葉の説明を残す。",
+      useWhen: "同期、検証、短い進行状態を反復表示するとき。",
+      avoidWhen: "重要な状態を色だけ、または名前のないglyphだけで伝えるとき。",
       implementation:
-        "安定したaccessible labelとtooltipをiconに組み合わせる。黒は構造に使い、状態色は状態だけに使う。",
+        "安定したlabelとtooltipをiconに組み合わせる。黒は構造に使い、`kind`の色は状態だけに使う。",
       keyboard:
-        "詳しい情報を開くならbuttonにしてfocus対象を見せる。受動的な状態はTab順に入れない。",
+        "受動的な状態はTab順に入れない。詳しい説明を開く場合だけbuttonにしてfocus対象を見せる。",
       accessibility:
-        "状態をaccessible nameまたはlive descriptionに含め、iconの形や文章など色以外の手掛かりも添える。",
+        "状態をaccessible nameまたは説明文に含め、iconの形や文章など色以外の手掛かりも添える。",
       goodFor: "同期状態、検証状態、短い進行状態の反復表示",
       avoidFor: "色だけで判断させる警告、説明のないiconの羅列",
       interaction: "受動的に状態を示し、必要ならfocusで説明を表示する。",
       propertyLabels: { kind: "状態", label: "説明" },
     },
-    stack: {
-      category: "配置",
-      summary: "装飾なしで、縦方向の順序、gap、alignmentだけを予測可能に扱う。",
-      philosophy:
-        "`Stack`は縦順序だけを保証する。focusによる伸縮やoverflow navigationを含めず、基礎として保つ。",
-      useWhen: "要素を予測可能な縦順序とgap、alignmentで並べたいとき。",
-      avoidWhen:
-        "focusの交渉、overflow navigation、装飾を`Stack`へ持ち込まない。それぞれの契約に分ける。",
-      implementation:
-        "最小の縦方向compositionに`Stack`を使い、子要素の意味のある順序をDOM順にも保つ。",
-      keyboard: "キーボード動作を追加せず、子孫の通常のfocus順を保つ。",
-      accessibility:
-        "実際にlistやgroupであるときだけそのroleを使う。layoutだけではlandmarkにしない。",
-      goodFor: "縦並びのform、説明、操作群",
-      avoidFor: "focus配分、横方向のwrap、surfaceの管理",
-      interaction: "子要素をDOM順に読み進める。",
-      propertyLabels: { gap: "間隔", align: "揃え方" },
-    },
-    cluster: {
-      category: "配置",
-      summary: "関連する短い要素を横のbaselineに揃え、狭い画面ではwrapさせる。",
-      philosophy:
-        "`Cluster`は横配置とwrapだけを保証する。複雑な領域退避は`AxisFlow`へ委ねる。",
-      useWhen: "関連する短い操作や値を同じ横のbaselineにまとめたいとき。",
-      avoidWhen:
-        "狭いviewportで重要な内容を隠すために使わず、配置の交渉には`AxisFlow`を使う。",
-      implementation:
-        "wrapを許し、意味のあるDOM順を保つ。選択中の子の軽い強調に留め、新しいcontainerを作らない。",
-      keyboard:
-        "子要素の操作モデルに従う。tabやchoiceを含む場合は、そのwidgetの矢印キー動作を実装する。",
-      accessibility:
-        "利用者に伝えるgroupingがあるときだけlabelを付け、空のgroup landmarkは追加しない。",
-      goodFor: "短いaction群、tag群、同列の値",
-      avoidFor: "領域の退避、overflow navigation、無関係な要素の一括配置",
-      interaction: "子要素を横に読み、必要なら次の行へwrapする。",
-      propertyLabels: { gap: "間隔", wrap: "折り返し", active: "選択中の子" },
-    },
-    "focus-plane": {
+    vertical: {
       category: "配置",
       summary:
-        "隣接する複数領域がfocusに応じて幅を譲り、desktopとmobileで隣の領域へ移る。",
+        "順序付きの子要素を縦方向のplaneへ置き、elastic、wrap、scrollの方針で高さに適応する。",
       philosophy:
-        "`FocusPlane`はtaskへ空間を譲る。separatorは隣接領域の方向を示す操作線であり、自由なdragより意味のある状態遷移を優先する。",
-      useWhen:
-        "一覧とdetail、editorと履歴のように隣接領域が空間を競合するとき。",
-      avoidWhen:
-        "固定二列のmarketing layoutや、自由に動かすdrag splitterには使わない。",
+        "開発者が宣言するのは子の順序と適応方針。利用可能な高さへの割り当てはplane resolverが決定し、各子が個別に隠す判断をしない。",
+      useWhen: "form、説明、作業列など、DOM順が縦の読み順になるとき。",
+      avoidWhen: "横方向の比較や、意味のないwrapperを増やすためには使わない。",
       implementation:
-        "初期focusを一つ決め、境界矢印をbuttonとして描画する。`FocusRegion`のlayout eventを受け、viewportに応じた比率を決める。",
+        "`vertical(children, { fit, gap, available })`で`PlaneSpec`を作り、`resolvePlane`のoffset、size、overflowを描画へ反映する。",
       keyboard:
-        "矢印操作で領域間のfocus配分を変える。片方が広がっても、もう片方のfocus可能な内容へ到達できるようにする。",
+        "Tabは縦のDOM順に進める。矢印キーを子へ勝手に割り当てず、子componentのwidget契約を保つ。",
       accessibility:
-        "各領域にlabelを付け、現在の配分を公開する。境界操作には意味の分かる名前を付ける。",
-      goodFor: "一覧とdetail、文書と履歴、検索とpreview",
-      avoidFor: "単純な二列文章layout、自由なサイズ変更UI",
-      interaction: "境界の矢印または内部focusで、隣接領域へ空間を渡す。",
-      propertyLabels: {
-        initial: "初期focus",
-        focusOnInput: "内部focusで拡張",
-        collapse: "0幅を許可",
-      },
+        "単なるlayoutはlandmarkにしない。list、group、formなど実際の意味がある場合だけsemantic roleを付ける。",
+      goodFor: "縦並びのform、説明、作業列",
+      avoidFor: "横方向の関連項目、個別componentの選択状態の所有",
+      interaction: "子の順序を保ち、狭い高さでは指定された方針で適応する。",
+      propertyLabels: { fit: "適応", gap: "間隔", items: "項目数" },
     },
-    "focus-region": {
+    horizontal: {
       category: "配置",
       summary:
-        "子componentが親`FocusPlane`を直接知らず、eventで必要な領域と比率を要求する。",
+        "順序付きの子要素を横方向のplaneへ置き、幅に応じて縮小、折返し、scrollする。",
       philosophy:
-        "visual treeとcomponent treeを疎結合にする。子の要求へ最も近い`FocusPlane`がviewportに応じた比率を決める。",
-      useWhen:
-        "子componentが親の配置実装を知らずに、必要な領域へfocusを要求するとき。",
-      avoidWhen:
-        "装飾的な内容からlayout requestを送り、近い所有者で足りるのにnamed scopeを使わない。",
+        "横の関係は同じaxisの読み順として宣言する。overflow時も子の意味を別のoverlayへ逃がさず、resolverの結果を明示する。",
+      useWhen: "toolbar、関連action、短い比較項目を横方向に並べるとき。",
+      avoidWhen: "縦の読み順を無理に横へ押し込むとき。",
       implementation:
-        "`ikasue:layout-request`を`secondary`などのtargetでdispatchし、最も近い`FocusPlane`に実行可能な比率を決めさせる。",
+        "`horizontal(children, { fit, gap, available })`を作り、`resolvePlane`が返すline、offset、overflowを使って配置する。",
       keyboard:
-        "focus requestだけで現在のfocusを奪わない。component自身の操作が移動させる場合を除き、要求元のcontrolを保つ。",
+        "Tab順は意味のあるDOM順を保つ。矢印キーはChoiceGroupやDataTableなど、所有するwidgetだけが使う。",
       accessibility:
-        "意味のある配置変更だけを通知し、要求された領域の見出しをaccessible contextとして残す。",
-      goodFor: "子から親へのfocus配分要求、疎結合なlayout event",
-      avoidFor: "装飾要素からの要求、親を直接操作するための参照",
-      interaction: "子が要求を送り、近い配置所有者が実際の空間を決める。",
-      propertyLabels: { target: "要求先", scope: "探索範囲" },
-    },
-    "axis-flow": {
-      category: "配置",
-      summary:
-        "任意数の領域を横または縦の軸に並べ、収まらないときは軸の終端にnavigationを生やす。",
-      philosophy:
-        "無限に要素を受け入れるAPIと有限viewportを両立する。収まらなくなった瞬間に終端navigationへ切り替える。",
-      useWhen:
-        "多数のdashboard領域やtoolを一つの軸上に並べ、表示数が変わるとき。",
-      avoidWhen: "通常のflowで収まる短い静的rowには使わない。",
-      implementation:
-        "`horizontal`または`vertical`とfocus strategyを選ぶ。同じ軸の終端navigationを描画し、画面外の内容も論理順に保つ。",
-      keyboard:
-        "選んだ軸の矢印キーで移動し、HomeとEndで最初と最後へ移る。終端controlもキーボードで到達できるようにする。",
-      accessibility:
-        "必要に応じてlabel付きregionまたはlistとして公開し、motionに頼らずactive itemと位置を通知する。",
-      goodFor: "多数のworkspace領域、tool群、可変数のpanel",
-      avoidFor: "短いrow、固定された少数の要素",
-      interaction: "軸方向に移動し、収まらない要素は終端navigationから選ぶ。",
-      propertyLabels: { axis: "軸", items: "項目数", strategy: "focus配分" },
-    },
-    "edge-region": {
-      category: "配置",
-      summary:
-        "detailやtoolを所在する辺から追加し、既存内容を押し縮めて場所を作る。overlayしない。",
-      philosophy:
-        "新しい領域は存在場所と同じ辺から追加する。重なりではなくtrackの増加なので、元の情報との位置関係を保てる。",
-      useWhen: "右、左、下など既知の辺からdetailやtoolを追加したいとき。",
-      avoidWhen:
-        "すべての文脈を中断する緊急alertには使わず、意味のあるlive regionを使う。",
-      implementation:
-        "`right`、`left`、`bottom`のtrackを追加する。閉じた状態ではcontentを覆わず、配分からtrackを外す。",
-      keyboard:
-        "triggerはbuttonにし、許可されていればEscapeで閉じる。閉じた後はtriggerへfocusを戻す。",
-      accessibility:
-        "必要な意味に応じてlabel付きregionまたはdialogを使い、modalでない領域にfocus trapを設定しない。",
-      goodFor: "補助detail、tool、右側の設定領域",
-      avoidFor: "緊急通知、長いform、文脈を覆うmodal",
-      interaction: "指定した辺から開き、既存の領域を押して閉じる。",
-      propertyLabels: { edge: "出現辺", initial: "初期状態" },
-    },
-    "bottom-dock": {
-      category: "配置",
-      summary:
-        "上の情報を保ったまま下端に短い作業領域を追加し、平面内で場所を確保する。",
-      philosophy:
-        "確認や補助情報は下端の新しいrowとして追加する。上の文脈を読みながら判断できるため、根拠を隠さない。",
-      useWhen:
-        "短い確認、detail、commandを上の文脈を残したまま下から追加するとき。",
-      avoidWhen: "長いformや常設navigationのためには使わない。",
-      implementation:
-        "目的とサイズを明示した下端rowとして扱い、controlを見せる前にlayout上の場所を確保する。",
-      keyboard:
-        "開くと最初の意味のあるcontrolへfocusを移し、DOM順に進める。閉じたらopen操作の元へfocusを戻す。",
-      accessibility:
-        "目的に合うheadingとlandmarkを付け、一時的にtaskを所有するときだけdialogの意味を使う。",
-      goodFor: "削除確認、短い補助detail、command area",
-      avoidFor: "長い入力、常設navigation、画面全体を塞ぐdialog",
-      interaction: "下端から現れ、上の内容を押し縮めながら操作を受ける。",
-      propertyLabels: { size: "高さ", purpose: "用途" },
-    },
-    "edge-nav": {
-      category: "ナビゲーション",
-      summary:
-        "左端のrailを手掛かりとして残し、開くとmain contentを横へ押してnavigationを展開する。",
-      philosophy:
-        "navigationは必要なときだけ語彙を展開する。閉じてもrailとiconが地理的手掛かりとして残る。",
-      useWhen:
-        "常設のedge clueを保ちながら、要求時だけnavigationの語彙を広げたいとき。",
-      avoidWhen:
-        "名前のないiconに唯一のnavigationを隠したり、一時的なtool paletteに使ったりしない。",
-      implementation:
-        "railを常に見せ、左から展開してmain trackを再配分する。選択項目は両方の状態で見えるようにする。",
-      keyboard:
-        "railのtoggle、navigation項目、close操作を予測可能な順序にする。項目内では矢印キーを使えるようにする。",
-      accessibility:
-        "label付きnavigation landmark、実際のtoggle button、選択先を示す`aria-current`を使う。",
-      goodFor: "workspace navigation、常設rail、複数の主要destination",
-      avoidFor: "一時的なtool群、labelのないiconだけのnavigation",
-      interaction: "railを手掛かりにし、開くと左から展開してmainを押す。",
-      propertyLabels: { initial: "初期状態", selected: "選択先" },
-    },
-    "elastic-tabs": {
-      category: "ナビゲーション",
-      summary:
-        "同じ階層の兄弟panelを切り替え、選択中のpanelへ面積と淡い選択面を譲る。",
-      philosophy:
-        "選択された情報へ面積を譲り、下線だけより明確に現在位置を示す。panelはtabと同じ方向から交代する。",
-      useWhen:
-        "同じ階層のpanelを一つずつ切り替え、選択中の内容に空間を渡したいとき。",
-      avoidWhen:
-        "無関係なdestination、名前を付けきれない多数のtab、同時比較が必要なpanelには使わない。",
-      implementation:
-        "近くて軽いpanelはautomatic activation、重いpanelはmanual activationにする。panelの出現方向をtab順と揃える。",
-      keyboard:
-        "矢印キーでtab間を移動し、HomeとEndで端へ移る。manual activationはEnterまたはSpaceで確定する。",
-      accessibility:
-        "`tablist`、`tab`、`tabpanel`、selected state、決定的なfocus関係を実装する。",
-      goodFor: "同じ階層の単一panel切り替え、設定の章、workspace view",
-      avoidFor: "複数panelの同時表示、別階層へのnavigation、長すぎるtab名",
-      interaction: "tabを選ぶと、対応するpanelへ面積を渡して切り替える。",
-      propertyLabels: {
-        selected: "選択",
-        activation: "有効化方式",
-        directional: "方向の動き",
-      },
+        "横配置を読み上げ順の変更と誤解しないよう、見出しとlabelをDOM順に揃える。横スクロール時もfocusを見失わせない。",
+      goodFor: "toolbar、関連action、短い比較項目",
+      avoidFor: "長い文章、縦のform、overflowを隠すための横配置",
+      interaction: "子の順序を保ち、幅が足りないときは契約した方針で適応する。",
+      propertyLabels: { fit: "適応", gap: "間隔", items: "項目数" },
     },
     "icon-action": {
       category: "アクション",
-      summary: "反復する業務actionをiconで示し、hoverとfocusで説明を補う。",
+      summary:
+        "反復する操作をiconで短く示し、hoverとfocusで安定した説明を提供する。",
       philosophy:
-        "actionは反復されるほどiconだけで理解できる。初回学習と多言語対応はtooltip、accessible name、documentationが担う。",
-      useWhen: "利用者が繰り返し行い、iconで意味を認識できるactionに使う。",
+        "操作の見た目は軽く保つが、意味は省略しない。icon、accessible label、tooltip、busy状態を同じ契約で扱う。",
+      useWhen: "保存、追加、編集、削除など、利用者が反復して覚える操作に使う。",
       avoidWhen:
-        "新規、破壊的、曖昧なactionを、隣接labelや確認なしのiconだけで表さない。",
+        "初回利用者に説明文が必要な主操作や、iconだけでは意味が曖昧な操作に使わない。",
       implementation:
-        "実際のbutton、安定したicon、accessible name、tooltipを使う。busy中もaction名を消さず、二重実行だけを防ぐ。",
+        "実際のbuttonに`action`、stable label、`state`を渡す。busy中は二重実行を防ぐが、accessible nameと位置は保つ。",
       keyboard:
-        "EnterとSpaceで実行する。disabledとbusyは実行できず、tooltipはhoverだけでなくkeyboard focusでも表示する。",
+        "Tabでfocusし、EnterまたはSpaceで実行する。busy中もfocus ringを消さない。",
       accessibility:
-        "iconだけのactionにaccessible labelを付け、focus時にも見えるtooltipを示す。状態を色だけで伝えない。",
-      goodFor: "保存、追加、編集、削除など反復する短いaction",
-      avoidFor: "意味が初見で分からないaction、確認が必要な破壊的action",
-      interaction: "iconを押すかfocusして説明を確認し、buttonとして実行する。",
+        "icon-onlyでもaccessible nameを必須にし、hoverだけでなくfocusでもtooltipを表示する。",
+      goodFor: "反復する保存、追加、編集、削除",
+      avoidFor: "意味が一意でない主操作、説明文が必要な初回操作",
+      interaction:
+        "focusまたはhoverで説明を確認し、buttonとして一度だけ実行する。",
       propertyLabels: { action: "操作", state: "状態" },
     },
     "action-strip": {
       category: "アクション",
       summary:
-        "関連するicon actionを一列に並べ、activeまたはbusyのactionだけを淡い面で強調する。",
+        "関連するicon actionを同じbaselineに並べ、activeまたはbusyな操作だけを淡い面で強調する。",
       philosophy:
-        "複数actionを箱で囲まず、近接と同じbaselineでgroup化する。activeやbusyだけを面で強調する。",
-      useWhen: "密接に関連する複数のactionを静かに同じ列へ置きたいとき。",
-      avoidWhen:
-        "同じ行に入るという理由だけで無関係なactionをまとめず、主要navigationも入れない。",
+        "action groupに新しい箱を足さず、近接と順序で関係を示す。選択面は操作対象に面積を渡すために使う。",
+      useWhen: "同じ対象へ繰り返し行う短い操作を一列でまとめるとき。",
+      avoidWhen: "説明が長い操作、異なる対象の操作を一列へ混ぜるとき。",
       implementation:
-        "label付き`IconAction`を順序通りに並べ、active actionを淡い選択面で示す。wrapはviewportに任せる。",
-      keyboard:
-        "本当のtoolbarならroving focusを使い、それ以外は通常のTab順で各actionを発見できるようにする。",
+        "`horizontal`でactionの順序を宣言し、各buttonの`active`と`busy`を個別に管理する。wrapperのsurfaceでgroupを囲まない。",
+      keyboard: "Tabで順番に移動し、各buttonのEnterまたはSpaceを保つ。",
       accessibility:
-        "toolbarである場合だけlabel付きtoolbarにし、各action自身の名前と状態も公開する。",
-      goodFor: "保存、履歴、更新など近接した操作群",
-      avoidFor: "主要navigation、無関係なactionの寄せ集め",
-      interaction: "列のactionを個別に実行し、activeやbusyだけ面で確認する。",
+        "groupに目的をlabelし、各icon actionに個別のaccessible nameを付ける。activeはaria-pressedなどnativeに近い状態で示す。",
+      goodFor: "同じ対象への保存、履歴、更新などの操作列",
+      avoidFor: "無関係な操作の寄せ集め、長文buttonの代替",
+      interaction: "近い操作を認識し、activeな操作へ静かな面積を渡す。",
       propertyLabels: { active: "選択中", density: "密度" },
     },
     "boolean-text": {
       category: "情報と入力",
-      summary:
-        "空のboxを描かず、文章全体を押して真偽を切り替える。trueはcheckと淡い面で示す。",
+      summary: "空のcheckboxを主役にせず、文章全体を押して真偽を切り替える。",
       philosophy:
-        "booleanの本体はboxではなく文章の意味。falseは静かに、trueはcheckと選択面で示す。",
-      useWhen:
-        "文章そのものがboolean設定の意味であり、文章全体をhit targetにしたいとき。",
+        "booleanの本体はboxではなく文章の意味。falseは静かに、trueはcheckと淡い選択面で示す。",
+      useWhen: "自動保存、公開、同期など短い真偽設定を文章で説明できるとき。",
       avoidWhen:
-        "密な標準form controlが必要なときや、labelだけでは意味を持てないときはnative checkboxを使う。",
+        "選択肢が複数あるときや、長い説明と複雑なvalidationが必要なとき。",
       implementation:
-        "文章の見た目を使いながらnative checkboxの意味を保ち、checkedをcheckと静かな面で示して即時changeする。",
+        "label全体をnative checkboxのlabelとして扱い、`checked`と`label`を状態として管理する。CSSの色だけで値を表さない。",
       keyboard:
-        "Spaceで値を切り替え、focusは文章のcontrolに残す。Enterの送信は周囲のformの規則に任せる。",
+        "Tabでfocusし、Spaceで切り替える。label全体がfocus targetの意味を壊さない。",
       accessibility:
-        "見た目のboxを省いてもcheckbox role、checked state、labelの関連付けを保つ。",
-      goodFor: "自動保存、設定、同意など短いboolean文",
-      avoidFor: "複雑なform、boxの標準表示が重要な入力",
-      interaction: "文章を押すかSpaceで、文章の意味を真偽として切り替える。",
+        "native checkboxとlabelを使い、checked状態を支援技術へ公開する。trueのcheckだけを頼りにしない。",
+      goodFor: "短い真偽設定、自動保存、公開可否",
+      avoidFor: "radio相当の選択、複雑なform field",
+      interaction: "文章を読み、同じlabelを押して値を切り替える。",
       propertyLabels: { checked: "値", label: "文章" },
     },
     "choice-group": {
       category: "情報と入力",
-      summary:
-        "radio circleを前面に出さず、選択された意味へ少し面積を譲る単一選択group。",
+      summary: "選択された意味へ面積を渡し、横・縦で同じ選択grammarを保つ。",
       philosophy:
-        "選択肢の中で現在値へ面積を渡す。`ElasticTabs`と同じselection grammarを使い、値は即時commitする。",
-      useWhen: "一つだけ選び、選択された意味を少し広い面で示したいとき。",
+        "選択は濃いborderではなく静かな面積で示す。ChoiceGroupは一つの値を即時に所有し、各choiceの意味は文章で残す。",
+      useWhen: "少数の相互排他的な選択肢を同じplaneで比較するとき。",
       avoidWhen:
-        "複数選択、page間navigation、検索して選ぶ方がよい多数の値には使わない。",
+        "選択肢が多いとき、複数選択、長い説明、階層的な選択が必要なとき。",
       implementation:
-        "label付きgroupとradio semanticsを描画して即時選択する。横と縦で同じselection grammarを保つ。",
-      keyboard:
-        "group内の矢印キーで選択肢を変え、Tabではgroupへ入り、groupから一度に出る。",
+        "native radio groupに近いcontractで`direction`と`selected`を管理し、`horizontal`または`vertical`で選択肢を並べる。",
+      keyboard: "Tabでgroupへ入り、矢印キーで選択を移し、Spaceで現在値を選ぶ。",
       accessibility:
-        "radiogroupとradio role、group label、checked state、選択面に依存しないfocus indicatorを公開する。",
-      goodFor: "少数の単一選択、表示密度の異なるview選択",
-      avoidFor: "複数選択、多数の検索可能な選択肢、page navigation",
-      interaction: "候補を選ぶと、その候補へ面積を渡して即時に値を確定する。",
+        "fieldsetとlegend、または適切なradio roleでgroup名を公開する。選択中は色以外に文章や選択面を残す。",
+      goodFor: "少数の表示モード、密度、レビュー段階の選択",
+      avoidFor: "複数選択、長いoption list、複雑な階層選択",
+      interaction: "選択肢を比較し、選択中の値へ明確な面積を渡す。",
       propertyLabels: { direction: "方向", selected: "選択" },
     },
     "form-list": {
       category: "情報と入力",
       summary:
-        "項目名の下へTextを並べ、boxの集合ではなく情報の順序としてformを表す。",
+        "labelと情報値を縦の順序として示し、表示と編集を同じplaneで扱う。",
       philosophy:
-        "formはboxの集合ではなく情報の順序。labelの下にTextを置き、Tabは編集可能な情報だけを移動する。",
-      useWhen: "labelと情報値が読みやすい順序で並ぶformを作りたいとき。",
+        "formはboxの集合ではなく情報の順序。`FormList`がvaluesとstatusを所有し、子のfocusとdraftは編集途中の局所状態に留める。",
+      useWhen:
+        "短いmetadataや設定値を、読みやすいlabel/valueの列で編集するとき。",
       avoidWhen:
-        "密なspreadsheet編集や、native fieldsetとlegendの方がgroupingを伝えやすい場合には使わない。",
+        "rich text editor、長い段階的form、値の所有権を子へ分散したいとき。",
       implementation:
-        "各labelの下にText値を置き、編集能力を局所化する。marker styleは意味を加える場合だけ使う。",
+        "`FormList`がvalues、validation status、確定結果を所有する。子`Text`にはfocusとdraftだけを渡し、child focus/draftで元データをrecolorしない。",
       keyboard:
-        "Tabは編集可能な情報だけを移動する。各TextはEnter、F2、Escape、確定、検証の動作を保つ。",
+        "Tabはeditable valueだけを順に移動し、Enter/F2で編集、Escapeで取消、EnterまたはTabで確定する。",
       accessibility:
-        "すべてのlabelをcontrolに関連付け、mixedやerror stateを文章とprogrammatic descriptionで公開する。",
-      goodFor: "設定、metadata、順序を持つ読みやすいform",
-      avoidFor: "spreadsheet編集、複雑なgrouping、長文入力",
-      interaction: "上から読み、必要なTextだけを編集して次へ移る。",
+        "各labelとfieldを明確に関連付け、errorやstatusをそのfieldへ紐付ける。draft中の見た目を保存済みデータの状態と混同させない。",
+      goodFor: "短い設定、metadata、段階の少ない業務form",
+      avoidFor: "長文編集、複雑なwizard、子がform stateを所有する構成",
+      interaction: "labelを読み、必要な値だけ編集し、FormListへ結果を返す。",
       propertyLabels: { marker: "項目記号", state: "差分例" },
     },
     "data-table": {
       category: "データ",
       summary:
-        "cellを操作単位にし、選択cellのrowとcolumnを淡く示してcopy、paste、editを支える。",
+        "cellを操作単位にし、選択cellと同じrow/columnを淡く示して文脈を保つ。",
       philosophy:
-        "cellが操作単位。選択cellを明確にしつつrowとcolumnの文脈は淡く残し、indexやlock iconを既定表示しない。",
-      useWhen:
-        "業務データを閲覧、copy、paste、編集し、cellが作業単位になるとき。",
-      avoidWhen:
-        "page layoutや、FormListの方が明快な小さなkey-value一覧には使わない。",
+        "tableはlayoutのための格子ではなく、データを判断するplane。選択、copy、paste、editをcell contractとして公開する。",
+      useWhen: "業務データの比較、copy/paste、inline editが必要なとき。",
+      avoidWhen: "単純な二列の説明や、layout目的で表を使いたいとき。",
       implementation:
-        "意味のあるheaderを保ち、cellを選択してrowとcolumnを淡く強調する。許可されたcellだけ編集可能にする。",
+        "行と列を`horizontal` planeの子として扱い、選択cell、行列peer、変更状態を別々の状態として描画する。clipboard失敗時も選択を残す。",
       keyboard:
-        "矢印キーでcellを移動し、HomeとEndで軸内を移動する。CtrlまたはCmdとC、Vでclipboardを扱い、EnterまたはF2で編集する。",
+        "矢印キーでcellを移動し、Home/Endでaxisの端へ移る。Ctrl/Cmd+C/V、Enter、F2はtable contractに従う。",
       accessibility:
-        "実際のtableとheaderを使い、選択を通知する。clipboard権限に失敗してもcellを使える状態に残す。",
-      goodFor: "業務データ、cell単位の選択、copyとpaste、inline edit",
-      avoidFor: "layout目的のtable、小さなkey-value情報",
+        "caption、header、row/column scopeを正しく付け、現在cellと編集状態を公開する。row/columnの色は補助情報に留める。",
+      goodFor: "業務データ、比較、copy/paste、inline edit",
+      avoidFor: "カードgrid、装飾的な表、layout専用のtable",
       interaction:
-        "cellを選び、周囲のrowとcolumnを確認しながら移動または編集する。",
+        "cellを選び、行列の文脈を保ったままコピー、貼り付け、編集する。",
       propertyLabels: {
         editable: "編集",
         selection: "選択強調",
@@ -475,136 +321,125 @@ export const COMPONENT_COPY = {
     },
     "history-gutter": {
       category: "データ",
-      summary:
-        "現在の情報の横に線と点でrevisionを示し、選択revisionだけを面で強調する。",
+      summary: "線と点だけでrevisionを示し、選択revisionだけに面積を渡す。",
       philosophy:
-        "変更履歴は別cardではなく、現在情報の横にある時間軸。線、点、差分色だけでrevisionを示す。",
-      useWhen:
-        "現在、previous、initialなどのrevisionを隣の情報と照合したいとき。",
-      avoidWhen:
-        "独立したaudit dashboardや、長いrevision説明を主flowに置く場合には使わない。",
+        "変更履歴は別surfaceではなく、現在情報の横にある時間軸。線、点、差分色でrevisionの関係を読み取れるようにする。",
+      useWhen: "現在値と過去revisionを同じ視野で比較したいとき。",
+      avoidWhen: "長い監査ログや、履歴操作が主役で独立した画面が必要なとき。",
       implementation:
-        "一本の線とrevisionの点を描き、選択点だけを強調する。選択revisionを説明対象のcontentに結び付ける。",
+        "`vertical`でrevisionの順序を保ち、selected revisionへ面積を渡す。差分の色は文章や記号と組み合わせる。",
       keyboard:
-        "矢印キーでrevision間を移動し、Enterで選択する。focusは現在のcontentの近くに保つ。",
+        "Tabでgutterへ入り、矢印キーでrevisionを移動、Enterで選択を確定する。",
       accessibility:
-        "gutterをlabel付きのrevision listまたはnavigationとして公開し、説明のない装飾線にしない。",
-      goodFor: "現在値の横に置く短いrevision timeline",
-      avoidFor: "独立した監査画面、長い履歴説明の一覧",
-      interaction: "点を選び、隣のcontentで該当revisionを確認する。",
+        "revisionの時刻、作成者、状態をaccessible labelに含め、選択中のrevisionを明示する。線と点だけで意味を伝えない。",
+      goodFor: "revision比較、変更の追跡、現在値への復帰",
+      avoidFor: "独立した監査画面、無制限のevent log",
+      interaction: "時間軸を読み、revisionを選んで現在の判断材料にする。",
       propertyLabels: { selected: "revision", compact: "簡潔表示" },
     },
     "progress-region": {
       category: "フィードバック",
-      summary:
-        "以前のcontentを残したまま、処理中のregionだけに黒いwaveを流してloadingを示す。",
+      summary: "処理対象regionの内容を残したまま、そのplaneだけに進行を示す。",
       philosophy:
-        "中央spinnerで対象を不明にしない。対象regionに黒いmotionを流し、以前の情報を読めるままにする。",
-      useWhen: "既存のcontentも文脈として役立つ既知のregionが処理中のとき。",
-      avoidWhen:
-        "局所的な処理でdocument全体を覆ったり、有用な結果をindeterminate spinnerで置き換えたりしない。",
+        "中央spinnerで対象を曖昧にしない。以前の情報を読めるまま残し、処理されているregionの面と状態を明示する。",
+      useWhen: "既存情報を参照しながら非同期更新を待つとき。",
+      avoidWhen: "対象が画面全体で、region単位の進行を説明できないとき。",
       implementation:
-        "古いcontentをmountしたままregionにwave、scan、edgeの構造的なmotionを加え、処理終了時に外す。",
+        "対象regionを`vertical`の子として維持し、`loading`と`pattern`をそのregionの状態にする。内容を空にしてspinnerへ置き換えない。",
       keyboard:
-        "無関係なfocusを止めず、二重実行を起こすcontrolだけを無効にする。",
+        "loading中も既存のfocusを不用意に奪わず、完了後の状態を同じ順序で読めるようにする。",
       accessibility:
-        "regionをbusyとして示し、簡潔なlive statusを提供する。減速指定でも構造でbusyを示す。",
-      goodFor: "検索結果、panel、tableなど局所的な処理状態",
-      avoidFor: "document全体のloading、既存contentを隠すspinner",
-      interaction: "対象regionを読み続けながら、処理の完了を待つ。",
-      propertyLabels: { loading: "処理中", pattern: "表示パターン" },
+        "busy状態と短い進行説明を公開し、motionをoffにしても以前の内容と完了状態を伝える。",
+      goodFor: "保存、同期、部分更新、計算中のregion",
+      avoidFor: "対象不明の全画面spinner、内容の不可逆な置換",
+      interaction: "以前の情報を読みながら、対象regionの進行と完了を確認する。",
+      propertyLabels: { loading: "処理中", pattern: "表現" },
     },
     "message-region": {
       category: "フィードバック",
       summary:
-        "短いstatus messageを対象regionに結び、押すとそのregionへfocusと空間を渡す。",
+        "短いstatus messageを対象regionへ結び、必要ならそのplaneへ注意を移す。",
       philosophy:
-        "messageを通知棚へ積まず、対象regionへのlinkとして機能させる。押すと一時的にその領域を強調する。",
+        "通知を別の棚へ積まず、原因になった情報の近くへ戻れるlinkとして扱う。messageの色は状態を示すが、移動先と文章も残す。",
       useWhen:
-        "短いstatusを特定regionに結び、選択時にそのregionへ注意を向けたいとき。",
+        "保存結果、検証、同期など特定regionに結び付く短いmessageを示すとき。",
       avoidWhen:
-        "global notification queueとして使ったり、status colorだけにwarningを依存させたりしない。",
+        "長い説明、無関係なglobal announcement、複数対象を一つのmessageに混ぜるとき。",
       implementation:
-        "messageをtargetへ結び、意味のある状態色を控えめに使う。activate時だけ一時的なfocus配分を要求する。",
-      keyboard:
-        "操作可能なmessageはbuttonにしてEnterとSpaceを受け、regionが落ち着いた後のfocusを予測可能に戻す。",
+        "`target`をplane上のregion idに結び、messageをbuttonまたはlinkとしてrenderする。クリック後は対象regionへfocusを戻す。",
+      keyboard: "Tabでmessageへ移り、EnterまたはSpaceで対象regionへ移動する。",
       accessibility:
-        "必要なら新しいstatusをlive regionで伝え、文章labelを付ける。messageとtargetを説明的な関係で結ぶ。",
-      goodFor: "validation、同期、処理結果を対象regionへ結ぶ短いmessage",
-      avoidFor: "global toast、色だけのwarning、対象のない通知",
-      interaction:
-        "messageを選ぶと対象regionが広がり、関連する状態を確認できる。",
+        "statusのkindと文章をlive regionに公開し、移動先のheadingやlabelへfocusを安全に置く。色だけで緊急度を示さない。",
+      goodFor: "保存結果、検証、同期などregionに結び付く状態",
+      avoidFor: "長文通知、対象のないglobal message、色だけの警告",
+      interaction: "messageを読み、必要なら対象regionへ戻って対処する。",
       propertyLabels: { kind: "状態", target: "対象" },
     },
     "bottom-dialog": {
       category: "フィードバック",
       summary:
-        "modalを上へ重ねず、下端から平面内へdialogを追加し、上の情報を読みながら判断できる。",
+        "modalをZ軸へ重ねず、下端からplane内へrowを追加し、根拠を読みながら判断できるようにする。",
       philosophy:
-        "dialogもZ軸へ逃がさない。下端からrowを追加して元の情報を押し縮め、不可逆判断でも根拠を隠さない。",
-      useWhen:
-        "削除確認など、根拠となる情報を見ながら短い判断をしてほしいとき。",
+        "dialogも情報を隠す例外にしない。決定領域が入る場所を明示し、上の内容を押し縮めて同じplaneに残す。",
+      useWhen: "削除確認、短いsystem判断、補助commandを現在情報と並べるとき。",
       avoidWhen:
-        "長いform、無関係なnavigation、別のmodal policyが必要な完全遮断alertには使わない。",
+        "長いform、常設detail、根拠を隠さないと成立しない操作に使わない。",
       implementation:
-        "heading、primary action、dismiss actionを持つ下端rowを追加し、trackを再配分する。z-index overlayは使わない。",
+        "`vertical`の最後にdialog rowを追加し、`intent`と`dismiss`をcontractとして管理する。close後はopenerへfocusを戻す。",
       keyboard:
-        "開いたらheadingまたは最初のactionへfocusを移す。本当にmodalな判断だけTabを閉じ込め、許可されていればEscapeで閉じる。",
+        "開いたらdialog内の最初のactionへfocusし、Escapeで取消可能なら閉じる。確定後はopenerへ戻る。",
       accessibility:
-        "一時的な判断にだけdialog semanticsを使い、headingでlabelし、意図を説明してopen操作元へfocusを戻す。",
-      goodFor: "削除確認、短いsystem判断、補助command",
-      avoidFor: "長いform、常設detail、完全に文脈を遮るalert",
-      interaction:
-        "下端から追加されたdialogで判断し、閉じると元のfocusへ戻る。",
+        "dialogのlabel、説明、button名を公開し、behind contentを読み上げから隠さない。色とmotionは補助にする。",
+      goodFor: "削除確認、短い判断、現在情報に紐付く補助command",
+      avoidFor: "長いform、常設detail、根拠を覆い隠すmodal",
+      interaction: "追加された下端rowで判断し、閉じたら元の情報とfocusへ戻る。",
       propertyLabels: { intent: "目的", dismiss: "取消可能" },
     },
-  } satisfies Record<CatalogComponentId, ComponentCopy>,
+  },
   en: {
     "developer-model": {
       category: "Philosophy & contracts",
       summary:
-        "Treat display and editing as capabilities of information, while layout follows axis and focus requests instead of fixed columns.",
+        "The developer declares child order, axis, and fit policy; the runtime resolves space on one shared plane.",
       philosophy:
-        "Use one contract for information, editing capability, and layout requests. The nearest layout owner answers the request; this is not a visual wrapper.",
+        "An ikasue component is a contract for information, interaction, and placement—not a visual box. The nearest plane owner resolves allocation while children stay independent of parent implementation details.",
       useWhen:
-        "You need one vocabulary for readable information, editing, and negotiated placement.",
+        "You want information, editing, and placement to share one plane model.",
       avoidWhen:
-        "Do not use it as a visual wrapper or as a replacement for a framework-specific component model.",
+        "You are adding a decorative wrapper or replacing a framework-specific widget and state model.",
       implementation:
-        "Start with an information component, then add `editable` and the smallest editor kind at the workflow boundary. Let the nearest owner handle `ikasue:layout-request`.",
+        "Choose a meaningful component contract, declare order with `vertical` or `horizontal`, and treat `resolvePlane` output as layout data. Do not hide the result with overlapping DOM.",
       keyboard:
-        "Keep keyboard order equal to visual reading order. Editing follows Enter, F2, Escape, and Tab contracts.",
+        "Keep DOM reading order aligned with plane order. Do not override each widget’s Tab, arrow, Escape, or Enter contract for layout convenience.",
       accessibility:
-        "Expose information role and editable state separately so a screen reader can distinguish reading from editing.",
+        "A plane is not a semantic landmark. Components still expose headings, labels, roles, and state names so assistive technology can understand the structure.",
       goodFor:
-        "Information display, editable values, and negotiated region layout",
+        "Information-dense workspaces combining data, editing, and placement",
       avoidFor:
-        "Decorative wrappers and framework-specific state-model replacement",
+        "Decorative containers, arbitrary overlap, framework-owned state replacement",
       interaction:
-        "Read information by default and enable editing only at the capability boundary.",
+        "Read information first; give space and interaction capability only when selection or editing needs it.",
       propertyLabels: {},
     },
     "theme-root": {
       category: "Foundation",
       summary:
-        "Provides document-level rules for OS typography, the white canvas, structural black, state colors, density, and motion.",
+        "Provides OS fonts, a white canvas, black structural lines, semantic status colors, density, and motion at document scope.",
       philosophy:
-        "Theme is a shared decision system, not a decorative preset. Adjust selection surfaces, lines, density, and motion consistently.",
+        "Theme is a shared decision rule, not a decorative palette. Tune selection surface, lines, density, and motion; do not turn status colors into decoration.",
       useWhen:
-        "You need one document-wide source for density, motion, selection surfaces, and structural lines.",
+        "A whole document needs one rule for density, selection, lines, and motion.",
       avoidWhen:
-        "Do not turn theme tokens into a decorative palette or layer component overrides that contradict the canvas.",
+        "You are adding arbitrary per-component colors or surface layers that contradict the canvas.",
       implementation:
-        "Mount one `ThemeRoot` at the application boundary and let descendants inherit CSS custom properties. Prefer semantic state tokens over arbitrary colors.",
+        "Place one `ThemeRoot` at the application boundary and inherit semantic CSS tokens. With `motion: off`, state and direction still remain visible.",
       keyboard:
-        "`ThemeRoot` owns no focus. Preserve descendant focus rings, tab order, and input affordances.",
+        "`ThemeRoot` does not own focus. Preserve descendant focus rings, Tab order, and input cues.",
       accessibility:
-        "When motion is off or reduced, keep state changes visible through structural cues instead of motion alone.",
-      goodFor: "Document-wide display rules, density, and state treatment",
-      avoidFor:
-        "Component-local decorative themes and arbitrary color palettes",
-      interaction:
-        "Descendants inherit shared display rules without adding an interactive surface.",
+        "Never make color or motion the only status cue. With reduced or disabled motion, use text, icons, lines, and selection surfaces.",
+      goodFor: "Document-wide display rules, density, and status expression",
+      avoidFor: "Per-component decoration themes and arbitrary color palettes",
+      interaction: "Pass shared display rules down to descendant components.",
       propertyLabels: {
         density: "Density",
         selection: "Selection surface",
@@ -615,26 +450,26 @@ export const COMPONENT_COPY = {
     text: {
       category: "Foundation",
       summary:
-        "Treat static text and text input as one information component, adding editing cues only when the value is editable.",
+        "Treats static copy and an editing field as one information component, entering edit mode only when the editable capability is present.",
       philosophy:
-        "Information is not an editor by default. Reading is the default state; editable information owns the editing cues.",
+        "Information is not an editor by default. Reading is the calm baseline; add editing capability only at the boundary where a change is needed.",
       useWhen:
-        "A value is mostly read but sometimes edited, such as metadata, a form value, a table cell, or a short command.",
+        "A metadata value, short form value, or table cell is normally read and sometimes changed.",
       avoidWhen:
-        "Do not use it for long multi-step forms, rich text, or permanently prominent input.",
+        "Long-form editing, rich text, or a field whose primary purpose is always-on input.",
       implementation:
-        "Render the value as text by default. Add `editable` and the smallest suitable editor at the capability boundary, then emit one commit event after validation.",
+        "Render the value as text, add `editable` and the smallest `editor` kind where needed, and return the confirmed value through normal state updates without relying on a custom event name.",
       keyboard:
-        "Enter or F2 starts editing, Escape cancels, Enter commits, and Tab commits before moving to the next editable value.",
+        "Enter or F2 starts editing, Escape cancels, and Enter confirms. Tab confirms before moving to the next editable value.",
       accessibility:
-        "Use a real input while editing, preserve its accessible name, and announce validation errors without silently replacing the value.",
-      goodFor: "Metadata, form values, table cells, and short commands",
+        "Use a real input while editing and keep its label and errors available. Do not lose the accessible name when switching between display and edit modes.",
+      goodFor: "Metadata, short form values, table cells, and short commands",
       avoidFor: "Long-form editing, rich text, and always-on input fields",
       interaction:
-        "Move from reading to editing, then commit or cancel back to reading.",
+        "Move from reading to editing, then return after confirming or cancelling.",
       propertyLabels: {
         editable: "Editable",
-        editor: "Editor",
+        editor: "Editor kind",
         state: "Change state",
         value: "Value",
       },
@@ -642,389 +477,217 @@ export const COMPONENT_COPY = {
     rule: {
       category: "Foundation",
       summary:
-        "States a meaningful boundary once with space and a single line, without creating a card.",
+        "Shows a meaningful break with one line and space without creating a card.",
       philosophy:
-        "A rule marks a boundary rather than creating a container. Avoid nested frames and surface hierarchies.",
+        "A boundary line names a difference between adjacent meanings once; it does not multiply containers or surface levels.",
       useWhen:
-        "A meaningful boundary should be stated once with space and one line.",
-      avoidWhen:
-        "Do not wrap every region in rules; repeated borders create the card taxonomy this system avoids.",
+        "A semantic boundary should be clear through one line and measured space.",
+      avoidWhen: "Every region is being boxed to create a card taxonomy.",
       implementation:
-        "Place `Rule` between meaningful siblings and choose its axis from layout direction. Keep it decorative when a heading already states the boundary.",
-      keyboard: "Rule is not interactive and must not enter the tab sequence.",
+        "Place `Rule` between meaningful siblings and choose `axis` to match the plane. If a heading already names the break, do not add a decorative line.",
+      keyboard: "It is not interactive, so it stays out of the Tab order.",
       accessibility:
-        "Use a semantic separator when it conveys structure; do not announce purely decorative lines.",
-      goodFor: "Section boundaries and directional separators",
-      avoidFor: "Card frames and repeated decorative borders",
+        "Use a semantic separator when the line conveys structure; hide purely decorative lines from assistive technology.",
+      goodFor: "Section boundaries and directional structure",
+      avoidFor: "Card borders and repeated decorative borders",
       interaction:
-        "It has no interaction; space and a line clarify reading boundaries.",
+        "It has no action; space and one line establish a reading boundary.",
       propertyLabels: { axis: "Axis", weight: "Weight" },
     },
     "status-icon": {
       category: "Foundation",
       summary:
-        "Uses a meaningful icon and state color instead of a status chip, with detail available on demand.",
+        "Combines a meaningful icon, semantic color, and a description to show a compact status.",
       philosophy:
-        "Repeated work benefits from quick icon-and-color recognition, but language remains available in the accessible name.",
+        "Repeated work benefits from quick status recognition, but shape and color are not enough. Keep a spoken explanation in the accessible name.",
       useWhen:
-        "A repeated status can be recognized by an icon and semantic color.",
+        "A sync, validation, or short progress status repeats in a dense surface.",
       avoidWhen:
-        "Do not make color or an unlabeled glyph the only explanation for an important state.",
+        "An important state would be communicated only by color or an unnamed glyph.",
       implementation:
-        "Pair the icon with a stable accessible label and tooltip. Keep black for structure and reserve status colors for status.",
+        "Pair a stable label and tooltip with the icon. Black is structural; `kind` colors are reserved for status.",
       keyboard:
-        "If it opens detail, make it a button with a visible focus target. A passive status remains out of the tab sequence.",
+        "Passive status stays out of the Tab order. If details open, use a real button with a visible focus target.",
       accessibility:
-        "Expose state in the accessible name or live description, and add a non-color cue such as shape or text.",
-      goodFor: "Repeated sync, validation, and progress states",
-      avoidFor: "Color-only warnings and unlabeled icon collections",
+        "Include the status in the accessible name or description, and add a non-color cue such as text or icon shape.",
+      goodFor: "Repeated sync, validation, and short progress states",
+      avoidFor: "Color-only warnings and unnamed icon collections",
       interaction:
-        "Show status passively, with explanation available on focus when needed.",
-      propertyLabels: { kind: "Status", label: "Label" },
+        "Show status passively, with a focusable explanation when more detail is available.",
+      propertyLabels: { kind: "Status", label: "Description" },
     },
-    stack: {
+    vertical: {
       category: "Layout",
       summary:
-        "Provides predictable vertical order, gap, and alignment without decoration.",
+        "Places ordered children on a vertical plane and adapts to height with elastic, wrap, or scroll policy.",
       philosophy:
-        "`Stack` guarantees vertical order only. Focus expansion and overflow navigation belong to other contracts.",
-      useWhen: "Children need predictable vertical order, gap, and alignment.",
+        "The developer declares order and fit policy. The plane resolver allocates available height; children do not independently decide what to hide.",
+      useWhen:
+        "A form, explanation, or work column reads in vertical DOM order.",
       avoidWhen:
-        "Do not put focus negotiation, overflow navigation, or decoration into `Stack`; keep those contracts separate.",
+        "Horizontal comparison or another decorative wrapper is the real need.",
       implementation:
-        "Use `Stack` for the smallest vertical composition and preserve meaningful child order in the DOM.",
+        "Create `PlaneSpec` with `vertical(children, { fit, gap, available })`, then render the `offset`, `size`, and `overflow` returned by `resolvePlane`.",
       keyboard:
-        "Add no keyboard behavior; descendants keep normal sequential focus.",
+        "Tab follows vertical DOM order. Do not assign arrow keys to children unless their own widget contract owns them.",
       accessibility:
-        "Use list or group roles only when content is actually a list or group. Layout alone is not a landmark.",
-      goodFor: "Vertical forms, explanations, and action groups",
-      avoidFor: "Focus allocation, horizontal wrapping, and surface management",
-      interaction: "Children are read and reached in DOM order.",
-      propertyLabels: { gap: "Gap", align: "Alignment" },
+        "A layout primitive is not a landmark. Add list, group, or form semantics only when the content has that meaning.",
+      goodFor: "Vertical forms, explanations, and work columns",
+      avoidFor: "Horizontal relationships and owning child selection state",
+      interaction:
+        "Preserve child order and adapt a tight height according to the declared policy.",
+      propertyLabels: { fit: "Fit", gap: "Gap", items: "Items" },
     },
-    cluster: {
+    horizontal: {
       category: "Layout",
       summary:
-        "Aligns related short elements on a horizontal baseline and wraps them when space is tight.",
+        "Places ordered children on a horizontal plane and adapts to width by shrinking, wrapping, or scrolling.",
       philosophy:
-        "`Cluster` guarantees horizontal placement and wrapping. Complex region evacuation belongs to `AxisFlow`.",
+        "A horizontal relationship is an ordered reading axis. When width is tight, the resolver reports adaptation instead of sending meaning into an overlay.",
       useWhen:
-        "Related short actions or values share a horizontal baseline and may wrap.",
-      avoidWhen:
-        "Do not hide important content when the viewport is tight; use `AxisFlow` for negotiated space.",
+        "A toolbar, related action set, or short comparison belongs on one horizontal axis.",
+      avoidWhen: "Vertical reading order is being forced into a row.",
       implementation:
-        "Allow wrapping and preserve meaningful DOM order. Keep selected-child emphasis light instead of creating another container.",
+        "Create `horizontal(children, { fit, gap, available })` and use `resolvePlane` output for line, offset, and overflow.",
       keyboard:
-        "Use the children’s interaction model. Tabs or choices inside it keep their widget-specific arrow-key behavior.",
+        "Keep meaningful DOM order. Arrow keys belong to widgets such as ChoiceGroup or DataTable, not to layout by default.",
       accessibility:
-        "Add a group label only when the grouping is user-facing; do not add an empty group landmark.",
-      goodFor: "Short action groups, tags, and same-line values",
-      avoidFor:
-        "Region evacuation, overflow navigation, and unrelated grouping",
+        "Do not let horizontal placement silently change reading order. Keep headings and labels aligned with DOM order and preserve focus during scroll.",
+      goodFor: "Toolbars, related actions, and short comparisons",
+      avoidFor: "Long prose, vertical forms, and hiding overflow behind a row",
       interaction:
-        "Read across the row, wrapping to the next line when necessary.",
-      propertyLabels: { gap: "Gap", wrap: "Wrap", active: "Active child" },
-    },
-    "focus-plane": {
-      category: "Layout",
-      summary:
-        "Lets adjacent regions yield width to focus, with directional controls for moving to a neighbor.",
-      philosophy:
-        "`FocusPlane` gives space to the task. Its separator is an operation line that names direction, not a free-form drag splitter.",
-      useWhen:
-        "Adjacent regions compete for space, such as list and detail or editor and history.",
-      avoidWhen:
-        "Do not use it for a fixed two-column marketing layout or a free-form drag splitter.",
-      implementation:
-        "Choose an initial focus, render a separator button, and let the nearest `FocusPlane` resolve `FocusRegion` layout events for the viewport.",
-      keyboard:
-        "Arrow controls change allocation between regions. Focusable content remains reachable when the other region expands.",
-      accessibility:
-        "Label each region, expose the current allocation, and give separator controls understandable names.",
-      goodFor: "List/detail, document/history, and search/preview workspaces",
-      avoidFor: "Simple two-column copy and freeform resizing",
-      interaction:
-        "A separator or internal focus gives space to the adjacent region.",
-      propertyLabels: {
-        initial: "Initial focus",
-        focusOnInput: "Expand on internal focus",
-        collapse: "Allow zero width",
-      },
-    },
-    "focus-region": {
-      category: "Layout",
-      summary:
-        "Lets a child request space from its nearest `FocusPlane` through an event instead of a direct reference.",
-      philosophy:
-        "Keep visual and component trees loosely coupled. The nearest `FocusPlane` turns the child’s request into a feasible ratio.",
-      useWhen:
-        "A nested component needs space without knowing its parent’s layout implementation.",
-      avoidWhen:
-        "Do not dispatch requests from decorative content or use named scopes when nearest ownership is sufficient.",
-      implementation:
-        "Dispatch `ikasue:layout-request` with a target such as `secondary`; the nearest `FocusPlane` resolves the viewport ratio.",
-      keyboard:
-        "A layout request must not steal focus. Keep the originating control focused unless its own interaction explicitly moves it.",
-      accessibility:
-        "Announce only meaningful layout changes and retain the requested region’s heading as accessible context.",
-      goodFor: "Child-to-parent focus allocation and decoupled layout events",
-      avoidFor: "Decorative requests and direct parent manipulation",
-      interaction:
-        "The child requests; the nearest layout owner decides the actual space.",
-      propertyLabels: { target: "Target", scope: "Scope" },
-    },
-    "axis-flow": {
-      category: "Layout",
-      summary:
-        "Accepts any number of regions on one axis and adds end navigation when the viewport cannot fit them.",
-      philosophy:
-        "Reconcile an unbounded item API with a finite viewport. When items no longer fit, turn the axis end into navigation.",
-      useWhen:
-        "Many dashboard regions or tools share an axis and the visible count changes.",
-      avoidWhen:
-        "Do not use it for a short static row that ordinary flow can handle.",
-      implementation:
-        "Choose `horizontal` or `vertical` and a focus strategy. Render end navigation on that axis while preserving logical order off screen.",
-      keyboard:
-        "Arrow keys follow the chosen axis; Home and End reach the extremes, and the end control remains keyboard reachable.",
-      accessibility:
-        "Expose a labeled region or list when appropriate, and announce active item and position without relying on motion.",
-      goodFor: "Large workspaces, tool groups, and variable panel counts",
-      avoidFor: "Short rows and fixed small sets of elements",
-      interaction:
-        "Move along the axis and choose overflow items from end navigation.",
-      propertyLabels: {
-        axis: "Axis",
-        items: "Item count",
-        strategy: "Focus strategy",
-      },
-    },
-    "edge-region": {
-      category: "Layout",
-      summary:
-        "Adds detail or tooling from its named edge and makes room by pushing existing content, never overlaying it.",
-      philosophy:
-        "New regions enter from the edge where they belong. A new track preserves the spatial relationship with the original information.",
-      useWhen:
-        "Detail or tooling belongs to a known edge and should reclaim space by pushing current content.",
-      avoidWhen:
-        "Do not use it for an urgent alert that must interrupt all context; use a semantic live region instead.",
-      implementation:
-        "Add a `right`, `left`, or `bottom` track. Closed removes the track from allocation rather than painting over content.",
-      keyboard:
-        "Use a button for the trigger, allow Escape to close when permitted, and return focus to the trigger after closing.",
-      accessibility:
-        "Use a labeled region or dialog only when its semantics require it; never trap focus in a non-modal region.",
-      goodFor: "Auxiliary detail, tooling, and right-side settings",
-      avoidFor: "Urgent notices, long forms, and context-covering modals",
-      interaction:
-        "Open from the named edge, push existing space, and close back into the original allocation.",
-      propertyLabels: { edge: "Opening edge", initial: "Initial state" },
-    },
-    "bottom-dock": {
-      category: "Layout",
-      summary:
-        "Adds a short work area at the bottom while keeping the upper context visible in the same plane.",
-      philosophy:
-        "Confirmation and supporting information become a new bottom row, so the evidence for a decision stays readable.",
-      useWhen:
-        "A short confirmation, detail view, or command area should enter from the bottom while context remains visible.",
-      avoidWhen:
-        "Do not use it for a long form or a permanent navigation system.",
-      implementation:
-        "Treat the dock as an explicit bottom row with purpose and size. Reserve layout space before revealing its controls.",
-      keyboard:
-        "Move focus to the first meaningful control on open, follow DOM order, and return focus to the opener on close.",
-      accessibility:
-        "Give the dock an appropriate heading and landmark; use dialog semantics only when it temporarily owns the task.",
-      goodFor:
-        "Delete confirmation, short supporting detail, and command areas",
-      avoidFor:
-        "Long input, permanent navigation, and context-blocking dialogs",
-      interaction:
-        "Enter from below, push the upper content, and receive the short task.",
-      propertyLabels: { size: "Height", purpose: "Purpose" },
-    },
-    "edge-nav": {
-      category: "Navigation",
-      summary:
-        "Keeps a persistent rail clue and expands from the left by pushing the main content aside.",
-      philosophy:
-        "Navigation expands its vocabulary only when needed. The closed rail and icons retain a geographic clue.",
-      useWhen:
-        "Primary navigation needs a persistent edge clue but should expand only on request.",
-      avoidWhen:
-        "Do not hide the only navigation path behind an unlabeled icon or use it for a transient tool palette.",
-      implementation:
-        "Keep the rail visible, expand from the left, and reallocate the main track. Keep the selected item visible in both states.",
-      keyboard:
-        "Keep rail toggle, navigation items, and close action predictable. Arrow keys may move within the navigation list.",
-      accessibility:
-        "Use a labeled navigation landmark, a real toggle button, and `aria-current` for the selected destination.",
-      goodFor: "Workspace navigation, persistent rails, and major destinations",
-      avoidFor: "Transient tools and icon-only unlabeled navigation",
-      interaction:
-        "Use the rail as a clue; opening it expands from the left and pushes the main track.",
-      propertyLabels: { initial: "Initial state", selected: "Selected item" },
-    },
-    "elastic-tabs": {
-      category: "Navigation",
-      summary:
-        "Switches sibling panels and gives the selected panel area and a quiet selection surface.",
-      philosophy:
-        "Area makes the current information clearer than an underline alone. Panels change from the same direction as tab order.",
-      useWhen:
-        "Siblings share one level and switching should grant space to the selected panel.",
-      avoidWhen:
-        "Do not use tabs for unrelated destinations, unnamed tab sprawl, or simultaneous panel comparison.",
-      implementation:
-        "Use automatic activation for nearby cheap panels and manual activation for expensive panels. Align panel entry with tab order.",
-      keyboard:
-        "Arrow keys move between tabs, Home and End jump to extremes, and Enter or Space activates manual tabs.",
-      accessibility:
-        "Implement `tablist`, `tab`, `tabpanel`, selected state, and a deterministic focus relationship.",
-      goodFor: "Single-panel switching within one level and workspace views",
-      avoidFor:
-        "Simultaneous comparison, cross-level navigation, and overly long tab names",
-      interaction: "Select a tab and give its panel the available area.",
-      propertyLabels: {
-        selected: "Selected",
-        activation: "Activation",
-        directional: "Directional motion",
-      },
+        "Preserve order and adapt a tight width according to the declared policy.",
+      propertyLabels: { fit: "Fit", gap: "Gap", items: "Items" },
     },
     "icon-action": {
       category: "Actions",
       summary:
-        "Represents repeated work actions with icons, adding explanation on hover and focus.",
+        "Uses a compact icon for repeated work and provides a stable explanation on hover and focus.",
       philosophy:
-        "Repeated actions become recognizable as icons. Tooltips, accessible names, and documentation handle learning and language.",
+        "Keep repeated actions visually light without dropping meaning. Icon, accessible label, tooltip, and busy state are one contract.",
       useWhen:
-        "An action is repeated often enough for its icon to be familiar.",
+        "A save, add, edit, or delete action is repeated enough to become familiar.",
       avoidWhen:
-        "Do not use an icon-only action for a novel, destructive, or ambiguous action without adjacent labeling or confirmation.",
+        "A primary action needs an explanatory sentence or an icon would be ambiguous to a first-time user.",
       implementation:
-        "Use a real button, stable icon, accessible name, and tooltip. Busy state prevents duplicate activation without erasing the action name.",
+        "Use a real button with `action`, stable label, and `state`. Busy prevents duplicate activation while preserving name and position.",
       keyboard:
-        "Enter and Space activate. Disabled and busy states cannot activate, and tooltips appear on keyboard focus as well as hover.",
+        "Tab focuses it; Enter or Space activates it. Keep the focus ring visible while busy.",
       accessibility:
-        "Every icon-only action has an accessible label and a visible focus tooltip; state is not conveyed by color alone.",
+        "Require an accessible name for icon-only actions, and show the tooltip on focus as well as hover.",
       goodFor: "Repeated save, add, edit, and delete actions",
       avoidFor:
-        "Unfamiliar actions and destructive actions without confirmation",
+        "Ambiguous primary actions and first-use actions that need prose",
       interaction:
-        "Focus or press the icon action, read its explanation, and activate it as a button.",
+        "Confirm the explanation on focus or hover, then activate the button once.",
       propertyLabels: { action: "Action", state: "State" },
     },
     "action-strip": {
       category: "Actions",
       summary:
-        "Places related icon actions on one line and softly emphasizes only active or busy actions.",
+        "Aligns related icon actions on one baseline and gives quiet area to the active or busy action.",
       philosophy:
-        "Group related actions by proximity and baseline rather than a container. Give area only to active or busy actions.",
-      useWhen:
-        "Several closely related actions should remain quiet in one row until active or busy.",
+        "Do not add another box around an action group. Proximity and order establish the relationship; selection surface gives the active action area.",
+      useWhen: "Several short actions repeatedly operate on the same subject.",
       avoidWhen:
-        "Do not group unrelated actions because they fit, and do not put primary navigation in an action strip.",
+        "Long actions or unrelated actions are being forced into one row.",
       implementation:
-        "Compose labeled `IconAction` items in order, expose the active action with a light surface, and let wrapping follow the viewport.",
+        "Declare action order with `horizontal` and track each button’s `active` and `busy` state independently. Avoid a wrapper surface for the group.",
       keyboard:
-        "Use roving focus only for a true toolbar; otherwise preserve normal tab order so every action remains discoverable.",
+        "Move through the buttons with Tab and preserve each button’s Enter or Space behavior.",
       accessibility:
-        "Label it as a toolbar only when it is one, and keep each action’s accessible name and state independent.",
-      goodFor: "Related save, history, and refresh actions",
-      avoidFor: "Primary navigation and unrelated action collections",
+        "Label the group’s purpose and give every icon action its own accessible name. Expose active state with a native-like state such as `aria-pressed`.",
+      goodFor: "Save, history, and refresh actions for one subject",
+      avoidFor: "Unrelated collections and a long-button replacement",
       interaction:
-        "Activate individual actions and use the surface to confirm active or busy state.",
+        "Recognize the nearby actions and give quiet area to the active one.",
       propertyLabels: { active: "Active", density: "Density" },
     },
     "boolean-text": {
       category: "Information & input",
       summary:
-        "Makes the sentence the hit target for a boolean value, showing true with a check and quiet surface.",
+        "Makes the sentence the target for toggling a boolean instead of centering an empty checkbox.",
       philosophy:
-        "The meaning of a boolean is the sentence, not a box. False stays quiet; true gains a check and selection surface.",
+        "The boolean is the meaning of the sentence, not the box. False is quiet; true adds a check and a quiet selection surface.",
       useWhen:
-        "The sentence is the meaning of a boolean preference and should be the hit target.",
+        "A short sentence can explain a setting such as autosave, publishing, or sync.",
       avoidWhen:
-        "Do not remove a familiar native checkbox when dense standard form behavior or a stronger visual box is needed.",
+        "There are several choices, long explanations, or complex validation rules.",
       implementation:
-        "Keep native checkbox semantics under the text grammar, render checked state with a check and quiet surface, and emit change immediately.",
+        "Use the full label as the native checkbox label and keep `checked` and `label` in state. Never use color alone to express the value.",
       keyboard:
-        "Space toggles the value while focus stays on the text control. Enter submits only when the surrounding form defines it.",
+        "Tab focuses it and Space toggles it. The full label remains a meaningful focus target.",
       accessibility:
-        "Keep checkbox role, checked state, and label association even when the visual box is omitted.",
-      goodFor: "Short boolean sentences for settings, consent, and auto-save",
-      avoidFor: "Complex forms and inputs where the native box is important",
-      interaction: "Press the sentence or Space to toggle its boolean meaning.",
+        "Use a native checkbox and label and expose the checked state. Do not make the checkmark the only cue.",
+      goodFor: "Short boolean settings such as autosave and publishing",
+      avoidFor: "Radio-like choices and complex form fields",
+      interaction:
+        "Read the sentence and press the same label to toggle its value.",
       propertyLabels: { checked: "Value", label: "Sentence" },
     },
     "choice-group": {
       category: "Information & input",
       summary:
-        "Presents one selection without foregrounding radio circles, giving the selected meaning a little more area.",
+        "Gives area to the selected meaning while preserving one selection grammar in rows and columns.",
       philosophy:
-        "The selected option owns a little more area. It shares selection grammar with `ElasticTabs` while committing a value immediately.",
+        "Selection is a quiet surface, not a heavy border. ChoiceGroup owns one immediate value and keeps each option’s meaning in text.",
       useWhen:
-        "Exactly one option should be chosen and the selected meaning can own a little more area.",
+        "A small set of mutually exclusive options should be compared on one plane.",
       avoidWhen:
-        "Do not use it for multiple selection, page navigation, or many values better searched than scanned.",
+        "There are many options, multiple selection, long explanations, or hierarchical choice.",
       implementation:
-        "Render a labeled group with radio semantics and select immediately. Keep the same selection grammar in horizontal and vertical layouts.",
+        "Manage `direction` and `selected` with a native-radio-like contract, placing choices with `horizontal` or `vertical`.",
       keyboard:
-        "Arrow keys change the option within the group; Tab enters and leaves the group once.",
+        "Enter the group with Tab, move with arrow keys, and choose the current value with Space.",
       accessibility:
-        "Expose radiogroup and radio roles, group label, checked state, and a focus indicator independent of the selection surface.",
-      goodFor: "Small single-choice sets and density/view selection",
+        "Expose the group name with fieldset/legend or an appropriate radio role. Keep text and selection surface alongside color.",
+      goodFor: "A few display modes, density options, or review stages",
       avoidFor:
-        "Multiple selection, large searchable sets, and page navigation",
-      interaction:
-        "Choose an option and commit it immediately while giving it the available area.",
+        "Multiple selection, long option lists, and hierarchical choice",
+      interaction: "Compare options and give clear area to the selected value.",
       propertyLabels: { direction: "Direction", selected: "Selected" },
     },
     "form-list": {
       category: "Information & input",
       summary:
-        "Places Text values under their labels, presenting a form as readable information order rather than boxes.",
+        "Presents labels and values as a readable vertical order while keeping display and editing on one plane.",
       philosophy:
-        "A form is an information sequence, not a collection of boxes. Text values receive editing capability locally.",
+        "A form is an order of information, not a collection of boxes. `FormList` owns values and status; child focus and draft stay local to editing.",
       useWhen:
-        "A form is a readable ordered sequence of labels and information values.",
+        "Short metadata or settings need a readable label/value sequence with occasional editing.",
       avoidWhen:
-        "Do not use it for dense spreadsheet editing or when native fieldset and legend communicate grouping better.",
+        "Rich text, long multi-step forms, or a design that distributes value ownership to children.",
       implementation:
-        "Place each label above its Text value, keep editing local, and use marker style only when it adds meaning.",
+        "Let `FormList` own values, validation status, and confirmed results. Pass only focus and draft to child `Text`; child focus/draft must not recolor source data.",
       keyboard:
-        "Tab moves through editable information only. Each Text preserves Enter, F2, Escape, commit, and validation behavior.",
+        "Tab visits editable values, Enter/F2 starts editing, Escape cancels, and Enter or Tab confirms.",
       accessibility:
-        "Associate every label with its control and expose mixed or error state in text and programmatic descriptions.",
-      goodFor: "Settings, metadata, and readable ordered forms",
-      avoidFor: "Spreadsheet editing, complex grouping, and long-form input",
+        "Associate each label and field and connect errors/status to that field. Do not make draft appearance look like a saved-data status.",
+      goodFor: "Short settings, metadata, and low-step business forms",
+      avoidFor: "Long editing, complex wizards, and child-owned form state",
       interaction:
-        "Read from top to bottom and edit only the Text values that need it.",
-      propertyLabels: { marker: "Marker", state: "Example state" },
+        "Read a label, edit only the needed value, and return the result to FormList.",
+      propertyLabels: { marker: "Item marker", state: "Example state" },
     },
     "data-table": {
       category: "Data",
       summary:
-        "Makes the cell the task unit, lightly showing its row and column context for copy, paste, and editing.",
+        "Makes the cell the task unit and lightly marks its row and column to preserve context.",
       philosophy:
-        "The cell is the operation unit. Keep row and column context quiet, and do not add index or lock icons by default.",
-      useWhen:
-        "Users inspect, copy, paste, or edit rectangular business data with the cell as the task unit.",
+        "A table is a data plane, not a grid used only for layout. Selection, copy, paste, and edit are explicit cell contracts.",
+      useWhen: "Business data needs comparison, copy/paste, or inline editing.",
       avoidWhen:
-        "Do not use it for page layout or a small key-value list clearer as a FormList.",
+        "A simple two-column explanation or a decorative layout table is enough.",
       implementation:
-        "Keep headers meaningful, select a cell, lightly highlight its row and column, and enable editing only for permitted cells.",
+        "Treat rows and columns as horizontal plane children and render selected cell, row/column peers, and change state separately. Keep selection usable when clipboard permission fails.",
       keyboard:
-        "Arrow keys move cells, Home and End move within an axis, Ctrl or Cmd+C/V handles the clipboard, and Enter or F2 edits.",
+        "Arrow keys move by cell; Home/End reach axis extremes. Ctrl/Cmd+C/V, Enter, and F2 follow the table contract.",
       accessibility:
-        "Use a real table with headers and selection announcements; clipboard failures must leave the cell usable.",
-      goodFor:
-        "Business data, cell selection, clipboard work, and inline editing",
-      avoidFor: "Layout tables and small key-value information",
+        "Use caption, headers, and row/column scope correctly; expose the current cell and edit state. Row/column color is only supporting information.",
+      goodFor: "Business data, comparison, copy/paste, and inline editing",
+      avoidFor: "Card grids, decorative tables, and layout-only tables",
       interaction:
-        "Select a cell, inspect its row and column context, then move or edit.",
+        "Select a cell and copy, paste, or edit while preserving row and column context.",
       propertyLabels: {
         editable: "Editable",
         selection: "Selection emphasis",
@@ -1034,97 +697,98 @@ export const COMPONENT_COPY = {
     "history-gutter": {
       category: "Data",
       summary:
-        "Shows revisions beside current information with a line and points, emphasizing only the selected revision.",
+        "Uses one line and points to show revisions and gives area only to the selected revision.",
       philosophy:
-        "History is a timeline beside current information, not a separate card. Line, points, and change color carry the meaning.",
+        "History is a timeline beside current information, not a separate surface. Line, points, and change cues should make revision relationships readable.",
       useWhen:
-        "Current, previous, and initial revisions need comparison beside the information they explain.",
+        "Current and previous revisions should remain in the same field of view.",
       avoidWhen:
-        "Do not use it as a detached audit dashboard or for long revision explanations in the main flow.",
+        "A long audit log or a standalone history workspace is the real task.",
       implementation:
-        "Draw one line with revision points, highlight only the selected point, and connect it to the content it explains.",
+        "Keep revision order with `vertical` and give area to the selected revision. Pair change color with text or symbols.",
       keyboard:
-        "Arrow keys move between revisions and Enter activates the selected revision. Keep focus near current content.",
+        "Tab enters the gutter; arrow keys move between revisions and Enter confirms the selection.",
       accessibility:
-        "Expose the gutter as a labeled revision list or navigation, not as an unexplained decorative line.",
-      goodFor: "A compact revision timeline beside current information",
-      avoidFor: "Detached audit screens and long history descriptions",
+        "Include time, author, and state in each accessible label and identify the selected revision. Do not rely on line and points alone.",
+      goodFor:
+        "Revision comparison, change tracking, and returning to a prior value",
+      avoidFor: "Standalone audit screens and unbounded event logs",
       interaction:
-        "Select a point and inspect the matching revision beside it.",
+        "Read the timeline and select a revision as evidence for the current decision.",
       propertyLabels: { selected: "Revision", compact: "Compact" },
     },
     "progress-region": {
       category: "Feedback",
       summary:
-        "Keeps previous content visible while a black wave marks processing in the affected region.",
+        "Keeps a region’s content readable while showing progress on that plane only.",
       philosophy:
-        "A central spinner hides the target. Structural motion belongs to the target region while its previous information remains readable.",
+        "A centered spinner should not obscure the target. Keep prior information visible and identify the region that is being processed.",
       useWhen:
-        "A known region is processing and its previous content is still useful context.",
+        "Existing information remains useful while an async update runs.",
       avoidWhen:
-        "Do not cover the whole document for a local operation or replace useful results with an indeterminate spinner.",
+        "The entire page is the target and a region-specific progress explanation would be misleading.",
       implementation:
-        "Keep old content mounted, apply wave, scan, or edge motion to the region, and remove it when processing settles.",
+        "Keep the target region as a `vertical` child and put `loading` and `pattern` in that region’s state. Do not replace its content with a spinner.",
       keyboard:
-        "Do not block unrelated focus; disable only controls that would duplicate the active operation.",
+        "Do not steal existing focus during loading; keep the completed state in the same readable order.",
       accessibility:
-        "Mark the region busy and provide a concise live status. Reduced motion must still show busy state structurally.",
-      goodFor: "Local loading in search results, panels, and tables",
-      avoidFor: "Document-wide loading and spinners that hide existing content",
+        "Expose busy state and a short progress description. With motion off, prior content and completion remain understandable.",
+      goodFor:
+        "Save, sync, partial update, and in-progress calculation regions",
+      avoidFor:
+        "Targetless full-page spinners and irreversible content replacement",
       interaction:
-        "Continue reading the affected region while waiting for its operation to finish.",
+        "Read prior information while confirming progress and completion for the target region.",
       propertyLabels: { loading: "Loading", pattern: "Pattern" },
     },
     "message-region": {
       category: "Feedback",
       summary:
-        "Links a short status message to a target region and gives that region attention when selected.",
+        "Links a short status message to its target region and can move attention back to that plane.",
       philosophy:
-        "A message is a link to its target, not a pile in a notification shelf. Activation temporarily gives the region space and status emphasis.",
+        "Do not stack notices in a detached shelf. Make the message a route back to the information that caused it; keep target and prose alongside color.",
       useWhen:
-        "A short status belongs to one region and selecting it should focus that region.",
+        "A save, validation, or sync message belongs to one known region.",
       avoidWhen:
-        "Do not use it as a global notification queue or make a warning depend only on status color.",
+        "The explanation is long, global, or mixes several unrelated targets.",
       implementation:
-        "Link the message to its target, use semantic status color sparingly, and request temporary focus allocation on activation.",
+        "Bind `target` to a region id and render the message as a button or link. After activation, return focus to the target region.",
       keyboard:
-        "An actionable message is a button that supports Enter and Space and restores focus predictably after the region settles.",
+        "Tab reaches the message; Enter or Space moves to its target region.",
       accessibility:
-        "Use a live region for new status when appropriate, provide a text label, and connect message and target descriptively.",
-      goodFor: "Short validation, sync, and result messages tied to a region",
-      avoidFor: "Global toasts, color-only warnings, and untargeted notices",
+        "Expose kind and prose in a live status and move focus safely to the target heading or label. Do not communicate urgency with color alone.",
+      goodFor: "Save results, validation, and sync state tied to a region",
+      avoidFor:
+        "Long notices, targetless global messages, and color-only warnings",
       interaction:
-        "Select the message to expand its target and inspect the related state.",
+        "Read the message and return to its target region when action is needed.",
       propertyLabels: { kind: "Status", target: "Target" },
     },
     "bottom-dialog": {
       category: "Feedback",
       summary:
-        "Adds a dialog from the bottom within the plane so the information behind a short decision stays readable.",
+        "Adds a bottom row inside the plane instead of covering evidence with a Z-axis modal.",
       philosophy:
-        "A dialog does not escape to the z-axis. It becomes a bottom row that pushes content, keeping the evidence for an irreversible decision visible.",
+        "A dialog is not an exception that hides information. It enters from a named edge, reallocates the plane, and leaves the evidence above it.",
       useWhen:
-        "A short decision should enter from below while the information that justifies it remains readable.",
+        "A delete confirmation, short system decision, or helper action belongs with current information.",
       avoidWhen:
-        "Do not use it for long forms, unrelated navigation, or a blocking alert with a different modal policy.",
+        "A long form, permanent detail view, or decision that requires hiding its evidence.",
       implementation:
-        "Add a bottom row with a heading, primary action, dismiss action, and reallocated track. Do not use a z-index overlay.",
+        "Append a dialog row to a `vertical` plane and manage `intent` and `dismiss` as its contract. Return focus to the opener after close.",
       keyboard:
-        "Focus the heading or first action on open. Trap Tab only for a genuinely modal decision, and allow Escape when permitted.",
+        "Move focus to the first dialog action, close with Escape when dismissible, and return to the opener after confirmation or close.",
       accessibility:
-        "Use dialog semantics only for the temporary decision, label it with a heading, describe its intent, and restore focus to the opener.",
+        "Expose dialog label, description, and button names without hiding the content behind it. Color and motion remain supporting cues.",
       goodFor:
-        "Delete confirmation, short system decisions, and supporting commands",
-      avoidFor: "Long forms, permanent detail, and context-blocking alerts",
+        "Delete confirmation, short decisions, and helper actions tied to current data",
+      avoidFor: "Long forms, permanent detail, and evidence-obscuring modals",
       interaction:
-        "Make the decision in the added bottom dialog, then return to the opener on close.",
+        "Decide in the added bottom row, then return to the original information and focus.",
       propertyLabels: { intent: "Intent", dismiss: "Dismissible" },
     },
-  } satisfies Record<CatalogComponentId, ComponentCopy>,
-} as const satisfies Record<
-  DocsLocale,
-  Record<CatalogComponentId, ComponentCopy>
->;
+  },
+} satisfies Record<DocsLocale, Record<CatalogComponentId, ComponentCopy>>;
 
 export const COMPONENT_UI_COPY: Record<DocsLocale, ComponentUiCopy> = {
   ja: {
@@ -1133,15 +797,18 @@ export const COMPONENT_UI_COPY: Record<DocsLocale, ComponentUiCopy> = {
     contract: "契約",
     useWhen: "使う場面",
     avoidWhen: "避ける場面",
-    implementation: "実装の入口",
-    integrationSketch: "統合例",
+    implementation: "実装",
+    implementationUsage:
+      "JavaScript implementation / usage と Rust implementation sketch",
+    javascript: "JavaScript implementation / usage",
+    rust: "Rust implementation sketch",
     properties: "プロパティ",
     propertiesCaption: (name) => `${name} のプロパティ`,
     key: "キー",
     type: "型",
     defaultValue: "既定値",
     values: "値",
-    noProps: "この概念的な実行項目には設定可能なプロパティがありません。",
+    noProps: "設定可能なプロパティはありません。",
     behaviorAccessibility: "振る舞いとアクセシビリティ",
     goodFor: "適する対象",
     avoidFor: "適さない対象",
@@ -1149,13 +816,16 @@ export const COMPONENT_UI_COPY: Record<DocsLocale, ComponentUiCopy> = {
     keyboard: "キーボード",
     accessibility: "アクセシビリティ",
     matrixNote:
-      "インタラクティブカタログと同じメタデータから描画しています。この一覧には24の実行コンポーネントを掲載しています。",
-    matrixCaption: "ikasue 実行コンポーネント一覧",
-    component: "コンポーネント",
+      "インタラクティブカタログと同じメタデータから描画する、現在の17 componentの一覧です。",
+    matrixContract:
+      "各pageはPlane API、state ownership、keyboard、accessibility、JavaScript / Rust sourceを同じ契約として説明します。",
+    matrixCaption: "ikasue component inventory",
+    component: "component",
     category: "カテゴリ",
     summary: "概要",
     demo: "デモ",
     openCatalog: "カタログを開く ↗",
+    matrixLink: "component一覧へ戻る",
   },
   en: {
     catalogLink: "Open interactive catalog ↗",
@@ -1164,14 +834,17 @@ export const COMPONENT_UI_COPY: Record<DocsLocale, ComponentUiCopy> = {
     useWhen: "Use it when",
     avoidWhen: "Avoid it when",
     implementation: "Implementation",
-    integrationSketch: "Integration sketch",
+    implementationUsage:
+      "JavaScript implementation / usage and Rust implementation sketch",
+    javascript: "JavaScript implementation / usage",
+    rust: "Rust implementation sketch",
     properties: "Properties",
     propertiesCaption: (name) => `${name} properties`,
     key: "Key",
     type: "Type",
     defaultValue: "Default",
     values: "Values",
-    noProps: "This conceptual runtime entry has no configurable properties.",
+    noProps: "This component has no configurable properties.",
     behaviorAccessibility: "Behavior and accessibility",
     goodFor: "Good for",
     avoidFor: "Not for",
@@ -1179,13 +852,16 @@ export const COMPONENT_UI_COPY: Record<DocsLocale, ComponentUiCopy> = {
     keyboard: "Keyboard",
     accessibility: "Accessibility",
     matrixNote:
-      "Rendered from the same metadata as the interactive catalog; this matrix intentionally lists all 24 runtime components.",
-    matrixCaption: "ikasue runtime component matrix",
+      "This matrix uses the same metadata as the interactive catalog and lists the current 17-component inventory.",
+    matrixContract:
+      "Every page explains the Plane API, state ownership, keyboard behavior, accessibility, and JavaScript / Rust sources as one contract.",
+    matrixCaption: "ikasue component inventory",
     component: "Component",
     category: "Category",
     summary: "Summary",
     demo: "Demo",
     openCatalog: "Open catalog ↗",
+    matrixLink: "Back to component inventory",
   },
 };
 

@@ -1,45 +1,68 @@
 ---
 title: Usage
-description: Choose and compose ikasue components around negotiated space.
+description: Compose ikasue components around one negotiated plane.
 ---
 
-## The smallest useful composition
+## The smallest mount
 
-Start with a semantic region and let the runtime mount into a real DOM target. The catalog is framework-neutral and can sit inside an existing application shell.
+Mount the package into an existing DOM target. The catalog is framework-neutral and can live inside an application shell.
 
-```ts
+```js
 import { mountCatalog } from "@ugoite/ikasue";
 import "@ugoite/ikasue/style.css";
 
-const target = document.querySelector<HTMLElement>("#workspace");
+const target = document.querySelector("#workspace");
 if (!target) throw new Error("workspace target is required");
 
 const catalog = mountCatalog(target, {
-  label: "Order workspace",
-  component: "focus-plane",
+  label: "Operations workspace",
+  component: "data-table",
 });
 
-// Keep the returned handle for route changes or teardown.
-catalog.select("data-table");
+catalog.select("form-list");
+// Route teardown:
 catalog.dispose();
 ```
 
-The package's public mount API is intentionally small: `label`, `component`, and `search` configure the catalog; `select` changes the current page and `dispose` removes listeners and DOM owned by the mount.
+## Declare the plane first
 
-## Choose by spatial responsibility
+```js
+import { horizontal, resolvePlane, vertical } from "@ugoite/ikasue";
 
-| Need                                      | Start with                   | Why                                                                     |
-| ----------------------------------------- | ---------------------------- | ----------------------------------------------------------------------- |
-| A readable value that can become editable | `Text`                       | Information and editor capability stay together.                        |
-| Two regions competing for attention       | `FocusPlane` + `FocusRegion` | A child can request space without knowing the parent tree.              |
-| Many regions along one axis               | `AxisFlow`                   | End navigation appears on the same axis when the viewport is finite.    |
-| Detail entering from an edge              | `EdgeRegion` or `BottomDock` | The new track pushes content instead of overlaying it.                  |
-| One panel among siblings                  | `ElasticTabs`                | Selection receives area and panel motion has direction.                 |
-| Business data                             | `DataTable`                  | Cell selection, peer highlighting, clipboard, and editing are explicit. |
-| A short decision                          | `BottomDialog`               | The evidence remains above the new bottom row.                          |
+const filters = horizontal(["status", "owner", "date"], {
+  fit: "wrap",
+  gap: 1,
+  available: 6,
+});
+const workspace = vertical(
+  [
+    { id: "filters", basis: 2, min: 1 },
+    { id: "table", basis: 6, min: 3 },
+  ],
+  { fit: "elastic", gap: 1, available: 8 },
+);
 
-## Keep composition planar
+const filterLayout = resolvePlane(filters);
+const workspaceLayout = resolvePlane(workspace);
+```
 
-Use `Stack` and `Cluster` for local order and wrapping. Add `Rule` only at a meaningful boundary. When a component needs to change the allocation of a larger region, use the dedicated layout contract rather than adding a new wrapper surface.
+A `PlaneSpec` gives components one vocabulary for available space, child order, and overflow. You do not need another surface or overlap rule just to make layout work.
 
-The [component matrix](../components/) is the fastest way to compare props and jump to a working demo. Every page includes the current metadata defaults and a copyable contract.
+## Choose by responsibility
+
+| Need                                   | Start with      | What the plane model preserves                   |
+| -------------------------------------- | --------------- | ------------------------------------------------ |
+| Document-wide rules                    | `ThemeRoot`     | Consistent density, selection, motion, and lines |
+| A vertical work column                 | `Vertical`      | DOM order and height adaptation                  |
+| A toolbar or short comparison          | `Horizontal`    | Horizontal order and width adaptation            |
+| A value read most of the time          | `Text`          | One information contract for display and edit    |
+| A short form with owned status         | `FormList`      | Centralized FormList state ownership             |
+| Cell-oriented business data            | `DataTable`     | Selection, copy/paste, and inline editing        |
+| A status linked to a region            | `MessageRegion` | The relationship between message and target      |
+| A decision that keeps evidence visible | `BottomDialog`  | A bottom row added to the same plane             |
+
+`FormList` owns values and status. Child `Text` focus and draft are local editing state and must not recolor saved source data before confirmation.
+
+## Check the composition
+
+Read each component’s property table, JavaScript implementation / usage, and Rust implementation sketch, then use the catalog to verify defaults and keyboard behavior. The [Examples](../examples/) page compares the plane model across five distinct site shapes.

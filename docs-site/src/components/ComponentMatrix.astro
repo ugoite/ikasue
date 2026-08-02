@@ -13,8 +13,9 @@ const localePrefix = locale === "en" ? "en/" : "";
 
 <div class="component-matrix not-content">
   <p class="matrix-note">{ui.matrixNote}</p>
+  <p class="matrix-contract">{ui.matrixContract}</p>
   <div class="table-scroll">
-    <table>
+    <table aria-label={ui.matrixCaption}>
       <caption>{ui.matrixCaption}</caption>
       <thead>
         <tr>
@@ -59,6 +60,11 @@ const localePrefix = locale === "en" ? "en/" : "";
   .matrix-note {
     border-inline-start: 3px solid var(--sl-color-text-accent);
     padding-inline-start: 1rem;
+  }
+
+  .matrix-contract {
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-sm);
   }
 
   .table-scroll {

@@ -1,0 +1,306 @@
+---
+title: Examples / 例
+description: Five radically different site shapes built from the same plane model.
+---
+
+import { TabItem, Tabs } from "@astrojs/starlight/components";
+
+同じcomponent systemでも、情報のshapeが変わればplaneの使い方は変わります。ここでは、dense operations dashboard、editor + preview、planning/calendar、field/mobile service、observability/incident consoleの5つを比較します。各例は「新しい情報をどこから入れ、何に場所を譲るか」を先に決めています。
+
+## 1. Dense operations dashboard
+
+filter、queue、detail、statusを一つのworkspaceで判断する形です。`Horizontal`で短いfilterと操作を並べ、`Vertical`でqueueとdetailの順序を保つと、狭い幅でもfilterを隠すoverlayを増やさずに済みます。`DataTable`のcell selectionと`MessageRegion`のtargetを同じplaneの証拠として残せます。
+
+<Tabs>
+  <TabItem label="JavaScript implementation / usage">
+
+```js
+import { horizontal, resolvePlane, vertical } from "@ugoite/ikasue";
+
+const filters = horizontal(["status", "owner", "sla"], {
+  fit: "wrap",
+  gap: 1,
+  available: 7,
+});
+const dashboard = vertical(
+  [
+    { id: "filters", basis: 2, min: 1 },
+    { id: "queue", basis: 5, min: 3 },
+    { id: "detail", basis: 4, min: 2 },
+  ],
+  { fit: "elastic", gap: 1, available: 12 },
+);
+
+const resolved = resolvePlane(dashboard);
+const contract = {
+  component: "data-table",
+  props: { selection: "row-column", editable: true },
+  messageTarget: "detail",
+};
+renderDashboard({ filters, resolved, contract });
+```
+
+  </TabItem>
+  <TabItem label="Rust implementation sketch">
+
+```rust
+struct PlaneChild<'a> { id: &'a str, basis: f32, min: f32 }
+struct PlaneSpec<'a> {
+    axis: Axis,
+    fit: Fit,
+    gap: f32,
+    children: Vec<PlaneChild<'a>>,
+}
+
+let dashboard = PlaneSpec {
+    axis: Axis::Vertical,
+    fit: Fit::Elastic,
+    gap: 1.0,
+    children: vec![
+        PlaneChild { id: "filters", basis: 2.0, min: 1.0 },
+        PlaneChild { id: "queue", basis: 5.0, min: 3.0 },
+        PlaneChild { id: "detail", basis: 4.0, min: 2.0 },
+    ],
+};
+let layout = resolve_plane(&dashboard, 12.0);
+let data_table = ComponentContract::new("data-table")
+    .prop("selection", "row-column")
+    .prop("editable", "true");
+```
+
+  </TabItem>
+</Tabs>
+
+## 2. Editor + preview
+
+文書を編集しながらpreviewを読む形です。editorを左、previewを右に置く`Horizontal`は、選択中の情報へ面積を渡しつつ、previewを別のfloating cardへしません。`FormList`はfrontmatterのvalues/statusを所有し、子のdraftは未確定のままです。
+
+<Tabs>
+  <TabItem label="JavaScript implementation / usage">
+
+```js
+import { horizontal, resolvePlane, vertical } from "@ugoite/ikasue";
+
+const editor = vertical(["title", "slug", "body"], {
+  fit: "scroll",
+  gap: 1,
+  available: 8,
+});
+const page = horizontal(
+  [
+    { id: "editor", basis: 5, min: 3 },
+    { id: "preview", basis: 7, min: 4 },
+  ],
+  { fit: "elastic", gap: 1, available: 12 },
+);
+
+const contract = {
+  component: "form-list",
+  ownership:
+    "FormList owns values and status; Text owns local focus/draft only.",
+  childDataCue: "draft does not recolor saved data",
+};
+renderEditor({ editor, layout: resolvePlane(page), contract });
+```
+
+  </TabItem>
+  <TabItem label="Rust implementation sketch">
+
+```rust
+let page = PlaneSpec {
+    axis: Axis::Horizontal,
+    fit: Fit::Elastic,
+    gap: 1.0,
+    children: vec![
+        PlaneChild { id: "editor", basis: 5.0, min: 3.0 },
+        PlaneChild { id: "preview", basis: 7.0, min: 4.0 },
+    ],
+};
+let layout = resolve_plane(&page, 12.0);
+let form_list = FormListState {
+    values: saved_frontmatter,
+    status: validation_status,
+    child_focus: FocusState::Local,
+    child_draft: DraftState::Local,
+};
+// A child draft is not a saved-data status cue.
+```
+
+  </TabItem>
+</Tabs>
+
+## 3. Planning / calendar
+
+日、week、resourceを並べ替えるplanning surfaceです。dayを`Horizontal`のchildrenにし、各dayのeventを`Vertical`にすると、横方向の比較と縦方向の読み順が混ざりません。幅が足りないときは`wrap`または`scroll`を選べるので、後ろへ隠れたdayを無言で捨てません。
+
+<Tabs>
+  <TabItem label="JavaScript implementation / usage">
+
+```js
+import { horizontal, resolvePlane, vertical } from "@ugoite/ikasue";
+
+const days = horizontal(
+  [
+    { id: "mon", basis: 3, min: 2 },
+    { id: "tue", basis: 3, min: 2 },
+    { id: "wed", basis: 3, min: 2 },
+    { id: "thu", basis: 3, min: 2 },
+  ],
+  { fit: "scroll", gap: 1, available: 9 },
+);
+const monday = vertical(["standup", "review", "handoff"], {
+  fit: "wrap",
+  gap: 1,
+});
+
+const contract = {
+  component: "choice-group",
+  props: { direction: "horizontal", selected: "standard" },
+  axisRule: "days compare horizontally; events read vertically",
+};
+renderCalendar({ days: resolvePlane(days), monday, contract });
+```
+
+  </TabItem>
+  <TabItem label="Rust implementation sketch">
+
+```rust
+let days = PlaneSpec {
+    axis: Axis::Horizontal,
+    fit: Fit::Scroll,
+    gap: 1.0,
+    children: vec![
+        PlaneChild { id: "mon", basis: 3.0, min: 2.0 },
+        PlaneChild { id: "tue", basis: 3.0, min: 2.0 },
+        PlaneChild { id: "wed", basis: 3.0, min: 2.0 },
+    ],
+};
+let day_layout = resolve_plane(&days, 9.0);
+let day_events = PlaneSpec {
+    axis: Axis::Vertical,
+    fit: Fit::Elastic,
+    gap: 1.0,
+    children: events_for("mon"),
+};
+let choices = ChoiceGroup::new(Choice::Standard);
+```
+
+  </TabItem>
+</Tabs>
+
+## 4. Field / mobile service
+
+networkが不安定な現場で、job、写真、checklist、短い判断を扱う形です。縦のjob contextを保持し、actionだけを横に並べます。確認が必要なときも`BottomDialog`を下端rowとして追加し、地図やjob evidenceを上から覆いません。narrow widthでは`elastic`から`scroll`へ明示的に切り替えます。
+
+<Tabs>
+  <TabItem label="JavaScript implementation / usage">
+
+```js
+import { horizontal, resolvePlane, vertical } from "@ugoite/ikasue";
+
+const actions = horizontal(["arrived", "photo", "call"], {
+  fit: "wrap",
+  gap: 1,
+  available: 4,
+});
+const job = vertical(
+  [
+    "location",
+    "checklist",
+    "photos",
+    { id: "bottom-dialog", basis: 2, min: 2 },
+  ],
+  { fit: "scroll", gap: 1, available: 10 },
+);
+
+const contract = {
+  component: "bottom-dialog",
+  props: { intent: "confirm", dismiss: true },
+  preserves: ["location", "checklist", "photos"],
+};
+renderFieldJob({
+  actions: resolvePlane(actions),
+  job: resolvePlane(job),
+  contract,
+});
+```
+
+  </TabItem>
+  <TabItem label="Rust implementation sketch">
+
+```rust
+let job = PlaneSpec {
+    axis: Axis::Vertical,
+    fit: Fit::Scroll,
+    gap: 1.0,
+    children: vec![
+        PlaneChild { id: "location", basis: 3.0, min: 2.0 },
+        PlaneChild { id: "checklist", basis: 4.0, min: 3.0 },
+        PlaneChild { id: "photos", basis: 3.0, min: 2.0 },
+        PlaneChild { id: "bottom-dialog", basis: 2.0, min: 2.0 },
+    ],
+};
+let layout = resolve_plane(&job, 10.0);
+let dialog = BottomDialog::confirm().dismissible(true);
+```
+
+  </TabItem>
+</Tabs>
+
+## 5. Observability / incident console
+
+timeline、service status、incident detailを並べるconsoleです。timelineとservice listは別の責務として`Vertical`に置き、detailへのmessageは`MessageRegion`としてtargetを持たせます。loading中も`ProgressRegion`が以前のmetricsを残すので、incidentのevidenceをspinnerで消しません。
+
+<Tabs>
+  <TabItem label="JavaScript implementation / usage">
+
+```js
+import { horizontal, resolvePlane, vertical } from "@ugoite/ikasue";
+
+const timeline = vertical(["14:02 deploy", "14:07 alert", "14:11 mitigation"], {
+  fit: "scroll",
+  gap: 1,
+  available: 7,
+});
+const consolePlane = horizontal(
+  [
+    { id: "timeline", basis: 4, min: 3 },
+    { id: "incident", basis: 8, min: 5 },
+  ],
+  { fit: "elastic", gap: 1, available: 13 },
+);
+
+const contract = {
+  component: "message-region",
+  props: { kind: "warning", target: "incident" },
+  progress: { component: "progress-region", retainsPreviousContent: true },
+};
+renderIncidentConsole({
+  timeline,
+  layout: resolvePlane(consolePlane),
+  contract,
+});
+```
+
+  </TabItem>
+  <TabItem label="Rust implementation sketch">
+
+```rust
+let console = PlaneSpec {
+    axis: Axis::Horizontal,
+    fit: Fit::Elastic,
+    gap: 1.0,
+    children: vec![
+        PlaneChild { id: "timeline", basis: 4.0, min: 3.0 },
+        PlaneChild { id: "incident", basis: 8.0, min: 5.0 },
+    ],
+};
+let layout = resolve_plane(&console, 13.0);
+let message = MessageRegion::warning(RegionId::Incident);
+let progress = ProgressRegion::retain_previous(ProgressPattern::Wave);
+```
+
+  </TabItem>
+</Tabs>
+
+この5つは別のsite shapeですが、共通の判断は同じです。新しい情報の所属edge、順序を持つaxis、spaceを所有するplane、そして値/statusを所有するcomponentを先に決めます。詳細は[使い方](../guides/usage/)と[behavioral contracts](../guides/behavioral-contracts/)を参照してください。

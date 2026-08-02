@@ -1,38 +1,40 @@
 ---
 title: Design philosophy / 平面適応UIの思想
-description: The planar adaptive UI principles behind ikasue.
+description: The plane-centered principles behind ikasue.
 ---
 
-ikasue starts with a spatial question: if a new piece of information appears, where does it belong on the same plane? The answer is directional and negotiated. A right-side detail comes from the right, a navigation surface expands from the left, and a decision region enters from the bottom. Existing information is reallocated rather than hidden.
+ikasueは「新しい情報は、同じplaneのどこに入るべきか」という問いから始まります。右側のdetailは右から、下端の判断領域は下から入り、既存の情報は隠されずに再配分されます。edgeはmotionの起点であるだけでなく、情報の所属を示します。
 
-This is not an anti-decoration rule. It is a decision-making rule. The UI should preserve the relationship between an action and the information that makes the action understandable.
+これは装飾を嫌うための規則ではありません。actionと、そのactionを理解するためのevidenceの関係を保つための規則です。
 
-import Principles from '../../components/Principles.astro';
+import Principles from "../../components/Principles.astro";
 
 <Principles />
 
-## How to read the system
+## systemの読み方
 
-### Geometry is behavior / geometryが振る舞い
+### Planeは共有された作業面
 
-An edge is not just a motion origin. It tells the user where the new information belongs. A focus request is not just a style change. It is a request to give the current task enough area to be understood.
+componentをZ軸へ重ねる代わりに、planeの中で順序と面積を調整します。開発者は`PlaneSpec`のaxis、fit、gap、childrenを宣言し、`resolvePlane`は各childのoffset、size、line、overflowを返します。
 
-### Information first, editing second / 情報が先、編集が後
+### Axisは一度に一つ
 
-`Text` is readable by default. An editable capability adds an editor only when needed. This keeps workspaces calm while retaining a direct path to change metadata, form values, and cells.
+`vertical`と`horizontal`は子の順序を公開する小さなprimitiveです。収まる間は順序を保ち、必要になったときだけ`elastic`、`wrap`、`scroll`の契約へ適応します。layout ownerは子の内容やfocusを勝手に所有しません。
 
-### Selection owns area / 選択は面積を持つ
+### 情報が先、編集が後
 
-Selected content receives a quiet surface and a little more room. It is not reduced to a thin underline or a heavy border. Status colors remain semantic; black belongs to structure.
+`Text`は読む状態が標準です。editable capabilityを追加したときだけeditorを出し、確定値とdraftを区別します。`FormList`ではvaluesとstatusをFormListが所有し、childのfocus/draftは元データをrecolorしません。
 
-### The catalog is a contract
+### Selectionは面積を持つ
 
-Use the catalog to exercise defaults, change properties, reset state, and copy a JSON-like contract. A demo is not a substitute for product integration: it makes the spatial and keyboard contract visible before you compose it into your own app.
+選択は薄いunderlineや濃いborderだけではなく、静かな面積として示します。状態色は意味のあるstatusだけに使い、黒は構造に使います。
 
-## A useful design test
+### Card taxonomyを作らない
 
-Ask three questions during review:
+分類のために箱を増やしません。余白、順序、`Rule`、semantic headingで意味を分けます。新しい領域は既存のevidenceを覆わずに、所属するedgeから同じplaneへ入ります。
 
-- Can the user still read the evidence behind the decision?
-- Does new information enter from the edge where it belongs and push space into existence?
-- Does the same relationship remain understandable with keyboard navigation, text zoom, narrow width, and reduced motion?
+## 設計レビューの問い
+
+- 判断の根拠を、現在のworkspaceの中で読み続けられるか。
+- 新しい情報は所属するedgeから入り、既存の内容に場所を譲っているか。
+- keyboard、text zoom、narrow width、reduced motionでも同じ関係が理解できるか。
