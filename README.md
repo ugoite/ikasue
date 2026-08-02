@@ -6,7 +6,7 @@ This repository contains the distributable `@ugoite/ikasue` package, an interact
 
 - [Documentation source](docs-site/src/content/docs/index.md)
 - [Component matrix](docs-site/src/content/docs/components/index.mdx)
-- [Interactive catalog](http://localhost:5173/)
+- Standalone interactive catalog (`npm run catalog`)
 
 ## Development
 
@@ -17,9 +17,11 @@ mise run check
 npm run docs:dev
 ```
 
-The catalog is available at `http://localhost:5173/`. The Starlight docs run at `http://localhost:4321/`.
+The standalone catalog is served by `npm run catalog`, and the integrated catalog is available at `catalog/` from the local docs origin during development. GitHub Pages serves the same integrated route at `https://ugoite.github.io/ikasue/catalog/`; all docs links follow Astro’s configured base path.
 
-Useful documentation commands are `npm run docs:build` and `npm run docs:check`. From a clean checkout, install both lockfiles with `npm install` and `npm --prefix docs-site install`. Component demo links use `PUBLIC_CATALOG_URL` when set; otherwise they point to the local catalog at `http://localhost:5173/`.
+Useful documentation commands are `npm run docs:build` and `npm run docs:check`. From a clean checkout, install both lockfiles with `npm install` and `npm --prefix docs-site install`. Component demo links point to the integrated docs catalog, while `npm run catalog` keeps the standalone Vite catalog working locally.
+
+The English docs locale is manually authored and kept in sync with the root locale by `npm run docs:sync`. Do not use external machine-translation services when adding or updating documentation.
 
 ## Publishing
 

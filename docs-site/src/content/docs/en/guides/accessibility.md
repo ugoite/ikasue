@@ -1,9 +1,9 @@
 ---
-title: Accessibility / アクセシビリティ
+title: Accessibility
 description: Semantic, keyboard, motion, and resilience requirements for ikasue.
 ---
 
-Accessibility is a behavioral requirement, not a theme option. The planar language should make the information relationship clearer without asking assistive technology users to infer it from paint or motion.
+Accessibility is a behavioral requirement, not a theme option. The planar language should make information relationships clearer without asking assistive technology users to infer them from paint or motion.
 
 ## Semantic structure
 

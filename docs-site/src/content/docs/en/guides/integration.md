@@ -1,5 +1,5 @@
 ---
-title: Integration / 統合
+title: Integration
 description: Mount the framework-neutral runtime package in an existing application.
 ---
 
@@ -52,4 +52,4 @@ Import `@ugoite/ikasue/style.css` once at the application boundary. Give the mou
 
 The docs site includes the interactive catalog at the relative `catalog/` route, so component demo links stay on the same origin and follow the configured Astro base path. The standalone Vite catalog remains available from the root `npm run catalog` command.
 
-The English documentation locale is manually authored and reviewed against the source contracts. Do not add external machine-translated prose or rely on an external translation service when updating it.
+The English documentation is manually authored and reviewed alongside the source locale. Do not add external machine-translated prose or rely on an external translation service when updating it.

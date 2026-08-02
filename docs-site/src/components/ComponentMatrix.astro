@@ -1,32 +1,27 @@
 ---
+import { CATALOG_COMPONENTS } from "../../../src/catalog/metadata";
 import {
-  CATALOG_COMPONENTS,
-  CATALOG_GROUPS,
-} from "../../../src/catalog/metadata";
+  COMPONENT_UI_COPY,
+  componentCopy,
+} from "../data/component-copy";
+import { catalogPath, sitePath } from "../data/site-path";
 
-const groupNames = new Map(
-  CATALOG_GROUPS.map(([label, id]) => [id, label]),
-);
-const catalogOrigin = (
-  import.meta.env.PUBLIC_CATALOG_URL ?? "http://localhost:5173"
-).replace(/\/$/, "");
+const locale = Astro.currentLocale === "en" ? "en" : "ja";
+const ui = COMPONENT_UI_COPY[locale];
+const localePrefix = locale === "en" ? "en/" : "";
 ---
 
 <div class="component-matrix not-content">
-  <p class="matrix-note">
-    Source: <code>src/catalog/metadata.ts</code>. The matrix is rendered from the
-    same metadata as the interactive catalog, so it intentionally contains 24
-    runtime components.
-  </p>
+  <p class="matrix-note">{ui.matrixNote}</p>
   <div class="table-scroll">
     <table>
-      <caption>ikasue runtime component matrix / runtime component一覧</caption>
+      <caption>{ui.matrixCaption}</caption>
       <thead>
         <tr>
-          <th scope="col">Component</th>
-          <th scope="col">Group</th>
-          <th scope="col">Summary / 概要</th>
-          <th scope="col">Demo</th>
+          <th scope="col">{ui.component}</th>
+          <th scope="col">{ui.category}</th>
+          <th scope="col">{ui.summary}</th>
+          <th scope="col">{ui.demo}</th>
         </tr>
       </thead>
       <tbody>
@@ -34,18 +29,18 @@ const catalogOrigin = (
           CATALOG_COMPONENTS.map((component) => (
             <tr>
               <th scope="row">
-                <a href={`/components/${component.id}/`}>{component.name}</a>
-                <small>{component.ja}</small>
+                <a href={sitePath(`${localePrefix}components/${component.id}/`)}>{component.name}</a>
+                {locale === "ja" && <small>{component.ja}</small>}
               </th>
-              <td>{groupNames.get(component.cat)}</td>
-              <td>{component.summary}</td>
+              <td>{componentCopy(locale, component.id).category}</td>
+              <td>{componentCopy(locale, component.id).summary}</td>
               <td>
                 <a
-                  href={`${catalogOrigin}/?component=${component.id}`}
+                  href={catalogPath(component.id, locale)}
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Open catalog ↗
+                  {ui.openCatalog}
                 </a>
               </td>
             </tr>

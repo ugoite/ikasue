@@ -1,5 +1,5 @@
 ---
-title: Release and publishing / リリース
+title: Release and publishing
 description: Build, publish, and deploy ikasue from GitHub Actions.
 ---
 
@@ -36,4 +36,4 @@ The interactive catalog is part of the docs build at the relative `catalog/` rou
 
 `.github/workflows/package.yml` runs on `v*` tags, builds the package, and publishes `@ugoite/ikasue` to `https://npm.pkg.github.com`. It uses the workflow `GITHUB_TOKEN` with `packages: write`; it does not publish to npmjs.org.
 
-Keep the tag aligned with the package version, for example `v0.1.0`. Package consumers must configure the `@ugoite` scope for GitHub Packages as described in [Integration / 統合](integration/).
+Keep the tag aligned with the package version, for example `v0.1.0`. Package consumers must configure the `@ugoite` scope for GitHub Packages as described in [Integration](integration/).

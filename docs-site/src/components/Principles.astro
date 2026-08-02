@@ -1,10 +1,12 @@
 ---
-import { PRINCIPLES } from "../../../src/catalog/metadata";
+import { PRINCIPLES, PRINCIPLES_EN } from "../../../src/catalog/metadata";
+
+const principles = Astro.currentLocale === "en" ? PRINCIPLES_EN : PRINCIPLES;
 ---
 
 <div class="principles not-content">
   {
-    PRINCIPLES.map(([title, description], index) => (
+    principles.map(([title, description], index) => (
       <article>
         <span class="principle-index">{String(index + 1).padStart(2, "0")}</span>
         <div>
