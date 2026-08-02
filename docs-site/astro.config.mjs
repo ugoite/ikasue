@@ -33,7 +33,11 @@ export default defineConfig({
           label: "思想",
           translations: { en: "Philosophy" },
           items: [
-            { label: "概要", translations: { en: "Overview" }, link: "" },
+            {
+              label: "概要",
+              translations: { en: "Overview" },
+              link: "overview/",
+            },
             {
               label: "平面適応UIの思想",
               translations: { en: "Design philosophy" },
