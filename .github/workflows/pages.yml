@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Configure Pages
         id: pages
         uses: actions/configure-pages@v5
@@ -34,6 +36,11 @@ jobs:
         run: npm ci
       - name: Install documentation dependencies
         run: npm ci --prefix docs-site
+      - name: Check documentation
+        env:
+          DOCS_SYNC_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          DOCS_SYNC_HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.event.after }}
+        run: npm run docs:check
       - name: Build documentation
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
