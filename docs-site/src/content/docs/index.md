@@ -32,4 +32,4 @@ The docs use the same source metadata as the catalog. Each component page includ
 
 The package is `@ugoite/ikasue`. It exposes the framework-neutral `mountCatalog` API, metadata, state helpers, and the custom event contracts. The [integrated interactive catalog](catalog/) is the executable reference and is served under the same site base path as these docs. The standalone Vite catalog remains available from the root `npm run catalog` command.
 
-The root docs locale is Japanese (`ja`); an English `/en/` locale is reserved for the translated tree in a later phase. Until then, the existing Japanese docs remain at the site root.
+The root docs locale is Japanese (`ja`), and the manually authored English translation is available at `/en/`. Both trees are checked for matching paths and internal-link safety without sending content to an external translation service.
