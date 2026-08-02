@@ -1,5 +1,5 @@
 ---
-title: Usage / 使い方
+title: Usage
 description: Choose and compose ikasue components around negotiated space.
 ---
 

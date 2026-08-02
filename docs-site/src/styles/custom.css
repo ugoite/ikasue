@@ -5,6 +5,10 @@
   --sl-color-accent: #075985;
   --sl-color-accent-high: #0c4a6e;
   --sl-color-text-accent: #0e7490;
+  --sl-color-bg-nav: var(--sl-color-bg);
+  --sl-color-bg-sidebar: var(--sl-color-bg);
+  --sl-color-hairline: var(--sl-color-gray-5);
+  --sl-color-hairline-shade: var(--sl-color-gray-5);
 }
 
 :root[data-theme="dark"] {
@@ -12,6 +16,89 @@
   --sl-color-accent: #67e8f9;
   --sl-color-accent-high: #cffafe;
   --sl-color-text-accent: #67e8f9;
+  --sl-color-bg-nav: var(--sl-color-bg);
+  --sl-color-bg-sidebar: var(--sl-color-bg);
+  --sl-color-hairline: var(--sl-color-gray-5);
+  --sl-color-hairline-shade: var(--sl-color-gray-5);
+}
+
+/* Keep the shell on one plane. Borders show structure; surfaces do not create hierarchy. */
+[data-ikasue-frame] > .header {
+  border-block-end-color: var(--sl-color-hairline);
+  background-color: var(--sl-color-bg);
+}
+
+[data-ikasue-frame] .sidebar-pane {
+  background-color: var(--sl-color-bg);
+}
+
+[data-ikasue-frame] .sidebar-content {
+  padding-block-start: 1.25rem;
+}
+
+[data-ikasue-frame] .sidebar-content a {
+  border-radius: 0;
+}
+
+[data-ikasue-frame] .sidebar-content a[aria-current="page"],
+[data-ikasue-frame] .sidebar-content a[aria-current="page"]:hover,
+[data-ikasue-frame] .sidebar-content a[aria-current="page"]:focus {
+  border-inline-start: 2px solid var(--sl-color-accent);
+  padding-inline-start: calc(var(--sl-sidebar-item-padding-inline) - 2px);
+  color: var(--sl-color-text-accent);
+  background-color: var(--sl-color-accent-low);
+}
+
+[data-ikasue-frame] .sidebar-content ul ul li {
+  border-inline-start-color: var(--sl-color-hairline);
+}
+
+[data-ikasue-frame] starlight-menu-button button {
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: 0;
+  background-color: var(--sl-color-bg);
+  color: var(--sl-color-text);
+  box-shadow: none;
+}
+
+[data-ikasue-frame] starlight-menu-button [aria-expanded="true"] {
+  border-color: var(--sl-color-accent);
+  background-color: var(--sl-color-accent-low);
+  color: var(--sl-color-text-accent);
+}
+
+.content-panel + .content-panel {
+  border-top-color: var(--sl-color-hairline);
+}
+
+.sl-link-button,
+.pagination-links a,
+.sl-link-card,
+#starlight__mobile-toc .toggle {
+  border-radius: 0;
+}
+
+.pagination-links a,
+.sl-link-card,
+.sl-banner,
+#starlight__mobile-toc .dropdown {
+  box-shadow: none;
+}
+
+.sl-link-card,
+.sl-markdown-content .card {
+  background-color: transparent;
+  border-color: var(--sl-color-hairline);
+}
+
+.sl-markdown-content .card {
+  --sl-card-border: var(--sl-color-hairline);
+  --sl-card-bg: transparent;
+}
+
+:where(a, button, summary):focus-visible {
+  outline: 2px solid var(--sl-color-accent);
+  outline-offset: 2px;
 }
 
 .hero {

@@ -6,10 +6,10 @@ hero:
   tagline: One plane. Negotiated space. Readable work.
   actions:
     - text: Explore the component matrix
-      link: /components/
+      link: components/
       icon: right-arrow
     - text: Read the philosophy
-      link: /philosophy/
+      link: philosophy/
       variant: minimal
 ---
 
@@ -23,13 +23,13 @@ The docs use the same source metadata as the catalog. Each component page includ
 
 ## Start with the contract
 
-1. Read [Design philosophy / 平面適応UIの思想](/philosophy/) to understand the geometry.
-2. Choose a primitive from the [component matrix / 一覧](/components/).
-3. Read [Usage / 使い方](/guides/usage/) and [Integration / 統合](/guides/integration/) before mounting it.
-4. Validate the [behavioral contracts](/guides/behavioral-contracts/) and [accessibility contract](/guides/accessibility/) in your own workspace.
+1. Read [Design philosophy / 平面適応UIの思想](philosophy/) to understand the geometry.
+2. Choose a primitive from the [component matrix / 一覧](components/).
+3. Read [Usage / 使い方](guides/usage/) and [Integration / 統合](guides/integration/) before mounting it.
+4. Validate the [behavioral contracts](guides/behavioral-contracts/) and [accessibility contract](guides/accessibility/) in your own workspace.
 
 ## Package and catalog
 
-The package is `@ugoite/ikasue`. It exposes the framework-neutral `mountCatalog` API, metadata, state helpers, and the custom event contracts. The [interactive catalog](http://localhost:5173/) is the executable reference; set `PUBLIC_CATALOG_URL` when the catalog is available at another URL.
+The package is `@ugoite/ikasue`. It exposes the framework-neutral `mountCatalog` API, metadata, state helpers, and the custom event contracts. The [integrated interactive catalog](catalog/) is the executable reference and is served under the same site base path as these docs. The standalone Vite catalog remains available from the root `npm run catalog` command.
 
-The docs are bilingual-friendly rather than locale-split: stable English API names stay copyable, and Japanese explanations stay next to the contract they describe.
+The root docs locale is Japanese (`ja`), and the manually authored English translation is available at `/en/`. Both trees are checked for matching paths and internal-link safety without sending content to an external translation service.
