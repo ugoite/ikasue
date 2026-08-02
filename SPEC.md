@@ -58,6 +58,14 @@ The separate conceptual page is:
 - pre-commit runs formatting, linting, YAML/action checks, and project validation before commits.
 - Work is implemented in Git worktrees with focused commits so each phase can be reviewed or reverted independently.
 
+## Phase 3 documentation and deployment contract
+
+- `docs-site/` is a real Astro + Starlight site. Its component matrix and page headers consume `src/catalog/metadata.ts`; the documentation must contain one separate Design philosophy page and one page for every runtime component in `CATALOG_COMPONENTS`.
+- Component pages are bilingual-friendly: English API names and contract terms remain stable while Japanese summaries and practical guidance explain the intended interaction model.
+- The root scripts `docs:dev`, `docs:build`, and `docs:check` invoke the locked `docs-site/` toolchain. A root build must remain independent from the docs build, while CI runs both.
+- GitHub Pages is the only documentation host. `pages.yml` must use `actions/configure-pages`, `actions/upload-pages-artifact`, and `actions/deploy-pages`, with `pages: write` and `id-token: write` only where required. The Astro base path is derived from `GITHUB_REPOSITORY` for project Pages sites.
+- `package.yml` publishes only `@ugoite/ikasue` to `https://npm.pkg.github.com` on `v*` tags using `GITHUB_TOKEN` and `packages: write`; no npmjs.org or third-party deployment target is configured.
+
 ## Necessary additions made during implementation
 
 - Component pages are addressable with a `?component=<id>` query parameter so demos can be linked from documentation and bug reports without adding a second navigation model.
