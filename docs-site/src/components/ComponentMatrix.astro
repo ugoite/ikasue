@@ -1,0 +1,106 @@
+---
+import {
+  CATALOG_COMPONENTS,
+  CATALOG_GROUPS,
+} from "../../../src/catalog/metadata";
+
+const groupNames = new Map(
+  CATALOG_GROUPS.map(([label, id]) => [id, label]),
+);
+const catalogOrigin = (
+  import.meta.env.PUBLIC_CATALOG_URL ?? "http://localhost:5173"
+).replace(/\/$/, "");
+---
+
+<div class="component-matrix not-content">
+  <p class="matrix-note">
+    Source: <code>src/catalog/metadata.ts</code>. The matrix is rendered from the
+    same metadata as the interactive catalog, so it intentionally contains 24
+    runtime components.
+  </p>
+  <div class="table-scroll">
+    <table>
+      <caption>ikasue runtime component matrix / runtime component一覧</caption>
+      <thead>
+        <tr>
+          <th scope="col">Component</th>
+          <th scope="col">Group</th>
+          <th scope="col">Summary / 概要</th>
+          <th scope="col">Demo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          CATALOG_COMPONENTS.map((component) => (
+            <tr>
+              <th scope="row">
+                <a href={`/components/${component.id}/`}>{component.name}</a>
+                <small>{component.ja}</small>
+              </th>
+              <td>{groupNames.get(component.cat)}</td>
+              <td>{component.summary}</td>
+              <td>
+                <a
+                  href={`${catalogOrigin}/?component=${component.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open catalog ↗
+                </a>
+              </td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .component-matrix {
+    margin-block: 1.5rem;
+  }
+
+  .matrix-note {
+    border-inline-start: 3px solid var(--sl-color-text-accent);
+    padding-inline-start: 1rem;
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    min-width: 54rem;
+    border-collapse: collapse;
+    font-size: var(--sl-text-sm);
+  }
+
+  th,
+  td {
+    border-block-end: 1px solid var(--sl-color-gray-5);
+    padding: 0.75rem;
+    text-align: start;
+    vertical-align: top;
+  }
+
+  thead th {
+    color: var(--sl-color-white);
+    background: var(--sl-color-gray-2);
+  }
+
+  tbody th {
+    min-width: 10rem;
+  }
+
+  tbody th a {
+    display: block;
+  }
+
+  small {
+    display: block;
+    color: var(--sl-color-gray-3);
+    font-weight: 400;
+  }
+</style>
