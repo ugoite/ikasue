@@ -45,7 +45,7 @@ The developer declares order, axis, and adaptation policy. The plane owner resol
 
 - Properties update live and can be reset to documented defaults.
 - `Text` is readable by default and gains editing capability only when needed. Confirmed values return through normal state updates; the public API does not require custom event names.
-- `FormList` owns values, validation status, and confirmed results. Child focus and draft are local editing state and must not recolor source data before confirmation.
+- `FormList` owns values, validation status, and confirmed results. Child focus and draft are local editing state; blur, Enter, and Tab do not commit them. An explicit external-send action applies all drafts together, then clears the child draft affordance. A draft that returns to its original value remains clean when sent, and local draft styling is neutral rather than a created/modified source-status color.
 - `Vertical` and `Horizontal` preserve ordered children while applying their declared fit policy.
 - Selection, status, and progress use semantic color plus a non-color cue.
 - `DataTable` treats the cell as the task unit and keeps selection, peer context, clipboard behavior, and editing explicit.
