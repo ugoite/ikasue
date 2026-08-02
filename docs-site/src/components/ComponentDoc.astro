@@ -7,6 +7,7 @@ import {
 } from "../../../src/catalog/metadata";
 import type { CatalogComponentId } from "../../../src/catalog/types";
 import { COMPONENT_GUIDANCE } from "../data/component-guidance";
+import { catalogPath } from "../data/site-path";
 
 interface Props {
   id: CatalogComponentId;
@@ -38,9 +39,6 @@ const contract = JSON.stringify(
   null,
   2,
 );
-const catalogOrigin = (
-  import.meta.env.PUBLIC_CATALOG_URL ?? "http://localhost:5173"
-).replace(/\/$/, "");
 ---
 
 <div class="component-doc">
@@ -48,7 +46,7 @@ const catalogOrigin = (
   <p class="lede">{metadata.summary}</p>
 
   <div class="doc-links">
-    <a href={`${catalogOrigin}/?component=${metadata.id}`} target="_blank" rel="noreferrer">
+    <a href={catalogPath(metadata.id)} target="_blank" rel="noreferrer">
       Open interactive catalog ↗
     </a>
     <span>Demo id: <code>{metadata.demo}</code></span>

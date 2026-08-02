@@ -42,4 +42,4 @@ The package's public mount API is intentionally small: `label`, `component`, and
 
 Use `Stack` and `Cluster` for local order and wrapping. Add `Rule` only at a meaningful boundary. When a component needs to change the allocation of a larger region, use the dedicated layout contract rather than adding a new wrapper surface.
 
-The [component matrix](/components/) is the fastest way to compare props and jump to a working demo. Every page includes the current metadata defaults and a copyable contract.
+The [component matrix](../components/) is the fastest way to compare props and jump to a working demo. Every page includes the current metadata defaults and a copyable contract.
