@@ -508,8 +508,8 @@
     width: 100%;
     border: 0;
     border-bottom: 1px solid var(--line-strong);
-    padding: 7px 24px 7px 0;
-    background: transparent;
+    padding: 7px 24px 7px 8px;
+    background: var(--selection);
     color: var(--ink);
   }
 
@@ -533,7 +533,7 @@
   }
 
   .ikasue-root .property-control input[type="text"] {
-    padding-right: 2px;
+    padding-right: 8px;
   }
 
   .ikasue-root .property-control select {
@@ -541,9 +541,10 @@
     cursor: pointer;
   }
 
-  .ikasue-root .property-control select:focus-visible {
+  .ikasue-root .property-control select:focus-visible,
+  .ikasue-root .property-control input[type="text"]:focus-visible {
     outline: 2px solid var(--ink);
-    outline-offset: 3px;
+    outline-offset: 1px;
   }
 
   .ikasue-root .switch-control {
@@ -887,9 +888,9 @@
     grid-column: 1 / -1;
     width: 100%;
     border: 0;
-    border-bottom: 1.5px solid var(--ink);
-    background: transparent;
-    padding: 2px 1px 4px;
+    border-bottom: 1.5px solid var(--line-strong);
+    background: var(--selection);
+    padding: 4px 8px;
     min-height: 30px;
     color: var(--ink);
   }
@@ -913,7 +914,7 @@
   .ikasue-root .info-text input:focus-visible,
   .ikasue-root .info-text textarea:focus-visible {
     outline: 2px solid var(--ink);
-    outline-offset: 3px;
+    outline-offset: 1px;
   }
 
   .ikasue-root .info-text textarea {
