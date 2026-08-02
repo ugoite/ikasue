@@ -27,7 +27,6 @@ export const CATALOG_GROUPS = [
   ["思想と契約", "philosophy"],
   ["基盤", "foundation"],
   ["配置", "layout"],
-  ["ナビゲーション", "navigation"],
   ["アクション", "action"],
   ["情報と入力", "input"],
   ["データ", "data"],
@@ -41,7 +40,7 @@ export const CATALOG_CONCEPTS = [
     name: "Design philosophy",
     ja: "平面適応UIの思想",
     summary:
-      "すべてのUIを一枚の平面上の空間配分として扱う。重ねず、出現元の辺から既存領域を押して場所を作る。",
+      "すべてのUIを一枚の平面上の順序と空間配分として扱う。必要な領域は同じ平面の中で場所を譲り、重なりを作らない。",
     demo: "philosophy",
     props: [],
   },
@@ -54,7 +53,7 @@ export const CATALOG_COMPONENTS = [
     name: "Developer model",
     ja: "コンポーネント契約",
     summary:
-      "表示専用と入力専用を分断せず、情報componentへ編集能力を付与する。配置は固定column数ではなくaxisとfocus要求で決まる。",
+      "開発者は順序、軸、適応方針を宣言する。領域間の調停やイベント配線はランタイムが担う。",
     demo: "developer",
     props: [],
   },
@@ -87,7 +86,7 @@ export const CATALOG_COMPONENTS = [
     name: "Text",
     ja: "情報テキスト",
     summary:
-      "静的textとtext inputを同じcomponentとして扱う。editable capabilityがある場合だけ破線と編集cursorを持つ。",
+      "静的textとtext inputを同じcomponentとして扱う。editable capabilityがある場合だけ編集状態を持つ。",
     demo: "text",
     props: [
       p("editable", "編集可能", "boolean", true),
@@ -139,151 +138,31 @@ export const CATALOG_COMPONENTS = [
     ],
   },
   {
-    id: "stack",
+    id: "vertical",
     cat: "layout",
-    name: "Stack",
-    ja: "縦配置",
+    name: "Vertical",
+    ja: "縦平面",
     summary:
-      "縦方向のde facto primitive。順序、gap、alignmentだけを責務にし、装飾やcontainer surfaceを持たない。",
-    demo: "stack",
+      "順序付きの子要素を縦方向の一枚の平面へ置く。収まらないときはelastic、wrap、scrollから選んで適応する。",
+    demo: "plane",
     props: [
-      p("gap", "gap", "select", "md", ["xs", "sm", "md", "lg"]),
-      p("align", "alignment", "select", "stretch", [
-        "start",
-        "center",
-        "stretch",
-      ]),
+      p("fit", "適応", "select", "elastic", ["elastic", "wrap", "scroll"]),
+      p("gap", "間隔", "select", "md", ["none", "sm", "md", "lg"]),
+      p("items", "項目数", "select", "4", ["3", "4", "6"]),
     ],
   },
   {
-    id: "cluster",
+    id: "horizontal",
     cat: "layout",
-    name: "Cluster",
-    ja: "横配置",
+    name: "Horizontal",
+    ja: "横平面",
     summary:
-      "横方向のde facto primitive。入らない場合はwrapするが、作業領域の自動退避はAxisFlowへ委ねる。",
-    demo: "cluster",
+      "順序付きの子要素を横方向の一枚の平面へ置く。収まらないときは同じ適応方針で縮小、折返し、scrollを選べる。",
+    demo: "plane",
     props: [
-      p("gap", "gap", "select", "sm", ["xs", "sm", "md"]),
-      p("wrap", "wrap", "boolean", true),
-      p("active", "active child", "select", "2", ["none", "1", "2", "3"]),
-    ],
-  },
-  {
-    id: "focus-plane",
-    cat: "layout",
-    name: "FocusPlane",
-    ja: "焦点配分面",
-    summary:
-      "複数領域のうちfocusされた領域へ幅を譲る。desktopは境界線上の矢印、mobileは画面端の矢印で隣の領域へ移る。",
-    demo: "focus",
-    props: [
-      p("initial", "初期focus", "select", "primary", [
-        "primary",
-        "balanced",
-        "secondary",
-      ]),
-      p("focusOnInput", "内部focusで拡張", "boolean", true),
-      p("collapse", "0幅を許可", "boolean", true),
-    ],
-  },
-  {
-    id: "focus-region",
-    cat: "layout",
-    name: "FocusRegion",
-    ja: "焦点要求",
-    summary:
-      "子componentが親FocusPlaneを直接参照せず、eventで必要な領域と比率を要求する。",
-    demo: "focus-request",
-    props: [
-      p("target", "要求先", "select", "secondary", [
-        "primary",
-        "balanced",
-        "secondary",
-      ]),
-      p("scope", "探索", "select", "nearest", ["nearest", "named"]),
-    ],
-  },
-  {
-    id: "axis-flow",
-    cat: "layout",
-    name: "AxisFlow",
-    ja: "無限軸配置",
-    summary:
-      "横または縦に任意数の領域を受け入れ、入らない場合はその軸の終端にnavigationを自動生成する。",
-    demo: "axis",
-    props: [
-      p("axis", "軸", "select", "horizontal", ["horizontal", "vertical"]),
-      p("items", "項目数", "select", "10", ["4", "7", "10"]),
-      p("strategy", "focus配分", "select", "elastic", [
-        "equal",
-        "elastic",
-        "single",
-      ]),
-    ],
-  },
-  {
-    id: "edge-region",
-    cat: "layout",
-    name: "EdgeRegion",
-    ja: "辺から追加する領域",
-    summary:
-      "右の領域は右から、下の領域は下から現れ、既存内容を押し縮めて場所を作る。overlayしない。",
-    demo: "edge",
-    props: [
-      p("edge", "出現辺", "select", "right", ["right", "left", "bottom"]),
-      p("initial", "初期状態", "select", "closed", ["closed", "open"]),
-    ],
-  },
-  {
-    id: "bottom-dock",
-    cat: "layout",
-    name: "BottomDock",
-    ja: "下端作業領域",
-    summary:
-      "上の情報を維持しながら下から作業領域を追加する。system dialogや短い確認にも使える。",
-    demo: "bottom-dock",
-    props: [
-      p("size", "高さ", "select", "medium", ["small", "medium", "large"]),
-      p("purpose", "用途", "select", "confirm", [
-        "confirm",
-        "detail",
-        "command",
-      ]),
-    ],
-  },
-  {
-    id: "edge-nav",
-    cat: "navigation",
-    name: "EdgeNav",
-    ja: "押し出しナビゲーション",
-    summary:
-      "左端のrailを恒常的な手掛かりにし、開くと横から伸びてmain contentを押す。重ならない。",
-    demo: "edge-nav",
-    props: [
-      p("initial", "初期", "select", "closed", ["closed", "open"]),
-      p("selected", "選択", "select", "workspace", [
-        "home",
-        "workspace",
-        "settings",
-      ]),
-    ],
-  },
-  {
-    id: "elastic-tabs",
-    cat: "navigation",
-    name: "ElasticTabs",
-    ja: "伸縮タブ",
-    summary:
-      "active tabへ面積と淡い面を与える。panelは選択方向から入り、奥行きや浮遊を使わない。",
-    demo: "tabs",
-    props: [
-      p("selected", "選択", "select", "1", ["0", "1", "2"]),
-      p("activation", "activation", "select", "automatic", [
-        "automatic",
-        "manual",
-      ]),
-      p("directional", "方向motion", "boolean", true),
+      p("fit", "適応", "select", "elastic", ["elastic", "wrap", "scroll"]),
+      p("gap", "間隔", "select", "sm", ["none", "sm", "md", "lg"]),
+      p("items", "項目数", "select", "4", ["3", "4", "6"]),
     ],
   },
   {
@@ -341,7 +220,7 @@ export const CATALOG_COMPONENTS = [
     name: "ChoiceGroup",
     ja: "単一選択",
     summary:
-      "radio circleを使わず、選択された意味へ面積を譲る。横・縦とも同じselection grammarを使う。",
+      "選択された意味へ面積を譲る。横・縦とも同じselection grammarを使う。",
     demo: "choice",
     props: [
       p("direction", "方向", "select", "horizontal", [
@@ -390,8 +269,7 @@ export const CATALOG_COMPONENTS = [
     cat: "data",
     name: "HistoryGutter",
     ja: "変更履歴",
-    summary:
-      "VS Codeの履歴感覚を洗練し、線と点だけでrevisionを示す。選択revisionだけを面で強調する。",
+    summary: "線と点だけでrevisionを示し、選択revisionだけを面で強調する。",
     demo: "history",
     props: [
       p("selected", "revision", "select", "current", [
@@ -419,8 +297,7 @@ export const CATALOG_COMPONENTS = [
     cat: "feedback",
     name: "MessageRegion",
     ja: "領域連動メッセージ",
-    summary:
-      "短いstatus messageを対象領域へ結び、押すとその領域が拡張され、薄くstatus色で強調される。",
+    summary: "短いstatus messageを対象領域へ結び、押すとその領域へ注意を移す。",
     demo: "message",
     props: [
       p("kind", "status", "select", "info", [
@@ -470,20 +347,16 @@ export const PAGE_IDS = CATALOG_PAGES.map(
 
 export const PRINCIPLES = [
   [
-    "Flat Plane",
-    "すべてのcomponentは同じ平面に置く。新しい領域は既存領域へ重ならず、grid trackやflowを変更して場所を作る。",
+    "One Plane",
+    "すべてのcomponentは同じ平面に置く。新しい領域は既存領域へ重ならず、flowの中で場所を作る。",
   ],
   [
-    "Directional Origin",
-    "右の内容は右から、左navは左から、bottom dialogは下から現れる。motionは情報の地理を説明する。",
+    "One Axis at a Time",
+    "開発者が選ぶのはverticalまたはhorizontalの一軸だけ。複雑な領域調停はランタイムが内部で行う。",
   ],
   [
-    "Space Negotiation",
-    "表示領域は固定spanではなく、focus、内容量、viewport、優先度から必要な幅と高さを交渉する。",
-  ],
-  [
-    "Infinite Axis, Finite Viewport",
-    "横にも縦にも任意数を受け入れる。収まらない場合はoverflowさせず、その軸の端にnavigationを生やす。",
+    "Simple Adaptation",
+    "収まる間は順序とサイズを保ち、必要になったときだけelastic、wrap、scrollへ決定的に適応する。",
   ],
   [
     "Information Is Editable",
@@ -495,7 +368,7 @@ export const PRINCIPLES = [
   ],
   [
     "No Card Taxonomy",
-    "分類のために箱を増やさない。余白、境界線、順序、edge navigationで意味を分ける。",
+    "分類のために箱を増やさない。余白、境界線、順序で意味を分ける。",
   ],
   [
     "Semantic Color Only",
@@ -505,28 +378,20 @@ export const PRINCIPLES = [
     "Readable During Work",
     "loadingや更新中も以前の内容を残し、処理対象の領域だけを黒いmotionで示す。",
   ],
-  [
-    "Keyboard Is Geometry",
-    "Tab、矢印、Home/End、copy/pasteが視覚的な移動方向と一致する。",
-  ],
 ] as const;
 
 export const PRINCIPLES_EN = [
   [
-    "Flat Plane",
-    "Place every component on the same plane. New regions make room by changing grid tracks or flow instead of covering existing regions.",
+    "One Plane",
+    "Place every component on the same plane. New regions make room in the flow instead of covering existing regions.",
   ],
   [
-    "Directional Origin",
-    "Right-side content enters from the right, left navigation from the left, and bottom dialogs from below. Motion explains the geography of information.",
+    "One Axis at a Time",
+    "The developer chooses only one axis, vertical or horizontal. Runtime behavior handles internal space negotiation.",
   ],
   [
-    "Space Negotiation",
-    "Display regions negotiate the width and height they need from focus, content, viewport, and priority instead of relying on fixed spans.",
-  ],
-  [
-    "Infinite Axis, Finite Viewport",
-    "Accept any number of items on either axis. When they no longer fit, add navigation at that axis edge instead of hiding them in overflow.",
+    "Simple Adaptation",
+    "Preserve order and size while content fits, then deterministically adapt with elastic, wrap, or scroll behavior.",
   ],
   [
     "Information Is Editable",
@@ -534,51 +399,33 @@ export const PRINCIPLES_EN = [
   ],
   [
     "Selection Owns Area",
-    "Show selection with a little more area and a quiet surface, not only an underline or heavy border. Keep unselected content calm.",
+    "Show selection with a little more area and a quiet surface, not only an underline or heavy border.",
   ],
   [
     "No Card Taxonomy",
-    "Do not add boxes to create categories. Separate meaning with space, boundaries, order, and edge navigation.",
+    "Do not add boxes to create categories. Separate meaning with space, boundaries, and order.",
   ],
   [
     "Semantic Color Only",
-    "Black is structural. Use blue, green, red, and yellow for state only; do not scatter them as a decorative palette.",
+    "Black is structural. Use blue, green, red, and yellow for state only.",
   ],
   [
     "Readable During Work",
     "Keep previous content visible during loading or updates, and show motion only on the region being processed.",
-  ],
-  [
-    "Keyboard Is Geometry",
-    "Tab, arrows, Home/End, and copy/paste should follow the same directions as visual movement.",
   ],
 ] as const;
 
 const PHILOSOPHY: Partial<Record<CatalogPageId, string>> = {
   "theme-root":
     "themeは装飾presetではなく、全componentが共有する判断規則。白、黒、OS fontを固定基盤とし、選択面の濃度、線、密度、motionだけを調整する。",
-  text: "情報は最初からeditorではない。読む状態を標準にし、editable capabilityがある情報だけ破線とcursorを持つ。編集中は破線を消し、単一の黒線だけを表示するため二重線にならない。",
+  text: "情報は最初からeditorではない。読む状態を標準にし、editable capabilityがある情報だけ編集状態を持つ。",
   rule: "境界線はcontainerを作るためではなく、意味の切れ目を一度だけ示す。二重囲いと階層surfaceを作らない。",
   "status-icon":
     "反復業務ではstatus labelを読まなくても意味が身につく。iconと色を主表示にし、言語説明はhover、focus、accessible nameへ退避する。",
-  stack:
-    "Stackは縦順序だけを保証する。focusによる伸縮やoverflow navigationを含めず、予測可能な基礎として保つ。",
-  cluster:
-    "Clusterは横配置とwrapだけを保証する。選択childの軽い拡張は許すが、複雑な領域退避はAxisFlowの責務。",
-  "focus-plane":
-    "FocusPlaneはtaskへ空間を譲る。separatorは装飾ではなく隣接領域の方向を示す操作線で、自由dragより意味ある状態遷移を優先する。",
-  "focus-region":
-    "visual treeとcomponent treeを疎結合にする。子は「secondaryをexpandedに」と要求し、最も近いFocusPlaneがviewportに応じて実際の比率を決める。",
-  "axis-flow":
-    "無限に要素を受け入れるAPIと有限viewportを両立する。収まる間は同一平面に並べ、収まらなくなった瞬間に終端navigationへ変換する。",
-  "edge-region":
-    "新規detailやtoolは、その存在場所と同じ辺から追加する。重なりではなくtrackの増加なので、元の情報との位置関係が壊れない。",
-  "bottom-dock":
-    "確認や補助情報は下端の新しいrowとして追加する。上の文脈がそのまま読めるため、判断の根拠を隠さない。",
-  "edge-nav":
-    "navigationは必要なときだけ語彙を展開する。閉じてもrailとiconが地理的手掛かりとして残り、開くとmainを押して平面を再配分する。",
-  "elastic-tabs":
-    "選択された情報へ面積を譲ることで、下線だけより明確に現在位置を示す。contentはtabの相対位置と同じ方向から交代する。",
+  vertical:
+    "Verticalは子要素の順序だけを開発者から受け取り、利用可能な高さに応じたサイズ調整を内部で決める。",
+  horizontal:
+    "Horizontalは子要素の順序だけを開発者から受け取り、利用可能な幅に応じたサイズ調整を内部で決める。",
   "icon-action":
     "actionは業務で反復されるほどiconだけで理解できる。初回学習と多言語対応はtooltip、accessible name、documentationが担う。",
   "action-strip":
@@ -586,17 +433,17 @@ const PHILOSOPHY: Partial<Record<CatalogPageId, string>> = {
   "boolean-text":
     "booleanの本体はboxではなく文章の意味。falseは薄い文章、trueはcheckと選択面で示し、文章全体をhit targetにする。",
   "choice-group":
-    "選択肢の中で現在値へ面積を渡す。navigationのElasticTabsと同じgrammarを使うが、値は即時commitする。",
+    "選択肢の中で現在値へ面積を渡す。値は即時commitし、横・縦で同じgrammarを保つ。",
   "form-list":
     "formはboxの集合ではなく情報の順序。labelの下にTextを置き、Tabはeditable capabilityを持つ情報だけを移動する。",
   "data-table":
-    "cellが操作単位。選択cellを明確にしつつrowとcolumnの文脈は淡く残す。indexやlock iconを既定表示しない。",
+    "cellが操作単位。選択cellを明確にしつつrowとcolumnの文脈は淡く残す。",
   "history-gutter":
     "変更履歴は別cardではなく、現在情報の横にある時間軸。線、点、差分色だけでrevisionを示す。",
   "progress-region":
     "中央spinnerは対象が不明になる。対象region全体へ黒いmotionを流し、以前の情報を読めるままにする。",
   "message-region":
-    "messageは通知棚へ積まず、対象regionへのlinkとして機能する。押すとその領域へ空間とstatus色を一時的に渡す。",
+    "messageは通知棚へ積まず、対象regionへのlinkとして機能する。押すとその領域へ注意を移す。",
   "bottom-dialog":
     "dialogもZ軸へ逃げない。下端からrowを追加し、元の情報を押し縮める。不可逆判断でも根拠を隠さない。",
 };
@@ -604,7 +451,7 @@ const PHILOSOPHY: Partial<Record<CatalogPageId, string>> = {
 export function componentPhilosophy(id: CatalogPageId): string {
   return (
     PHILOSOPHY[id] ??
-    "このcomponentはikasueの平面、境界、選択、方向motionの規則に従う。"
+    "このcomponentはikasueの平面、境界、選択、順序の規則に従う。"
   );
 }
 
@@ -615,15 +462,15 @@ const META: Partial<Record<CatalogPageId, readonly [string, string, string]>> =
       "command検索のように常時入力が必要な欄",
       "Enter/F2で編集、Escape取消、Tabで確定移動",
     ],
-    "focus-plane": [
-      "一覧とdetail、文書と履歴、検索とpreview",
-      "単純な二列文章layout",
-      "境界矢印、内部focus、layout-request",
+    vertical: [
+      "順序が意味を持つ文章、form、縦長の作業列",
+      "横方向の関連項目を無理に詰め込むこと",
+      "Tab、ArrowDown/Up、Home/End",
     ],
-    "axis-flow": [
-      "多数のdashboard region、tool群、可変workspace",
-      "単純な短いrow",
-      "edge navigation、Arrow keys",
+    horizontal: [
+      "toolbar、関連action、横方向の比較項目",
+      "読み順が縦になる内容を横へ押し込むこと",
+      "Tab、ArrowLeft/Right、Home/End",
     ],
     "bottom-dialog": [
       "削除確認、短いsystem判断、補助command",
@@ -634,11 +481,6 @@ const META: Partial<Record<CatalogPageId, readonly [string, string, string]>> =
       "業務データ、copy/paste、inline edit",
       "layout目的のtable",
       "Arrow keys、Ctrl/Cmd+C/V、Enter/F2",
-    ],
-    "elastic-tabs": [
-      "同一階層の単一panel切替",
-      "複数panelの同時表示",
-      "ArrowLeft/Right、Home/End、Enter/Space",
     ],
   };
 

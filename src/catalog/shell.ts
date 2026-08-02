@@ -227,6 +227,7 @@ export function mountCatalog(
       const control = element(document, "div", "property-control");
       const inputId = `catalog-${component.id}-${property.key}`;
       if (property.type === "select") {
+        control.classList.add("select-control");
         const select = element(document, "select");
         select.id = inputId;
         select.dataset.prop = property.key;
@@ -460,19 +461,19 @@ export function mountCatalog(
         "静的textは editable: false、入力可能なtextは editable: true。別componentではない。selectやdateもeditor kindの差であり、通常時は同じ情報表示になる。",
       ),
     );
-    const layout = appendSection(main, "空間要求model");
+    const layout = appendSection(main, "平面model");
     const layoutSpec = element(document, "pre", "code-block");
-    layoutSpec.textContent = `LayoutRequest {
-  axis: Horizontal | Vertical,
-  target: RegionId,
-  focus: Hidden | Compact | Balanced | Expanded | Exclusive,
-  origin_edge: Left | Right | Bottom | Top
+    layoutSpec.textContent = `PlaneSpec {
+  axis: Vertical | Horizontal,
+  fit: Elastic | Wrap | Scroll,
+  children: [PlaneChild],
+  gap: Number
 }`;
     layout.append(
       layoutSpec,
       paragraph(
         document,
-        "子componentは親のCSSやDOMを直接変更しない。bubbling eventまたはRust commandで空間要求を送る。",
+        "開発者は一軸の順序だけを宣言し、runtimeが利用可能な空間に合わせて子要素を縮小、折返し、またはscrollへ適応する。",
       ),
     );
     const output = appendSection(main, "出力例");
@@ -483,7 +484,7 @@ export function mountCatalog(
     appendDefinitionList(published, [
       ["@ugoite/ikasue", "dependency-free DOM enhancerとCustom Elements。"],
       ["@ugoite/ikasue-solid", "ugoite用の薄いSolid adapter。"],
-      ["ikasue-protocol", "RustのUiDocument、UiEvent、LayoutRequest。"],
+      ["ikasue-protocol", "RustのUiDocumentとPlaneSpecを同じ契約で扱う。"],
       ["ikasue-html", "semantic HTMLとsingle HTML asset生成。"],
     ]);
     grid.append(main, side);
