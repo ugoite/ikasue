@@ -24,12 +24,7 @@ import {
   serializeCatalogQuery,
   serializeComponentQuery,
 } from "./catalog/state";
-import {
-  COMMIT_EVENT,
-  LAYOUT_REQUEST_EVENT,
-  dispatchCommit,
-  dispatchLayoutRequest,
-} from "./catalog/events";
+import { horizontal, normalizePlane, resolvePlane, vertical } from "./plane";
 import type { CatalogMount, CatalogMountOptions } from "./catalog/shell";
 import type {
   CatalogCategoryId,
@@ -43,9 +38,18 @@ import type {
   CatalogProperty,
   CatalogPropertyType,
   CatalogPropertyValue,
-  CommitDetail,
-  LayoutRequestDetail,
 } from "./catalog/types";
+import type {
+  PlaneAxis,
+  PlaneChild,
+  PlaneChildInput,
+  PlaneFit,
+  PlaneInput,
+  PlaneOptions,
+  PlaneSpec,
+  ResolvedPlane,
+  ResolvedPlaneChild,
+} from "./plane";
 
 export const PACKAGE_NAME = "@ugoite/ikasue";
 export const ROOT_CLASS_NAME = "ikasue-root";
@@ -64,8 +68,15 @@ export type {
   CatalogProperty,
   CatalogPropertyType,
   CatalogPropertyValue,
-  CommitDetail,
-  LayoutRequestDetail,
+  PlaneAxis,
+  PlaneChild,
+  PlaneChildInput,
+  PlaneFit,
+  PlaneInput,
+  PlaneOptions,
+  PlaneSpec,
+  ResolvedPlane,
+  ResolvedPlaneChild,
 };
 
 export {
@@ -76,19 +87,19 @@ export {
   COMPONENT_IDS,
   CONCEPT_IDS,
   DEFAULT_COMPONENT_ID,
-  COMMIT_EVENT,
-  LAYOUT_REQUEST_EVENT,
   PAGE_IDS,
   defaultProps,
-  dispatchCommit,
-  dispatchLayoutRequest,
   getDefaultProps,
+  horizontal,
   isCatalogComponentId,
   isCatalogPageId,
+  normalizePlane,
   parseCatalogQuery,
   parseComponentQuery,
+  resolvePlane,
   serializeCatalogQuery,
   serializeComponentQuery,
+  vertical,
 };
 
 export interface MountOptions extends CatalogMountOptions {

@@ -1,14 +1,6 @@
-import {
-  LAYOUT_REQUEST_EVENT,
-  dispatchCommit,
-  dispatchLayoutRequest,
-} from "./events";
 import { appendLabel, element, setText, svgIcon, type Cleanup } from "./dom";
-import type {
-  CatalogPageMetadata,
-  CatalogProps,
-  LayoutRequestDetail,
-} from "./types";
+import { horizontal, resolvePlane, vertical } from "../plane";
+import type { CatalogPageMetadata, CatalogProps } from "./types";
 
 export interface DemoContext {
   readonly document: Document;
@@ -106,34 +98,8 @@ export function renderDemo(
     case "status":
       renderStatus(container, props, context);
       break;
-    case "stack":
-      renderStack(container, props, context);
-      break;
-    case "cluster":
-      renderCluster(container, props, context);
-      break;
-    case "focus":
-      container.append(
-        createFocusPlane(context, String(props.initial ?? "primary"), props),
-      );
-      break;
-    case "focus-request":
-      renderFocusRequest(container, props, context);
-      break;
-    case "axis":
-      renderAxis(container, props, context);
-      break;
-    case "edge":
-      renderEdge(container, props, context);
-      break;
-    case "bottom-dock":
-      renderBottomDock(container, props, context);
-      break;
-    case "edge-nav":
-      renderEdgeNav(container, props, context);
-      break;
-    case "tabs":
-      renderTabs(container, props, context);
+    case "plane":
+      renderPlane(container, component.id, props, context);
       break;
     case "icon-action":
       renderIconAction(container, props, context);
@@ -315,459 +281,58 @@ function renderStatus(
   container.append(cluster);
 }
 
-function renderStack(
+function renderPlane(
   container: HTMLElement,
+  componentId: string,
   props: CatalogProps,
   context: DemoContext,
 ): void {
-  const gaps: Record<string, string> = {
-    xs: "4px",
-    sm: "8px",
-    md: "14px",
-    lg: "24px",
-  };
-  const stack = element(context.document, "div", "stack");
-  stack.style.setProperty(
-    "--stack-gap",
-    gaps[String(props.gap ?? "md")] ?? "14px",
+  const axis = componentId === "horizontal" ? "horizontal" : "vertical";
+  const fit = String(props.fit ?? "elastic");
+  const gapValues: Record<string, number> = { none: 0, sm: 1, md: 2, lg: 3 };
+  const count = Number(props.items ?? 4);
+  const children = Array.from(
+    { length: Number.isFinite(count) ? Math.max(0, count) : 4 },
+    (_, index) => ({
+      id: `item-${String(index + 1)}`,
+      basis: 2,
+      min: fit === "elastic" ? 0.75 : 2,
+    }),
   );
-  stack.style.setProperty("--stack-align", String(props.align ?? "stretch"));
-  for (const [label, active] of [
-    ["一番目", false],
-    ["二番目・選択中", true],
-    ["三番目", false],
-  ] as const) {
-    const item = element(context.document, "div", "plain-item");
-    item.dataset.active = String(active);
-    item.textContent = label;
-    stack.append(item);
-  }
-  container.append(stack);
-}
-
-function renderCluster(
-  container: HTMLElement,
-  props: CatalogProps,
-  context: DemoContext,
-): void {
-  const gaps: Record<string, string> = { xs: "4px", sm: "8px", md: "14px" };
-  const cluster = element(context.document, "div", "cluster");
-  cluster.style.setProperty(
-    "--cluster-gap",
-    gaps[String(props.gap ?? "sm")] ?? "8px",
-  );
-  cluster.style.setProperty(
-    "--cluster-wrap",
-    props.wrap === false ? "nowrap" : "wrap",
-  );
-  for (let index = 1; index <= 5; index += 1) {
-    const item = textAction(context, `要素 ${String(index)}`);
-    item.classList.add("plain-item");
-    item.dataset.active = String(String(props.active) === String(index));
-    cluster.append(item);
-  }
-  container.append(cluster);
-}
-
-function createFocusPlane(
-  context: DemoContext,
-  initial: string,
-  props: CatalogProps,
-): HTMLDivElement {
-  const plane = element(context.document, "div", "focus-plane");
-  plane.dataset.state = initial;
-  plane.dataset.mobile = "primary";
-
-  const primary = element(context.document, "section", "focus-pane");
-  primary.dataset.pane = "primary";
-  primary.tabIndex = 0;
-  primary.append(
-    heading(context, "h2", "Primary"),
-    paragraph(context, "一覧や本文が存在する領域。"),
-  );
-  const selected = element(context.document, "div", "plain-item");
-  selected.dataset.active = "true";
-  selected.textContent = "選択された情報";
-  primary.append(selected);
-
-  const divider = element(context.document, "div", "focus-divider");
-  const left = iconButton(context, "left", "左領域を拡張");
-  left.dataset.left = "true";
-  const dot = element(context.document, "span", "focus-dot");
-  const right = iconButton(context, "right", "右領域を拡張");
-  right.dataset.right = "true";
-  divider.append(left, dot, right);
-
-  const secondary = element(context.document, "section", "focus-pane");
-  secondary.dataset.pane = "secondary";
-  secondary.tabIndex = 0;
-  secondary.append(
-    heading(context, "h2", "Secondary"),
-    paragraph(context, "詳細、form、履歴など必要時に現れる領域。"),
-  );
-  const field = element(context.document, "span", "info-text");
-  field.dataset.demoField = "true";
-  createInfoText(
-    field,
-    { editable: true, editor: "text", state: "clean", value: "詳細を編集" },
-    context,
-  );
-  secondary.append(field);
-  plane.append(primary, divider, secondary);
-
-  const setFocus = (state: string): void => {
-    const normalized = [
-      "primary",
-      "balanced",
-      "secondary",
-      "primary-only",
-      "secondary-only",
-    ].includes(state)
-      ? state
-      : "balanced";
-    plane.dataset.state = normalized;
-    const isMobile = (context.window?.innerWidth ?? 1024) < 901;
-    plane.dataset.mobile = normalized.startsWith("secondary")
-      ? "secondary"
-      : "primary";
-    if (!isMobile) plane.dataset.mobile = "primary";
-    for (const pane of [primary, secondary]) {
-      const paneName = pane.dataset.pane;
-      pane.dataset.focused = String(
-        (normalized.startsWith("primary") && paneName === "primary") ||
-          (normalized.startsWith("secondary") && paneName === "secondary"),
-      );
-    }
-  };
-  addListener(context, plane, LAYOUT_REQUEST_EVENT, (event) => {
-    const request = event as CustomEvent<LayoutRequestDetail>;
-    setFocus(request.detail.target);
-  });
-  addListener(context, left, "click", () =>
-    dispatchLayoutRequest(left, { target: "primary" }),
-  );
-  addListener(context, right, "click", () =>
-    dispatchLayoutRequest(right, { target: "secondary" }),
-  );
-  if (props.focusOnInput !== false) {
-    addListener(context, primary, "focusin", () => {
-      setFocus("primary");
-    });
-    addListener(context, secondary, "focusin", () => {
-      setFocus("secondary");
-    });
-  }
-  setFocus(initial);
-  return plane;
-}
-
-function renderFocusRequest(
-  container: HTMLElement,
-  props: CatalogProps,
-  context: DemoContext,
-): void {
-  const wrapper = element(context.document, "div", "stack");
-  const plane = createFocusPlane(context, "primary", {
-    focusOnInput: true,
-    collapse: true,
-  });
-  const request = textAction(
-    context,
-    `${String(props.target ?? "secondary")} を要求`,
-  );
-  request.style.marginTop = "12px";
-  addListener(context, request, "click", () => {
-    const target = String(
-      props.target ?? "secondary",
-    ) as LayoutRequestDetail["target"];
-    dispatchLayoutRequest(request, { target });
-  });
-  plane.querySelector('[data-pane="primary"]')?.append(request);
-  wrapper.append(plane);
-  container.append(wrapper);
-}
-
-function renderAxis(
-  container: HTMLElement,
-  props: CatalogProps,
-  context: DemoContext,
-): void {
-  const axis = String(props.axis ?? "horizontal");
-  const count = Number(props.items ?? 10);
-  const strategy = String(props.strategy ?? "elastic");
-  const flow = element(context.document, "div", "axis-flow");
-  flow.dataset.axis = axis;
-  const viewport = element(context.document, "div", "axis-viewport");
-  const regions: HTMLElement[] = [];
-  for (let index = 0; index < count; index += 1) {
-    const region = element(context.document, "section", "axis-region");
-    region.dataset.index = String(index);
-    const title = element(context.document, "strong");
-    title.textContent = `領域 ${String(index + 1)}`;
-    region.append(title, paragraph(context, "内容量とfocusに応じて配分。"));
-    regions.push(region);
-    viewport.append(region);
-  }
-  const nav = element(context.document, "div", "axis-nav");
-  flow.append(viewport, nav);
-  container.append(flow);
-
-  let active = 0;
-  const update = (): void => {
-    const width = flow.clientWidth || flow.getBoundingClientRect().width || 720;
-    const height =
-      flow.clientHeight || flow.getBoundingClientRect().height || 260;
-    const capacity =
-      axis === "horizontal"
-        ? Math.max(1, Math.floor(width / 180))
-        : Math.max(1, Math.floor(height / 100));
-    const condensed = strategy === "single" || regions.length > capacity;
-    for (const [index, region] of regions.entries()) {
-      region.dataset.active = String(index === active);
-      region.dataset.hidden = String(condensed && index !== active);
-      if (!condensed)
-        region.style.flexGrow =
-          strategy === "elastic" && index === active ? "2.2" : "1";
-    }
-    nav.replaceChildren();
-    if (condensed) {
-      const previous = iconButton(
-        context,
-        axis === "horizontal" ? "left" : "up",
-        "前の領域",
-      );
-      const next = iconButton(
-        context,
-        axis === "horizontal" ? "right" : "down",
-        "次の領域",
-      );
-      previous.disabled = active === 0;
-      next.disabled = active === regions.length - 1;
-      addListener(context, previous, "click", () => {
-        active = Math.max(0, active - 1);
-        update();
-      });
-      addListener(context, next, "click", () => {
-        active = Math.min(regions.length - 1, active + 1);
-        update();
-      });
-      nav.append(previous, next);
-    } else {
-      for (const [index, region] of regions.entries()) {
-        const control = textAction(context, String(index + 1));
-        control.setAttribute("aria-pressed", String(index === active));
-        addListener(context, control, "click", () => {
-          active = index;
-          update();
+  const plane =
+    axis === "horizontal"
+      ? horizontal(children, {
+          fit: fit as "elastic" | "wrap" | "scroll",
+          gap: gapValues[String(props.gap ?? "md")] ?? 2,
+          available: 10,
+        })
+      : vertical(children, {
+          fit: fit as "elastic" | "wrap" | "scroll",
+          gap: gapValues[String(props.gap ?? "md")] ?? 2,
+          available: 10,
         });
-        nav.append(control);
-        addListener(context, region, "click", () => {
-          active = index;
-          update();
-        });
-      }
-    }
-  };
-  update();
-  const ResizeObserverCtor =
-    typeof ResizeObserver === "undefined" ? undefined : ResizeObserver;
-  if (ResizeObserverCtor) {
-    const observer = new ResizeObserverCtor(update);
-    observer.observe(flow);
-    context.track(() => {
-      observer.disconnect();
-    });
+  const resolved = resolvePlane(plane);
+  const stage = element(context.document, "div", "plane-demo");
+  stage.dataset.axis = resolved.axis;
+  stage.dataset.fit = resolved.fit;
+  stage.style.setProperty("--plane-lines", String(resolved.lines));
+  for (const child of resolved.children) {
+    const item = element(context.document, "div", "plane-item");
+    item.dataset.line = String(child.line);
+    item.style.setProperty("--plane-size", String(child.size));
+    item.style.setProperty("--plane-offset", String(child.offset));
+    item.textContent = child.id.replace("item-", "要素 ");
+    stage.append(item);
   }
-}
-
-function renderEdge(
-  container: HTMLElement,
-  props: CatalogProps,
-  context: DemoContext,
-): void {
-  const edge = String(props.edge ?? "right");
-  const box = element(context.document, "div", "edge-region-demo");
-  box.dataset.edge = edge;
-  box.dataset.open = String(props.initial === "open");
-  const base = element(context.document, "div", "edge-base");
-  base.append(
-    documentText(context, "base content "),
-    createEdgeToggle(context, edge),
-  );
-  const added = element(context.document, "div", "edge-added");
-  added.textContent = `${edge} region`;
-  box.append(base, added);
-  addListener(
+  const note = paragraph(
     context,
-    base.querySelector("button") as HTMLButtonElement,
-    "click",
-    () => {
-      box.dataset.open = String(box.dataset.open !== "true");
-    },
+    resolved.overflow
+      ? "領域が足りないため、選択した適応方針が追加対応を示します。"
+      : `${String(resolved.lines)} line / ${resolved.extent.toFixed(2)} units`,
+    "plane-note",
   );
-  container.append(box);
+  container.append(stage, note);
 }
-
-function createEdgeToggle(
-  context: DemoContext,
-  edge: string,
-): HTMLButtonElement {
-  return textAction(context, `${edge}を切替`);
-}
-
-function documentText(context: DemoContext, text: string): Text {
-  return context.document.createTextNode(text);
-}
-
-function renderBottomDock(
-  container: HTMLElement,
-  props: CatalogProps,
-  context: DemoContext,
-): void {
-  const stack = element(context.document, "div", "stack");
-  stack.append(paragraph(context, "この領域はそのまま残ります。"));
-  const open = textAction(context, "下端領域を開く");
-  open.setAttribute("aria-pressed", "true");
-  addListener(context, open, "click", () => {
-    context.openDock(
-      `${String(props.purpose ?? "confirm")} dock`,
-      `上の情報を残したまま、${String(props.size ?? "medium")}サイズの領域を下から追加しました。`,
-    );
-  });
-  stack.append(open);
-  container.append(stack);
-}
-
-function renderEdgeNav(
-  container: HTMLElement,
-  props: CatalogProps,
-  context: DemoContext,
-): void {
-  const demo = element(context.document, "div", "edge-nav-demo");
-  demo.dataset.open = String(props.initial === "open");
-  const strip = element(context.document, "div", "edge-nav-strip");
-  const rail = element(context.document, "div", "edge-nav-rail");
-  const toggle = iconButton(context, "navigation", "navigationを開閉");
-  rail.append(toggle);
-  const copy = element(context.document, "div", "edge-nav-copy");
-  const selected = String(props.selected ?? "workspace");
-  for (const name of ["home", "workspace", "settings"]) {
-    const item = textAction(context, name);
-    item.classList.add("nav-item");
-    item.setAttribute("aria-current", name === selected ? "page" : "false");
-    addListener(context, item, "click", () => {
-      for (const sibling of copy.querySelectorAll(".nav-item"))
-        sibling.setAttribute("aria-current", "false");
-      item.setAttribute("aria-current", "page");
-    });
-    copy.append(item);
-  }
-  strip.append(rail, copy);
-  const content = element(context.document, "div", "edge-nav-content");
-  content.append(
-    heading(context, "h2", "main content"),
-    paragraph(
-      context,
-      "navigationが開くと、この領域は重ならず右へ押されます。",
-    ),
-  );
-  demo.append(strip, content);
-  addListener(context, toggle, "click", () => {
-    demo.dataset.open = String(demo.dataset.open !== "true");
-  });
-  container.append(demo);
-}
-
-function renderTabs(
-  container: HTMLElement,
-  props: CatalogProps,
-  context: DemoContext,
-): void {
-  const labels = ["概要", "活動", "設定"];
-  const descriptions = [
-    "基本情報と現在状態を表示します。",
-    "時系列の操作と変更を表示します。",
-    "表示と動作の設定を表示します。",
-  ];
-  const tablist = element(context.document, "div", "elastic-tabs");
-  tablist.setAttribute("role", "tablist");
-  const panel = element(context.document, "div", "tab-panel");
-  panel.setAttribute("role", "tabpanel");
-  panel.id = "catalog-tab-panel";
-  let active = Number(props.selected ?? 1);
-  const manual = props.activation === "manual";
-  const show = (next: number, old = active): void => {
-    active = next;
-    for (const [index, tab] of Array.from(
-      tablist.querySelectorAll<HTMLButtonElement>("[role=tab]"),
-    ).entries()) {
-      tab.setAttribute("aria-selected", String(index === active));
-      tab.tabIndex = index === active ? 0 : -1;
-    }
-    panel.dataset.enter = props.directional
-      ? next > old
-        ? "right"
-        : "left"
-      : "";
-    panel.replaceChildren(
-      heading(context, "h2", labels[active] ?? "概要"),
-      paragraph(context, descriptions[active] ?? ""),
-    );
-  };
-  const move = (from: number, delta: number): void => {
-    const next = (from + delta + labels.length) % labels.length;
-    const tabs = tablist.querySelectorAll<HTMLButtonElement>("[role=tab]");
-    tabs[next]?.focus();
-    if (!manual) show(next, from);
-  };
-  for (const [index, label] of labels.entries()) {
-    const tab = textAction(context, label);
-    tab.classList.add("elastic-tab");
-    tab.id = `catalog-tab-${String(index)}`;
-    tab.setAttribute("role", "tab");
-    tab.setAttribute("aria-controls", panel.id);
-    tab.tabIndex = index === active ? 0 : -1;
-    addListener(context, tab, "click", () => {
-      show(index);
-    });
-    addListener(context, tab, "keydown", (event) => {
-      const keyboard = event as KeyboardEvent;
-      if (keyboard.key === "ArrowRight") {
-        keyboard.preventDefault();
-        move(index, 1);
-      } else if (keyboard.key === "ArrowLeft") {
-        keyboard.preventDefault();
-        move(index, -1);
-      } else if (keyboard.key === "Home") {
-        keyboard.preventDefault();
-        tabsFirst(tablist)?.focus();
-        if (!manual) show(0, index);
-      } else if (keyboard.key === "End") {
-        keyboard.preventDefault();
-        const last =
-          tablist.querySelectorAll<HTMLButtonElement>("[role=tab]").length - 1;
-        tabsLast(tablist)?.focus();
-        if (!manual) show(last, index);
-      } else if (manual && (keyboard.key === "Enter" || keyboard.key === " ")) {
-        keyboard.preventDefault();
-        show(index);
-      }
-    });
-    tablist.append(tab);
-  }
-  container.append(tablist, panel);
-  show(active, active);
-}
-
-function tabsFirst(tablist: Element): HTMLButtonElement | null {
-  return tablist.querySelector<HTMLButtonElement>("[role=tab]");
-}
-
-function tabsLast(tablist: Element): HTMLButtonElement | null {
-  const tabs = tablist.querySelectorAll<HTMLButtonElement>("[role=tab]");
-  return tabs[tabs.length - 1] ?? null;
-}
-
 function renderIconAction(
   container: HTMLElement,
   props: CatalogProps,
@@ -1005,7 +570,6 @@ function startInfoEdit(
     host.dataset.editing = "false";
     if (read) read.textContent = value;
     if (host.dataset.state === "clean") host.dataset.state = "modified";
-    dispatchCommit(host, { value });
   };
   const cancel = (): void => {
     if (finished) return;
@@ -1329,22 +893,32 @@ function renderMessage(
   const text = element(context.document, "span");
   text.textContent = messageText;
   link.append(status, text, svgIcon(context.document, "right"));
-  const plane = createFocusPlane(context, "primary", {
-    focusOnInput: false,
-    collapse: true,
-  });
+  const plane = element(context.document, "div", "message-plane");
+  const regions = new Map<string, HTMLElement>();
+  for (const [regionId, regionLabel] of [
+    ["primary", "Primary"],
+    ["secondary", "Secondary"],
+  ] as const) {
+    const region = element(context.document, "section", "message-target");
+    region.dataset.target = regionId;
+    region.tabIndex = 0;
+    region.append(
+      heading(context, "h2", regionLabel),
+      paragraph(context, "対象領域の内容を残したまま注意を移します。"),
+    );
+    regions.set(regionId, region);
+    plane.append(region);
+  }
   addListener(context, link, "click", () => {
-    const target = String(
-      props.target ?? "secondary",
-    ) as LayoutRequestDetail["target"];
-    dispatchLayoutRequest(plane, { target });
-    const pane = plane.querySelector<HTMLElement>(`[data-pane="${target}"]`);
-    if (pane) {
+    const target = props.target === "primary" ? "primary" : "secondary";
+    for (const [regionId, region] of regions) {
+      region.dataset.active = String(regionId === target);
       for (const name of ["info", "success", "warning", "error"])
-        pane.classList.remove(`attention-${name}`);
-      pane.classList.add(`attention-${kind}`);
-      pane.focus({ preventScroll: true });
+        region.classList.remove(`attention-${name}`);
     }
+    const region = regions.get(target);
+    region?.classList.add(`attention-${kind}`);
+    region?.focus({ preventScroll: true });
   });
   container.append(link, plane);
 }
@@ -1375,16 +949,12 @@ export function renderPhilosophyDemo(
   context: DemoContext,
 ): void {
   clear(container);
-  const plane = createFocusPlane(context, "primary", {
-    focusOnInput: true,
-    collapse: true,
-  });
-  const request = textAction(context, "右側の詳細を要求");
-  addListener(context, request, "click", () =>
-    dispatchLayoutRequest(request, { target: "secondary" }),
+  renderPlane(
+    container,
+    "horizontal",
+    { fit: "elastic", gap: "md", items: "4" },
+    context,
   );
-  plane.querySelector('[data-pane="primary"]')?.append(request);
-  container.append(plane);
 }
 
 export function renderDeveloperDemo(
