@@ -21,6 +21,8 @@ The standalone catalog is served by `npm run catalog`, and the integrated catalo
 
 Useful documentation commands are `npm run docs:build` and `npm run docs:check`. From a clean checkout, install both lockfiles with `npm install` and `npm --prefix docs-site install`. Component demo links point to the integrated docs catalog, while `npm run catalog` keeps the standalone Vite catalog working locally.
 
+The English docs locale is manually authored and kept in sync with the root locale by `npm run docs:sync`. Do not use external machine-translation services when adding or updating documentation.
+
 ## Publishing
 
 - Documentation is deployed to GitHub Pages by `.github/workflows/pages.yml`.
