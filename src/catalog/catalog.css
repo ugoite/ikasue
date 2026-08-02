@@ -863,6 +863,12 @@
     padding: 2px 4px;
   }
 
+  .ikasue-root .info-text[data-draft="true"] .read-value {
+    background: var(--selection);
+    border-bottom-color: var(--line-strong);
+    color: var(--ink);
+  }
+
   .ikasue-root .type-icon {
     display: grid;
     place-items: center;
@@ -994,6 +1000,20 @@
     display: grid;
     gap: 0;
     border-top: var(--rule) solid var(--line);
+  }
+
+  .ikasue-root .form-list-actions {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .ikasue-root .form-list-status {
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.72rem;
   }
 
   .ikasue-root .form-row {
