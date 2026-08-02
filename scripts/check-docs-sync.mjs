@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -14,6 +15,9 @@ const docsRoot = path.join(
   "docs",
 );
 const englishRoot = path.join(docsRoot, "en");
+const docsRootRelative = "docs-site/src/content/docs";
+const emptyTreeSha = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
+const errors = [];
 
 function collectFiles(root, skipTopLevel = undefined) {
   const files = [];
@@ -36,6 +40,61 @@ function collectFiles(root, skipTopLevel = undefined) {
 
 function isMarkdownFile(filePath) {
   return filePath.endsWith(".md") || filePath.endsWith(".mdx");
+}
+
+function readGitPaths(arguments_) {
+  try {
+    return execFileSync("git", ["-C", repositoryRoot, ...arguments_], {
+      encoding: "utf8",
+    })
+      .split("\0")
+      .filter(Boolean);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    errors.push(`Unable to inspect changed documentation files: ${message}`);
+    return [];
+  }
+}
+
+function isAllZeroSha(value) {
+  return /^0+$/.test(value);
+}
+
+function changedPaths() {
+  const base = process.env.DOCS_SYNC_BASE?.trim();
+  const head = process.env.DOCS_SYNC_HEAD?.trim();
+
+  if (base && head) {
+    if (isAllZeroSha(head)) return new Set();
+
+    return new Set(
+      readGitPaths([
+        "diff",
+        "--name-only",
+        "--no-renames",
+        "-z",
+        isAllZeroSha(base) ? emptyTreeSha : base,
+        head,
+      ]),
+    );
+  }
+
+  return new Set([
+    ...readGitPaths(["diff", "--name-only", "--no-renames", "-z", "--cached"]),
+    ...readGitPaths(["diff", "--name-only", "--no-renames", "-z"]),
+    ...readGitPaths(["ls-files", "--others", "--exclude-standard", "-z"]),
+  ]);
+}
+
+function isDocumentationPath(filePath) {
+  return filePath.startsWith(`${docsRootRelative}/`);
+}
+
+function matchingLocalePath(filePath) {
+  const relativePath = filePath.slice(`${docsRootRelative}/`.length);
+  if (relativePath.startsWith("en/"))
+    return `${docsRootRelative}/${relativePath.slice("en/".length)}`;
+  return `${docsRootRelative}/en/${relativePath}`;
 }
 
 function withoutFrontmatter(source) {
@@ -103,7 +162,6 @@ const missing = rootFiles.filter(
   (filePath) => !englishFiles.includes(filePath),
 );
 const extra = englishFiles.filter((filePath) => !rootFiles.includes(filePath));
-const errors = [];
 
 if (missing.length)
   errors.push(
@@ -112,6 +170,23 @@ if (missing.length)
 if (extra.length)
   errors.push(
     `Extra English files:\n${extra.map((filePath) => `  - ${filePath}`).join("\n")}`,
+  );
+
+const changedDocumentationPaths = [...changedPaths()]
+  .filter(isDocumentationPath)
+  .sort();
+const missingChangedPairs = changedDocumentationPaths.filter(
+  (filePath, _, paths) => !paths.includes(matchingLocalePath(filePath)),
+);
+
+if (missingChangedPairs.length)
+  errors.push(
+    `Changed documentation files must include their manually authored bilingual pair:\n${missingChangedPairs
+      .map(
+        (filePath) =>
+          `  - ${filePath} requires ${matchingLocalePath(filePath)}`,
+      )
+      .join("\n")}`,
   );
 
 for (const locale of [

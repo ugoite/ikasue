@@ -54,7 +54,7 @@ The developer declares order, axis, and adaptation policy. The plane owner resol
 
 ## Documentation contract
 
-`docs-site/` is an Astro + Starlight site. The root Japanese locale and the `/en/` English locale are both manually authored. Every markdown or MDX file under the root docs tree has the same relative path under `src/content/docs/en/`; `npm run docs:sync` checks path parity and rejects root-absolute internal links.
+`docs-site/` is an Astro + Starlight site. The root Japanese locale and the `/en/` English locale are independent, manually authored documents. No machine translation or translation service is used, and no documentation content is transferred to an external service. Every markdown or MDX file under the root docs tree has the same relative path under `src/content/docs/en/`; `npm run docs:sync` checks path parity, requires both locale files in every local or CI change set, and rejects root-absolute internal links. A commit may not update only one side of a Japanese/English pair.
 
 Every public component has a mirrored page, a property table, philosophy/use/avoid guidance, interaction and keyboard behavior, accessibility notes, and JavaScript implementation/usage plus Rust implementation source tabs. Starlight `Tabs` and `TabItem` are used for those source views.
 
