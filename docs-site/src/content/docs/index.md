@@ -1,35 +1,34 @@
 ---
 title: ikasue
-description: Planar adaptive UI components for information-dense workspaces.
+description: Plane-centered adaptive UI components for information-dense workspaces.
 template: splash
 hero:
   tagline: One plane. Negotiated space. Readable work.
   actions:
-    - text: Explore the component matrix
+    - text: コンポーネント一覧を見る
       link: components/
       icon: right-arrow
-    - text: Read the philosophy
+    - text: 思想を読む
       link: philosophy/
       variant: minimal
 ---
 
-ikasue is a framework-neutral runtime package and interactive catalog for planar adaptive UI. The system treats every region as part of one shared canvas: new information enters from the edge where it belongs, pushes existing content, and keeps the context being judged visible.
+ikasueは、情報密度の高いworkspaceのためのframework-neutralなcomponent systemです。すべての領域を一枚のplane上の順序と空間配分として扱い、新しい情報は意味のあるedgeから入り、既存の情報を隠さずに場所を譲ります。
 
-## 平面適応UI / Planar adaptive UI
+## 平面適応UI
 
-The visual rule is small but consequential: no floating card taxonomy, overlay drawer, shadow hierarchy, or modal that hides the evidence for a decision. Space is negotiated by focus, content, viewport, and direction.
+見た目のルールは単純です。浮くcardの分類、overlay drawer、shadow hierarchy、判断の根拠を隠すmodalを増やしません。開発者は`vertical`または`horizontal`で順序と適応方針を宣言し、`resolvePlane`が利用可能な空間に対する位置を決めます。
 
-The docs use the same source metadata as the catalog. Each component page includes a practical entry point, a JSON contract, properties, keyboard behavior, accessibility notes, and a link to the matching catalog demo.
+## 契約から始める
 
-## Start with the contract
+1. [平面適応UIの思想](philosophy/)で、plane、axis、selectionの考え方を読む。
+2. [component inventory](components/)から現在の17 componentの責務を選ぶ。
+3. [使い方](guides/usage/)と[統合](guides/integration/)でpackageを既存のappへ組み込む。
+4. [振る舞いの契約](guides/behavioral-contracts/)と[アクセシビリティ](guides/accessibility/)を実装前に確認する。
+5. [例](examples/)で、異なるsite shapeへの組み合わせを見る。
 
-1. Read [Design philosophy / 平面適応UIの思想](philosophy/) to understand the geometry.
-2. Choose a primitive from the [component matrix / 一覧](components/).
-3. Read [Usage / 使い方](guides/usage/) and [Integration / 統合](guides/integration/) before mounting it.
-4. Validate the [behavioral contracts](guides/behavioral-contracts/) and [accessibility contract](guides/accessibility/) in your own workspace.
+## package、catalog、公開境界
 
-## Package and catalog
+packageは`@ugoite/ikasue`です。`vertical`、`horizontal`、`resolvePlane`とcurrent component metadataを公開し、interactive catalogは同じ契約を動かして確認する場所です。[catalog](catalog/)はGitHub Pagesのdocs buildに含まれ、packageはGitHub Packagesへ別のworkflowで公開されます。
 
-The package is `@ugoite/ikasue`. It exposes the framework-neutral `mountCatalog` API, metadata, state helpers, and the custom event contracts. The [integrated interactive catalog](catalog/) is the executable reference and is served under the same site base path as these docs. The standalone Vite catalog remains available from the root `npm run catalog` command.
-
-The root docs locale is Japanese (`ja`), and the manually authored English translation is available at `/en/`. Both trees are checked for matching paths and internal-link safety without sending content to an external translation service.
+root localeは日本語です。[English docs](en/)も同じpath treeを持つ手書きのlocaleとして管理しています。同期scriptはpathの一致とroot-absolute internal linkの混入を検査します。外部の翻訳serviceへ内容を送ることはありません。

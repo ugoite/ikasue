@@ -1,12 +1,13 @@
 ---
-import { Code } from "@astrojs/starlight/components";
+import { Code, TabItem, Tabs } from "@astrojs/starlight/components";
 import { findComponent } from "../../../src/catalog/metadata";
 import type { CatalogComponentId } from "../../../src/catalog/types";
 import {
   COMPONENT_UI_COPY,
   componentCopy,
 } from "../data/component-copy";
-import { catalogPath } from "../data/site-path";
+import { componentSource } from "../data/component-source";
+import { catalogPath, sitePath } from "../data/site-path";
 
 interface Props {
   id: CatalogComponentId;
@@ -17,6 +18,8 @@ const locale = Astro.currentLocale === "en" ? "en" : "ja";
 const metadata = findComponent(id);
 const copy = componentCopy(locale, id);
 const ui = COMPONENT_UI_COPY[locale];
+const source = componentSource(id);
+const localePrefix = locale === "en" ? "en/" : "";
 const englishPropertyDefaults: Partial<Record<string, string>> = {
   ...(id === "text" ? { value: "Tokyo office" } : {}),
   ...(id === "boolean-text" ? { label: "Enable automatic save" } : {}),
@@ -32,12 +35,15 @@ const contract = JSON.stringify(
       property.key,
       displayDefault(property.key, property.default),
     ])),
-    events:
-      id === "text"
-        ? ["ikasue:commit"]
-        : id === "focus-region"
-          ? ["ikasue:layout-request"]
-          : [],
+    plane: {
+      axis: id === "horizontal" || id === "rule" || id === "choice-group" || id === "data-table" || id === "action-strip" || id === "icon-action" || id === "status-icon" ? "horizontal" : "vertical",
+      fit: id === "horizontal" ? "wrap" : "elastic",
+      children: ["primary", "secondary"],
+    },
+    ownership:
+      id === "form-list"
+        ? "FormList owns values and status; child focus and draft remain local and do not recolor source data."
+        : "The component owns only the state named by its contract; its plane owner resolves shared space.",
     contract: [
       "new information enters from its semantic edge",
       "content is reallocated on one plane; no overlay is required",
@@ -60,6 +66,7 @@ const contract = JSON.stringify(
       {ui.catalogLink}
     </a>
     <span>{ui.demoId} <code>{metadata.demo}</code></span>
+    <a href={sitePath(`${localePrefix}components/`)}>{ui.matrixLink}</a>
   </div>
 
   <h2>{ui.contract}</h2>
@@ -79,7 +86,15 @@ const contract = JSON.stringify(
 
   <h2>{ui.implementation}</h2>
   <p>{copy.implementation}</p>
-  <Code code={`import { mountCatalog } from "@ugoite/ikasue";\n\nconst target = document.querySelector("#workspace");\nif (target) {\n  mountCatalog(target, { component: "${metadata.id}" });\n}`} lang="ts" title={ui.integrationSketch} />
+  <p class="source-note">{ui.implementationUsage}</p>
+  <Tabs>
+    <TabItem label={ui.javascript}>
+      <Code code={source.javascript} lang="js" title={ui.javascript} />
+    </TabItem>
+    <TabItem label={ui.rust}>
+      <Code code={source.rust} lang="rust" title={ui.rust} />
+    </TabItem>
+  </Tabs>
 
   <h2>{ui.properties}</h2>
   <div class="property-table">
@@ -153,6 +168,11 @@ const contract = JSON.stringify(
     padding: 1rem;
     border: 1px solid var(--sl-color-gray-5);
     border-inline-start: 3px solid var(--sl-color-text-accent);
+  }
+
+  .source-note {
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-sm);
   }
 
   .guidance-grid h2 {

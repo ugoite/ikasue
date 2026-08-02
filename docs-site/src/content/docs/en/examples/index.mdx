@@ -1,0 +1,306 @@
+---
+title: Examples
+description: Five radically different site shapes built from the same plane model.
+---
+
+import { TabItem, Tabs } from "@astrojs/starlight/components";
+
+The same component system can produce very different information shapes. These five examples compare a dense operations dashboard, an editor with preview, a planning calendar, a field/mobile service surface, and an observability/incident console. Each starts by deciding where new information belongs and what it should make room for.
+
+## 1. Dense operations dashboard
+
+This shape puts filters, a queue, detail, and status into one workspace. Use `Horizontal` for short filters and actions, then `Vertical` for queue and detail order. A narrow dashboard can adapt without hiding filters in an overlay. `DataTable` cell selection and a `MessageRegion` target remain evidence on the same plane.
+
+<Tabs>
+  <TabItem label="JavaScript implementation / usage">
+
+```js
+import { horizontal, resolvePlane, vertical } from "@ugoite/ikasue";
+
+const filters = horizontal(["status", "owner", "sla"], {
+  fit: "wrap",
+  gap: 1,
+  available: 7,
+});
+const dashboard = vertical(
+  [
+    { id: "filters", basis: 2, min: 1 },
+    { id: "queue", basis: 5, min: 3 },
+    { id: "detail", basis: 4, min: 2 },
+  ],
+  { fit: "elastic", gap: 1, available: 12 },
+);
+
+const resolved = resolvePlane(dashboard);
+const contract = {
+  component: "data-table",
+  props: { selection: "row-column", editable: true },
+  messageTarget: "detail",
+};
+renderDashboard({ filters, resolved, contract });
+```
+
+  </TabItem>
+  <TabItem label="Rust implementation sketch">
+
+```rust
+struct PlaneChild<'a> { id: &'a str, basis: f32, min: f32 }
+struct PlaneSpec<'a> {
+    axis: Axis,
+    fit: Fit,
+    gap: f32,
+    children: Vec<PlaneChild<'a>>,
+}
+
+let dashboard = PlaneSpec {
+    axis: Axis::Vertical,
+    fit: Fit::Elastic,
+    gap: 1.0,
+    children: vec![
+        PlaneChild { id: "filters", basis: 2.0, min: 1.0 },
+        PlaneChild { id: "queue", basis: 5.0, min: 3.0 },
+        PlaneChild { id: "detail", basis: 4.0, min: 2.0 },
+    ],
+};
+let layout = resolve_plane(&dashboard, 12.0);
+let data_table = ComponentContract::new("data-table")
+    .prop("selection", "row-column")
+    .prop("editable", "true");
+```
+
+  </TabItem>
+</Tabs>
+
+## 2. Editor + preview
+
+This shape keeps an editor on the left and a readable preview on the right. A `Horizontal` plane gives the selected work a little more area without turning the preview into a floating card. `FormList` owns frontmatter values and status; child draft remains unconfirmed local state.
+
+<Tabs>
+  <TabItem label="JavaScript implementation / usage">
+
+```js
+import { horizontal, resolvePlane, vertical } from "@ugoite/ikasue";
+
+const editor = vertical(["title", "slug", "body"], {
+  fit: "scroll",
+  gap: 1,
+  available: 8,
+});
+const page = horizontal(
+  [
+    { id: "editor", basis: 5, min: 3 },
+    { id: "preview", basis: 7, min: 4 },
+  ],
+  { fit: "elastic", gap: 1, available: 12 },
+);
+
+const contract = {
+  component: "form-list",
+  ownership:
+    "FormList owns values and status; Text owns local focus/draft only.",
+  childDataCue: "draft does not recolor saved data",
+};
+renderEditor({ editor, layout: resolvePlane(page), contract });
+```
+
+  </TabItem>
+  <TabItem label="Rust implementation sketch">
+
+```rust
+let page = PlaneSpec {
+    axis: Axis::Horizontal,
+    fit: Fit::Elastic,
+    gap: 1.0,
+    children: vec![
+        PlaneChild { id: "editor", basis: 5.0, min: 3.0 },
+        PlaneChild { id: "preview", basis: 7.0, min: 4.0 },
+    ],
+};
+let layout = resolve_plane(&page, 12.0);
+let form_list = FormListState {
+    values: saved_frontmatter,
+    status: validation_status,
+    child_focus: FocusState::Local,
+    child_draft: DraftState::Local,
+};
+// A child draft is not a saved-data status cue.
+```
+
+  </TabItem>
+</Tabs>
+
+## 3. Planning / calendar
+
+This planning surface compares days horizontally while events read vertically inside each day. When width is tight, `wrap` or `scroll` is explicit, so a later day is not silently discarded. `ChoiceGroup` can select the displayed planning mode without changing the axis contract.
+
+<Tabs>
+  <TabItem label="JavaScript implementation / usage">
+
+```js
+import { horizontal, resolvePlane, vertical } from "@ugoite/ikasue";
+
+const days = horizontal(
+  [
+    { id: "mon", basis: 3, min: 2 },
+    { id: "tue", basis: 3, min: 2 },
+    { id: "wed", basis: 3, min: 2 },
+    { id: "thu", basis: 3, min: 2 },
+  ],
+  { fit: "scroll", gap: 1, available: 9 },
+);
+const monday = vertical(["standup", "review", "handoff"], {
+  fit: "wrap",
+  gap: 1,
+});
+
+const contract = {
+  component: "choice-group",
+  props: { direction: "horizontal", selected: "standard" },
+  axisRule: "days compare horizontally; events read vertically",
+};
+renderCalendar({ days: resolvePlane(days), monday, contract });
+```
+
+  </TabItem>
+  <TabItem label="Rust implementation sketch">
+
+```rust
+let days = PlaneSpec {
+    axis: Axis::Horizontal,
+    fit: Fit::Scroll,
+    gap: 1.0,
+    children: vec![
+        PlaneChild { id: "mon", basis: 3.0, min: 2.0 },
+        PlaneChild { id: "tue", basis: 3.0, min: 2.0 },
+        PlaneChild { id: "wed", basis: 3.0, min: 2.0 },
+    ],
+};
+let day_layout = resolve_plane(&days, 9.0);
+let day_events = PlaneSpec {
+    axis: Axis::Vertical,
+    fit: Fit::Elastic,
+    gap: 1.0,
+    children: events_for("mon"),
+};
+let choices = ChoiceGroup::new(Choice::Standard);
+```
+
+  </TabItem>
+</Tabs>
+
+## 4. Field / mobile service
+
+This shape supports a job, photos, a checklist, and short decisions on an unreliable network. Keep job context vertical and actions horizontal. A `BottomDialog` enters as a bottom row, so the map or job evidence is not covered. At narrow widths, switch explicitly from `elastic` to `scroll`.
+
+<Tabs>
+  <TabItem label="JavaScript implementation / usage">
+
+```js
+import { horizontal, resolvePlane, vertical } from "@ugoite/ikasue";
+
+const actions = horizontal(["arrived", "photo", "call"], {
+  fit: "wrap",
+  gap: 1,
+  available: 4,
+});
+const job = vertical(
+  [
+    "location",
+    "checklist",
+    "photos",
+    { id: "bottom-dialog", basis: 2, min: 2 },
+  ],
+  { fit: "scroll", gap: 1, available: 10 },
+);
+
+const contract = {
+  component: "bottom-dialog",
+  props: { intent: "confirm", dismiss: true },
+  preserves: ["location", "checklist", "photos"],
+};
+renderFieldJob({
+  actions: resolvePlane(actions),
+  job: resolvePlane(job),
+  contract,
+});
+```
+
+  </TabItem>
+  <TabItem label="Rust implementation sketch">
+
+```rust
+let job = PlaneSpec {
+    axis: Axis::Vertical,
+    fit: Fit::Scroll,
+    gap: 1.0,
+    children: vec![
+        PlaneChild { id: "location", basis: 3.0, min: 2.0 },
+        PlaneChild { id: "checklist", basis: 4.0, min: 3.0 },
+        PlaneChild { id: "photos", basis: 3.0, min: 2.0 },
+        PlaneChild { id: "bottom-dialog", basis: 2.0, min: 2.0 },
+    ],
+};
+let layout = resolve_plane(&job, 10.0);
+let dialog = BottomDialog::confirm().dismissible(true);
+```
+
+  </TabItem>
+</Tabs>
+
+## 5. Observability / incident console
+
+This console combines a timeline, service state, and incident detail. Keep timeline and service list as separate vertical responsibilities, then make a `MessageRegion` point back to the incident target. `ProgressRegion` retains previous metrics while new data arrives, so evidence does not disappear into a spinner.
+
+<Tabs>
+  <TabItem label="JavaScript implementation / usage">
+
+```js
+import { horizontal, resolvePlane, vertical } from "@ugoite/ikasue";
+
+const timeline = vertical(["14:02 deploy", "14:07 alert", "14:11 mitigation"], {
+  fit: "scroll",
+  gap: 1,
+  available: 7,
+});
+const consolePlane = horizontal(
+  [
+    { id: "timeline", basis: 4, min: 3 },
+    { id: "incident", basis: 8, min: 5 },
+  ],
+  { fit: "elastic", gap: 1, available: 13 },
+);
+
+const contract = {
+  component: "message-region",
+  props: { kind: "warning", target: "incident" },
+  progress: { component: "progress-region", retainsPreviousContent: true },
+};
+renderIncidentConsole({
+  timeline,
+  layout: resolvePlane(consolePlane),
+  contract,
+});
+```
+
+  </TabItem>
+  <TabItem label="Rust implementation sketch">
+
+```rust
+let console = PlaneSpec {
+    axis: Axis::Horizontal,
+    fit: Fit::Elastic,
+    gap: 1.0,
+    children: vec![
+        PlaneChild { id: "timeline", basis: 4.0, min: 3.0 },
+        PlaneChild { id: "incident", basis: 8.0, min: 5.0 },
+    ],
+};
+let layout = resolve_plane(&console, 13.0);
+let message = MessageRegion::warning(RegionId::Incident);
+let progress = ProgressRegion::retain_previous(ProgressPattern::Wave);
+```
+
+  </TabItem>
+</Tabs>
+
+These site shapes differ, but their design decision is shared: choose the owning edge, the ordered axis, the plane that allocates space, and the component that owns values and status. Continue with [Usage](../guides/usage/) and [Behavioral contracts](../guides/behavioral-contracts/).

@@ -3,37 +3,32 @@ title: Release and publishing
 description: Build, publish, and deploy ikasue from GitHub Actions.
 ---
 
-## Local release checks
+## Local checks
 
-Use mise's Node 22.14.0 toolchain and install both lockfiles before checking a release.
+Use the mise Node 22.14.0 toolchain and both lockfiles.
 
 ```sh
-mise trust
 npm install
 npm --prefix docs-site install
-npm run format
+npm run format:check
 npm run check
 npm run build
 npm run docs:check
 npm run docs:build
-npm pack --dry-run
-pre-commit run --all-files
 ```
 
-The package build writes the distributable files to `dist/`. The docs build writes the static site to `docs-site/dist/`.
+The package build writes to `dist/`; the docs build writes to `docs-site/dist/`. Do not edit generated build output or the package version during the documentation phase.
 
-## Documentation translation
+## Bilingual documentation
 
-The English locale is maintained as a manually authored translation. Keep its paths and component contracts synchronized with the source locale, and do not use external machine-translation services for release documentation.
+The root locale and English locale are both authored manually. `npm run docs:sync` checks matching relative paths and rejects root-absolute links. Keep the English prose hand-authored alongside the same Plane API and component contracts; do not send it to an external machine-translation service.
 
-## GitHub Pages
+## GitHub Pages boundary
 
-`.github/workflows/pages.yml` uses `actions/configure-pages`, `actions/upload-pages-artifact`, and `actions/deploy-pages`. The Astro config derives the project base path from `GITHUB_REPOSITORY`, so a repository such as `owner/project` builds links under `/project/`. The workflow grants `pages: write` and `id-token: write` only to the deploy job and uses the Pages environment.
+The Pages workflow builds only the Astro + Starlight static site and publishes it with `actions/configure-pages`, `actions/upload-pages-artifact`, and `actions/deploy-pages`. `astro.config.mjs` derives the project base from `GITHUB_REPOSITORY`; generated links use `sitePath` / `catalogPath` so the base is preserved.
 
-The interactive catalog is part of the docs build at the relative `catalog/` route. It uses the same Astro base path as the Starlight pages, while the standalone Vite catalog remains a separate local development entry point.
+Pages hosts the docs and interactive catalog. It is not the package distribution channel.
 
-## GitHub Packages
+## GitHub Packages boundary
 
-`.github/workflows/package.yml` runs on `v*` tags, builds the package, and publishes `@ugoite/ikasue` to `https://npm.pkg.github.com`. It uses the workflow `GITHUB_TOKEN` with `packages: write`; it does not publish to npmjs.org.
-
-Keep the tag aligned with the package version, for example `v0.1.0`. Package consumers must configure the `@ugoite` scope for GitHub Packages as described in [Integration](integration/).
+The package workflow builds on `v*` tags and publishes `@ugoite/ikasue` to `https://npm.pkg.github.com` with `GITHUB_TOKEN` and `packages: write`. It does not publish to npmjs.org or a third-party deployment target. Pages deployment and package publishing remain separate boundaries.
