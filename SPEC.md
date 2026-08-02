@@ -1,73 +1,67 @@
 # ikasue implementation specification
 
-## Source of truth
-
-`/Users/shota/Downloads/ikasue_component_catalog_v4.html` is the visual and interaction reference. Its Japanese copy, component inventory, planar visual language, and live demos are preserved in the implementation while being separated into maintainable package and catalog modules.
-
 ## Product intent
 
-ikasue is a planar adaptive UI component library for information-dense work. Every region shares one canvas. New information enters from the edge where it belongs and reflows existing content; it never relies on a floating card, overlay drawer, shadow hierarchy, or modal that obscures the information being judged.
+ikasue is a plane-centered adaptive UI component system for information-dense work. Every region shares one canvas. New information enters from the edge where it belongs and reallocates existing space; the system does not depend on floating card taxonomies, overlay drawers, shadow hierarchies, or evidence-obscuring modals.
 
-## Required component inventory
+## Current public component inventory
 
-The reference has 25 navigable pages: one conceptual page and 24 contract
-entries. The catalog keeps the conceptual page in `CATALOG_CONCEPTS` and
-preserves the 24-entry component contract in `CATALOG_COMPONENTS`.
+The public runtime inventory is exactly 17 components. The catalog metadata and bilingual documentation use this same list:
 
-The 24 required component entries are:
+- `developer-model`
+- `theme-root`
+- `text`
+- `rule`
+- `status-icon`
+- `vertical`
+- `horizontal`
+- `icon-action`
+- `action-strip`
+- `boolean-text`
+- `choice-group`
+- `form-list`
+- `data-table`
+- `history-gutter`
+- `progress-region`
+- `message-region`
+- `bottom-dialog`
 
-- Developer model
-- ThemeRoot, Text, Rule, StatusIcon
-- Stack, Cluster, FocusPlane, FocusRegion, AxisFlow, EdgeRegion, BottomDock
-- EdgeNav, ElasticTabs
-- IconAction, ActionStrip
-- BooleanText, ChoiceGroup, FormList
-- DataTable, HistoryGutter
-- ProgressRegion, MessageRegion, BottomDialog
+The separate conceptual page is the design philosophy. It is not an additional runtime component.
 
-The separate conceptual page is:
+## Plane API
 
-- Design philosophy
+The package exposes a small framework-neutral plane model:
 
-## Behavioral contracts
+- `vertical(children, options)` creates an ordered vertical `PlaneSpec`.
+- `horizontal(children, options)` creates an ordered horizontal `PlaneSpec`.
+- `resolvePlane(input, available?)` normalizes a plane and returns deterministic child positions.
+- `PlaneChild` contains an `id`, optional preferred `basis`, and optional elastic `min`.
+- `PlaneSpec` contains `axis`, `fit`, `gap`, optional `available`, and ordered `children`.
+- `fit` is `elastic`, `wrap`, or `scroll`. Resolved output reports `offset`, `size`, `line`, `extent`, and `overflow`.
 
-- Properties update live and can be reset to their documented defaults.
-- Each component page exposes a copyable JSON/Rust-like contract.
-- Text is one information component with an optional editable capability; editing supports keyboard commit/cancel and emits a custom commit event.
-- FocusPlane and FocusRegion coordinate through a bubbling `ikasue:layout-request` event.
-- AxisFlow changes axis, item count, and focus strategy; when content does not fit it exposes end navigation on the same axis.
-- EdgeRegion, EdgeNav, BottomDock, and BottomDialog push/reallocate space in their entry direction rather than overlaying content.
-- DataTable supports cell selection, row/column peer highlighting, keyboard navigation, copy, paste, and editing when enabled.
-- ElasticTabs and ChoiceGroup expose keyboard semantics appropriate to tabs/radio groups.
-- Status and progress states use semantic color and a non-color structural cue.
+The developer declares order, axis, and adaptation policy. The plane owner resolves available space. Child components do not need a parent reference or a public layout event to participate.
 
-## Accessibility and resilience
+## State ownership and behavioral contracts
 
-- Use semantic headings, buttons, form controls, roles, labels, and live state attributes.
-- Every icon-only action has an accessible label and a visible tooltip on hover/focus.
-- Keyboard navigation must work for catalog navigation, tabs, choices, focus regions, tables, and editors.
-- `prefers-reduced-motion: reduce` disables transition and animation durations.
-- The catalog is usable at desktop, narrow mobile, keyboard-only, and text zoom layouts.
-- Clipboard features degrade gracefully when browser permissions are unavailable.
+- Properties update live and can be reset to documented defaults.
+- `Text` is readable by default and gains editing capability only when needed. Confirmed values return through normal state updates; the public API does not require custom event names.
+- `FormList` owns values, validation status, and confirmed results. Child focus and draft are local editing state and must not recolor source data before confirmation.
+- `Vertical` and `Horizontal` preserve ordered children while applying their declared fit policy.
+- Selection, status, and progress use semantic color plus a non-color cue.
+- `DataTable` treats the cell as the task unit and keeps selection, peer context, clipboard behavior, and editing explicit.
+- Temporary bottom decisions add a row inside the plane and return focus to their opener when closed.
+- Native semantics, keyboard behavior, text zoom, narrow layouts, and reduced motion remain available.
 
-## Delivery and operations
+## Documentation contract
 
-- The package is published as `@ugoite/ikasue` to GitHub Packages (npm registry); no other package or hosting service is used.
-- The Starlight site is built and deployed to GitHub Pages by GitHub Actions.
-- mise is the declared local toolchain and task runner.
-- pre-commit runs formatting, linting, YAML/action checks, and project validation before commits.
-- Work is implemented in Git worktrees with focused commits so each phase can be reviewed or reverted independently.
+`docs-site/` is an Astro + Starlight site. The root Japanese locale and the `/en/` English locale are both manually authored. Every markdown or MDX file under the root docs tree has the same relative path under `src/content/docs/en/`; `npm run docs:sync` checks path parity and rejects root-absolute internal links.
 
-## Phase 3 documentation and deployment contract
+Every public component has a mirrored page, a property table, philosophy/use/avoid guidance, interaction and keyboard behavior, accessibility notes, and JavaScript implementation/usage plus Rust implementation source tabs. Starlight `Tabs` and `TabItem` are used for those source views.
 
-- `docs-site/` is a real Astro + Starlight site. Its component matrix and page headers consume `src/catalog/metadata.ts`; the documentation must contain one separate Design philosophy page and one page for every runtime component in `CATALOG_COMPONENTS`.
-- Component pages are bilingual-friendly: English API names and contract terms remain stable while Japanese summaries and practical guidance explain the intended interaction model.
-- The root scripts `docs:dev`, `docs:build`, and `docs:check` invoke the locked `docs-site/` toolchain. A root build must remain independent from the docs build, while CI runs both.
-- GitHub Pages is the only documentation host. `pages.yml` must use `actions/configure-pages`, `actions/upload-pages-artifact`, and `actions/deploy-pages`, with `pages: write` and `id-token: write` only where required. The Astro base path is derived from `GITHUB_REPOSITORY` for project Pages sites.
-- `package.yml` publishes only `@ugoite/ikasue` to `https://npm.pkg.github.com` on `v*` tags using `GITHUB_TOKEN` and `packages: write`; no npmjs.org or third-party deployment target is configured.
+Astro-generated links use `sitePath` or `catalogPath` so local builds and project GitHub Pages builds include the configured base path. Content-authored internal links remain relative.
 
-## Necessary additions made during implementation
+## Deployment boundaries
 
-- Component pages are addressable with a `?component=<id>` query parameter so demos can be linked from documentation and bug reports without adding a second navigation model.
-- The package exposes a small framework-neutral mount API and ships its CSS so consumers can use the planar primitives without adopting the catalog app.
-- The docs include a release/publishing contract and a component matrix so package consumers can distinguish the interactive catalog from the runtime package.
+- GitHub Pages is the only documentation host. The Pages workflow builds the Astro + Starlight site and interactive catalog with `actions/configure-pages`, `actions/upload-pages-artifact`, and `actions/deploy-pages`. The Astro base is derived from `GITHUB_REPOSITORY` for project Pages sites.
+- GitHub Packages is the package distribution boundary. The package workflow publishes only `@ugoite/ikasue` to `https://npm.pkg.github.com` on `v*` tags with `GITHUB_TOKEN` and `packages: write`.
+- Pages deployment and GitHub Packages publishing are separate workflows and targets. The documentation phase does not change generated build output or package version.

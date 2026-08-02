@@ -1,11 +1,11 @@
 ---
 title: Design philosophy
-description: The planar adaptive UI principles behind ikasue.
+description: The plane-centered principles behind ikasue.
 ---
 
-ikasue starts with a spatial question: if a new piece of information appears, where does it belong on the same plane? The answer is directional and negotiated. A right-side detail comes from the right, a navigation surface expands from the left, and a decision region enters from the bottom. Existing information is reallocated rather than hidden.
+ikasue starts with one question: where should new information enter the same plane? A right-side detail enters from the right; a decision region enters from the bottom. Existing information is reallocated rather than hidden. An edge is both a motion origin and a statement of ownership.
 
-This is not an anti-decoration rule. It is a decision-making rule. The UI should preserve the relationship between an action and the information that makes the action understandable.
+This is not an anti-decoration rule. It preserves the relationship between an action and the evidence that makes that action understandable.
 
 import Principles from "../../../components/Principles.astro";
 
@@ -13,26 +13,28 @@ import Principles from "../../../components/Principles.astro";
 
 ## How to read the system
 
-### Geometry is behavior
+### The plane is a shared work surface
 
-An edge is not just a motion origin. It tells the user where new information belongs. A focus request is not just a style change. It is a request to give the current task enough area to be understood.
+Instead of stacking components on a Z-axis, adjust order and area inside one plane. Developers declare axis, fit, gap, and children in a `PlaneSpec`; `resolvePlane` returns each child’s offset, size, line, and overflow.
+
+### One axis at a time
+
+`vertical` and `horizontal` are small primitives for declaring child order. Preserve that order while content fits, then adapt only through the declared `elastic`, `wrap`, or `scroll` policy. A layout owner does not silently take ownership of child content or focus.
 
 ### Information first, editing second
 
-`Text` is readable by default. An editable capability adds an editor only when needed. This keeps workspaces calm while retaining a direct path to change metadata, form values, and cells.
+`Text` is readable by default. Add the editable capability only where an editor is needed, and distinguish confirmed values from draft state. In `FormList`, FormList owns values and status; child focus and draft do not recolor source data.
 
 ### Selection owns area
 
-Selected content receives a quiet surface and a little more room. It is not reduced to a thin underline or a heavy border. Status colors remain semantic; black belongs to structure.
+Selection is a quiet surface with a little more area, not only an underline or heavy border. Status colors have semantic work; black remains structural.
 
-### The catalog is a contract
+### Do not create a card taxonomy
 
-Use the catalog to exercise defaults, change properties, reset state, and copy a JSON-like contract. A demo is not a substitute for product integration: it makes the spatial and keyboard contract visible before you compose it into your own app.
+Do not add boxes to create categories. Use space, order, `Rule`, and semantic headings. New information enters the shared plane from its owning edge without covering existing evidence.
 
 ## A useful design test
 
-Ask three questions during review:
-
-- Can the user still read the evidence behind the decision?
-- Does new information enter from the edge where it belongs and push space into existence?
-- Does the same relationship remain understandable with keyboard navigation, text zoom, narrow width, and reduced motion?
+- Can the user keep reading the evidence behind the decision?
+- Does new information enter from the edge where it belongs and make room on the plane?
+- Is the same relationship understandable with keyboard navigation, text zoom, narrow width, and reduced motion?

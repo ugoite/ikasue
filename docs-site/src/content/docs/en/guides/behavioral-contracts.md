@@ -1,32 +1,36 @@
 ---
 title: Behavioral contracts
-description: The cross-component behaviors that define the ikasue runtime.
+description: The cross-component rules that define the ikasue runtime.
 ---
 
-These contracts are part of the component API. A visual match that breaks them is not an equivalent implementation.
+These are component API contracts, not visual suggestions. A screen that looks similar but breaks plane, state ownership, or keyboard behavior is not an equivalent ikasue implementation.
 
 ## Shared rules
 
 - Properties update live and can return to documented defaults.
-- Every component page exposes a copyable JSON/Rust-like contract.
-- Content enters from its semantic edge and reallocates space; it does not require an overlay.
-- Selection, status, and progress use semantic color plus a non-color structural cue.
-- `prefers-reduced-motion: reduce` disables transition and animation durations without removing state or direction.
+- Every component page exposes a JSON contract and JavaScript / Rust source.
+- Information enters from a semantic edge and reallocates space on the same plane; an overlay is not a requirement.
+- Selection, status, and progress pair semantic color with a non-color cue.
+- `prefers-reduced-motion: reduce` preserves state, direction, and focus.
 
-## Information and editing
+## Plane and placement
 
-`Text` is a single information component with an optional editable capability. Enter or F2 enters editing, Escape cancels, Enter commits, and Tab commits before moving to the next editable value. A commit emits the custom `ikasue:commit` event with the value in its detail.
+`vertical` and `horizontal` turn ordered children into a `PlaneSpec`; `resolvePlane` returns offsets, sizes, lines, and overflow for the available extent. `elastic` shrinks toward minimums, `wrap` adds lines, and `scroll` preserves child sizes while reporting overflow.
 
-## Layout negotiation
+The layout owner does not own child content or widget state. `Rule` names a boundary, `ProgressRegion` retains target information, and `BottomDialog` adds a row from the bottom edge.
 
-`FocusPlane` owns the allocation. `FocusRegion` bubbles `ikasue:layout-request` so a nested component can ask for `primary`, `balanced`, or `secondary` attention. `AxisFlow` changes axis, item count, and focus strategy; if the content cannot fit, end navigation appears on the same axis.
+## Information, editing, and form state
 
-`EdgeRegion`, `EdgeNav`, `BottomDock`, and `BottomDialog` add or remove tracks in their entry direction. Closing removes the track and restores the prior allocation. The content behind them remains the same DOM content, not a background screenshot.
+`Text` is readable by default. Enter or F2 starts editing, Escape cancels, Enter confirms, and Tab confirms before moving to the next editable value. The confirmed value returns through normal state updates; no custom public event name is required.
 
-## Data and navigation
+`FormList` owns values, validation status, and confirmed results. Child `Text` focus and draft are local editing state and must not recolor source data while a draft is unconfirmed.
 
-`DataTable` treats the cell as the task unit. It supports cell selection, peer row/column highlighting, keyboard navigation, copy, paste, and editing when enabled. `ElasticTabs` follows the tabs keyboard pattern; `ChoiceGroup` follows the radio-group pattern. Their shared visual grammar does not erase their different semantics.
+## Selection, data, and feedback
 
-## Resilience checks
+`ChoiceGroup` follows a radio-like keyboard contract for one selected value. `DataTable` treats the cell as the unit of selection, row/column context, copy, paste, and inline editing. If clipboard permission is unavailable, preserve selection and explain the limitation.
 
-Test each contract at desktop width, narrow width, keyboard-only navigation, text zoom, and reduced motion. Clipboard features must leave the table usable when browser permission is denied or unavailable.
+`StatusIcon` and `MessageRegion` expose labels, icons, and targets instead of relying on color alone. `ProgressRegion` keeps previous content readable while marking only the region being processed.
+
+## Verification
+
+Check the same contracts at desktop width, narrow width, keyboard-only navigation, text zoom, and reduced motion. A temporary region should return focus to its opener on close, and the evidence for a decision should remain readable.
