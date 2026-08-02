@@ -209,7 +209,7 @@
     padding: clamp(20px, 3vw, 46px) clamp(16px, 3vw, 48px) 80px;
   }
 
-  .ikasue-root .bottom-dock {
+  .ikasue-root .bottom-dialog {
     max-height: 0;
     overflow: hidden;
     border-top: 0 solid var(--line);
@@ -219,12 +219,12 @@
       border-width var(--motion-fast) linear;
   }
 
-  .ikasue-root .bottom-dock[data-open="true"] {
+  .ikasue-root .bottom-dialog[data-open="true"] {
     max-height: min(42dvh, 24rem);
     border-top-width: var(--rule);
   }
 
-  .ikasue-root .bottom-dock-inner {
+  .ikasue-root .bottom-dialog-inner {
     max-width: var(--max);
     margin: 0 auto;
     padding: 18px clamp(16px, 3vw, 48px) 22px;
@@ -235,12 +235,12 @@
       opacity var(--motion-fast) linear;
   }
 
-  .ikasue-root .bottom-dock[data-open="true"] .bottom-dock-inner {
+  .ikasue-root .bottom-dialog[data-open="true"] .bottom-dialog-inner {
     transform: none;
     opacity: 1;
   }
 
-  .ikasue-root .dock-head {
+  .ikasue-root .dialog-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -510,13 +510,16 @@
     border-bottom: 1px solid var(--line-strong);
     padding: 7px 24px 7px 0;
     background: transparent;
+    color: var(--ink);
   }
 
-  .ikasue-root .property-control {
+  .ikasue-root .property-control,
+  .ikasue-root .info-text .select-control {
     position: relative;
   }
 
-  .ikasue-root .property-control.select-control::after {
+  .ikasue-root .property-control.select-control::after,
+  .ikasue-root .info-text .select-control::after {
     content: "";
     position: absolute;
     right: 3px;
@@ -882,6 +885,17 @@
     background: transparent;
     padding: 2px 1px 4px;
     min-height: 30px;
+    color: var(--ink);
+  }
+
+  .ikasue-root .info-text .select-control {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .ikasue-root .info-text .select-control select {
+    border-bottom-color: var(--line-strong);
+    padding-right: 24px;
   }
 
   .ikasue-root .info-text select {

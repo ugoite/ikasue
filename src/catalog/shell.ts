@@ -109,28 +109,28 @@ export function mountCatalog(
   main.append(topline, contentScroll);
   appPlane.append(nav, main);
 
-  const dock = element(document, "section", "bottom-dock");
-  dock.id = "bottomDock";
-  dock.dataset.open = "false";
-  dock.setAttribute("aria-label", "下端ダイアログ");
-  const dockInner = element(document, "div", "bottom-dock-inner");
-  const dockHead = element(document, "div", "dock-head");
-  const dockHeading = element(document, "div");
-  const dockEyebrow = element(document, "div", "eyebrow");
-  dockEyebrow.textContent = "Bottom dialog";
-  const dockTitle = element(document, "h2");
-  dockTitle.id = "dockTitle";
-  dockTitle.textContent = "処理を確認";
-  dockHeading.append(dockEyebrow, dockTitle);
+  const dialog = element(document, "section", "bottom-dialog");
+  dialog.id = "bottomDialog";
+  dialog.dataset.open = "false";
+  dialog.setAttribute("aria-label", "下端ダイアログ");
+  const dialogInner = element(document, "div", "bottom-dialog-inner");
+  const dialogHead = element(document, "div", "dialog-head");
+  const dialogHeading = element(document, "div");
+  const dialogEyebrow = element(document, "div", "eyebrow");
+  dialogEyebrow.textContent = "Bottom dialog";
+  const dialogTitle = element(document, "h2");
+  dialogTitle.id = "dialogTitle";
+  dialogTitle.textContent = "処理を確認";
+  dialogHeading.append(dialogEyebrow, dialogTitle);
   const closeButton = createIconButton(document, "close", "閉じる", "閉じる");
-  closeButton.dataset.closeDock = "true";
-  dockHead.append(dockHeading, closeButton);
-  const dockText = element(document, "p");
-  dockText.id = "dockText";
-  dockText.textContent = "上の情報を残したまま、下端に判断領域を追加します。";
-  const dockActions = element(document, "div", "cluster");
-  dockActions.style.marginTop = "16px";
-  dockActions.style.justifyContent = "flex-end";
+  closeButton.dataset.closeDialog = "true";
+  dialogHead.append(dialogHeading, closeButton);
+  const dialogText = element(document, "p");
+  dialogText.id = "dialogText";
+  dialogText.textContent = "上の情報を残したまま、下端に判断領域を追加します。";
+  const dialogActions = element(document, "div", "cluster");
+  dialogActions.style.marginTop = "16px";
+  dialogActions.style.justifyContent = "flex-end";
   for (const [label, emphasized] of [
     ["取消", false],
     ["確定", true],
@@ -138,13 +138,13 @@ export function mountCatalog(
     const action = element(document, "button", "text-action");
     action.type = "button";
     action.textContent = label;
-    action.dataset.closeDock = "true";
+    action.dataset.closeDialog = "true";
     action.setAttribute("aria-pressed", String(emphasized));
-    dockActions.append(action);
+    dialogActions.append(action);
   }
-  dockInner.append(dockHead, dockText, dockActions);
-  dock.append(dockInner);
-  shell.append(appPlane, dock);
+  dialogInner.append(dialogHead, dialogText, dialogActions);
+  dialog.append(dialogInner);
+  shell.append(appPlane, dialog);
   root.append(shell);
   target.append(root);
 
@@ -162,10 +162,10 @@ export function mountCatalog(
     track: (item) => pageCleanup.push(item),
     listen: (targetElement, type, handler) =>
       pageCleanup.push(listen(targetElement, type, handler)),
-    openDock: (title, message) => {
-      dockTitle.textContent = title;
-      dockText.textContent = message;
-      dock.dataset.open = "true";
+    openDialog: (title, message) => {
+      dialogTitle.textContent = title;
+      dialogText.textContent = message;
+      dialog.dataset.open = "true";
     },
   });
 
@@ -568,13 +568,13 @@ export function mountCatalog(
     root.dataset.nav = root.dataset.nav === "open" ? "closed" : "open";
     syncNavButton();
   });
-  listenAndTrack(dock, "click", (event) => {
+  listenAndTrack(dialog, "click", (event) => {
     const targetElement = event.target;
     if (
       targetElement instanceof Element &&
-      targetElement.closest("[data-close-dock]")
+      targetElement.closest("[data-close-dialog]")
     )
-      dock.dataset.open = "false";
+      dialog.dataset.open = "false";
   });
   listenAndTrack(navList, "keydown", (event) => {
     const keyboard = event as KeyboardEvent;
