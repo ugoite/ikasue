@@ -3,13 +3,11 @@ import {
   CATALOG_COMPONENTS,
   CATALOG_GROUPS,
 } from "../../../src/catalog/metadata";
+import { catalogPath, sitePath } from "../data/site-path";
 
 const groupNames = new Map(
   CATALOG_GROUPS.map(([label, id]) => [id, label]),
 );
-const catalogOrigin = (
-  import.meta.env.PUBLIC_CATALOG_URL ?? "http://localhost:5173"
-).replace(/\/$/, "");
 ---
 
 <div class="component-matrix not-content">
@@ -34,14 +32,14 @@ const catalogOrigin = (
           CATALOG_COMPONENTS.map((component) => (
             <tr>
               <th scope="row">
-                <a href={`/components/${component.id}/`}>{component.name}</a>
+                <a href={sitePath(`components/${component.id}/`)}>{component.name}</a>
                 <small>{component.ja}</small>
               </th>
               <td>{groupNames.get(component.cat)}</td>
               <td>{component.summary}</td>
               <td>
                 <a
-                  href={`${catalogOrigin}/?component=${component.id}`}
+                  href={catalogPath(component.id)}
                   target="_blank"
                   rel="noreferrer"
                 >

@@ -28,4 +28,4 @@ When `prefers-reduced-motion: reduce` is active, transition and animation durati
 
 The catalog remains operable at narrow mobile widths and under text zoom. Horizontal data surfaces may scroll, but keyboard focus must not disappear. If clipboard permissions fail, keep selection and inline editing available and explain the failure in a short status message rather than throwing.
 
-See the [component matrix](/components/) and each page's “Behavior & accessibility” section for the component-specific contract.
+See the [component matrix](../components/) and each page's “Behavior & accessibility” section for the component-specific contract.

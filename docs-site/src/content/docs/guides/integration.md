@@ -50,4 +50,4 @@ The event is a request, not an imperative resize command. The owning plane decid
 
 Import `@ugoite/ikasue/style.css` once at the application boundary. Give the mount target a real block size and avoid applying an ancestor transform that changes the meaning of directional motion. Keep the host's own focus styles visible.
 
-For a hosted catalog demo link, set `PUBLIC_CATALOG_URL` while building the docs site. Without it, docs use `http://localhost:5173` so the links work with the repository's local `npm run catalog` command.
+The docs site includes the interactive catalog at the relative `catalog/` route, so component demo links stay on the same origin and follow the configured Astro base path. The standalone Vite catalog remains available from the root `npm run catalog` command.

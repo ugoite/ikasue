@@ -1,0 +1,48 @@
+---
+import "../../../src/styles.css";
+import { sitePath } from "../data/site-path";
+
+const canonicalUrl = Astro.site
+  ? new URL(sitePath("catalog/"), Astro.site).href
+  : undefined;
+---
+
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="The interactive ikasue planar adaptive component catalog."
+    />
+    <title>ikasue component catalog</title>
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    <link rel="icon" href={sitePath("favicon.svg")} type="image/svg+xml" />
+  </head>
+  <body>
+    <main id="catalog"></main>
+    <script>
+      import { mountCatalog } from "../../../src/index";
+
+      const target = document.querySelector<HTMLElement>("#catalog");
+      if (!target) {
+        throw new Error("The integrated catalog requires a #catalog element.");
+      }
+
+      mountCatalog(target, { label: "ikasue component catalog" });
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  :root,
+  body {
+    margin: 0;
+    min-height: 100%;
+  }
+
+  body {
+    overflow: hidden;
+  }
+</style>
