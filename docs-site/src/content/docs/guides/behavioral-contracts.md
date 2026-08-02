@@ -23,7 +23,7 @@ layout ownerは子の内容やwidget stateを所有しません。`Rule`は境�
 
 `Text`はreadable by defaultです。EnterまたはF2で編集、Escapeで取消、Enterで確定し、Tabは確定して次のeditable valueへ移ります。確定値は通常のstate updateとして親へ返し、独自のpublic event nameを要求しません。
 
-`FormList`がvalues、validation status、確定結果を所有します。子`Text`のfocusとdraftは局所状態であり、編集途中のdraftでsource dataをrecolorしません。
+`FormList`がvalues、validation status、確定結果を所有します。子`Text`、select、textareaのfocusとdraftは局所状態であり、blur、Enter、Tabで編集が終わってもFormListへは送られません。明示的なexternal-send actionだけが全draftを一括でFormListへ適用し、その後に子のdraft表示を解除します。元のvalueへ戻したdraftを送信した場合は、cleanなsource statusのままです。初期server statusは送信まで表示され、編集中のdraft affordanceはcreated/modifiedの意味色ではなく中立表示にします。
 
 ## 選択、表、feedback
 

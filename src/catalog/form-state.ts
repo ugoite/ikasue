@@ -53,29 +53,28 @@ export function getFormField(
 }
 
 /**
- * Applies an explicit owner-side data update. Draft values held by an editor
- * never reach this function until its owner commits them.
+ * Applies all drafts in one explicit owner-side commit. Draft values held by
+ * child editors never reach FormList state until this function is called.
  */
-export function updateFormListField(
+export function commitFormListFields(
   state: FormListState,
-  fieldId: string,
-  value: string,
-  status?: FormFieldStatus,
+  drafts: Readonly<Record<string, string>>,
 ): FormListState {
-  const field = getFormField(state, fieldId);
-  if (!field) return state;
+  const fields = { ...state.fields };
+  let changed = false;
 
-  const nextField: FormFieldState = {
-    ...field,
-    value,
-    status: status ?? statusForValue(field, value),
-  };
-  return {
-    fields: {
-      ...state.fields,
-      [fieldId]: nextField,
-    },
-  };
+  for (const [fieldId, value] of Object.entries(drafts)) {
+    const field = getFormField(state, fieldId);
+    if (!field) continue;
+
+    const status = statusForValue(field, value);
+    if (field.value === value && field.status === status) continue;
+
+    fields[fieldId] = { ...field, value, status };
+    changed = true;
+  }
+
+  return changed ? { fields } : state;
 }
 
 export function formListStatus(

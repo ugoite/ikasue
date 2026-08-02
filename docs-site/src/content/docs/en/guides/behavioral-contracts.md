@@ -23,7 +23,7 @@ The layout owner does not own child content or widget state. `Rule` names a boun
 
 `Text` is readable by default. Enter or F2 starts editing, Escape cancels, Enter confirms, and Tab confirms before moving to the next editable value. The confirmed value returns through normal state updates; no custom public event name is required.
 
-`FormList` owns values, validation status, and confirmed results. Child `Text` focus and draft are local editing state and must not recolor source data while a draft is unconfirmed.
+`FormList` owns values, validation status, and confirmed results. Child `Text`, select, and textarea focus and drafts are local editing state; blur, Enter, and Tab ending an edit do not send them to FormList. Only an explicit external-send action applies all drafts to FormList at once and then clears the child draft affordance. Sending a draft that returned to its original value leaves a clean source status. Initial server statuses remain visible until send, while the local draft affordance stays neutral instead of using created/modified semantic colors.
 
 ## Selection, data, and feedback
 
