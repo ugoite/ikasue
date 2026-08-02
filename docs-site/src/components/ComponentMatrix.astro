@@ -36,7 +36,7 @@ const localePrefix = locale === "en" ? "en/" : "";
               <td>{componentCopy(locale, component.id).summary}</td>
               <td>
                 <a
-                  href={catalogPath(component.id)}
+                  href={catalogPath(component.id, locale)}
                   target="_blank"
                   rel="noreferrer"
                 >

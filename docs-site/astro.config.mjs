@@ -25,43 +25,74 @@ export default defineConfig({
       },
       defaultLocale: "root",
       customCss: ["./src/styles/custom.css"],
+      components: {
+        PageFrame: "./src/components/IkasuePageFrame.astro",
+      },
       sidebar: [
         {
-          label: "Start here / はじめに",
+          label: "はじめに",
+          translations: { en: "Start here" },
           items: [
-            { label: "Overview / 概要", link: "" },
+            { label: "概要", translations: { en: "Overview" }, link: "" },
             {
-              label: "Design philosophy / 平面適応UIの思想",
+              label: "平面適応UIの思想",
+              translations: { en: "Design philosophy" },
               link: "philosophy/",
             },
-            { label: "Usage / 使い方", link: "guides/usage/" },
-            { label: "Integration / 統合", link: "guides/integration/" },
-            { label: "Interactive catalog / カタログ", link: "catalog/" },
+            {
+              label: "使い方",
+              translations: { en: "Usage" },
+              link: "guides/usage/",
+            },
+            {
+              label: "統合",
+              translations: { en: "Integration" },
+              link: "guides/integration/",
+            },
+            {
+              label: "インタラクティブカタログ",
+              translations: { en: "Interactive catalog" },
+              link: "catalog/",
+            },
           ],
         },
         {
-          label: "Contracts / 契約",
+          label: "契約",
+          translations: { en: "Contracts" },
           items: [
             {
-              label: "Behavioral contracts / 振る舞い",
+              label: "振る舞いの契約",
+              translations: { en: "Behavioral contracts" },
               link: "guides/behavioral-contracts/",
             },
             {
-              label: "Accessibility / アクセシビリティ",
+              label: "アクセシビリティ",
+              translations: { en: "Accessibility" },
               link: "guides/accessibility/",
             },
-            { label: "Release / リリース", link: "guides/release/" },
+            {
+              label: "リリース",
+              translations: { en: "Release" },
+              link: "guides/release/",
+            },
           ],
         },
         {
-          label: "Components / コンポーネント",
+          label: "コンポーネント",
+          translations: { en: "Components" },
           items: [
-            { label: "Component matrix / 一覧", link: "components/" },
             {
-              label: "Foundation / 基盤",
+              label: "コンポーネント一覧",
+              translations: { en: "Component matrix" },
+              link: "components/",
+            },
+            {
+              label: "基盤",
+              translations: { en: "Foundation" },
               items: [
                 {
-                  label: "Developer model",
+                  label: "開発者モデル",
+                  translations: { en: "Developer model" },
                   link: "components/developer-model/",
                 },
                 { label: "ThemeRoot", link: "components/theme-root/" },
@@ -71,7 +102,8 @@ export default defineConfig({
               ],
             },
             {
-              label: "Layout / 配置",
+              label: "配置",
+              translations: { en: "Layout" },
               items: [
                 { label: "Stack", link: "components/stack/" },
                 { label: "Cluster", link: "components/cluster/" },
@@ -83,21 +115,24 @@ export default defineConfig({
               ],
             },
             {
-              label: "Navigation / ナビゲーション",
+              label: "ナビゲーション",
+              translations: { en: "Navigation" },
               items: [
                 { label: "EdgeNav", link: "components/edge-nav/" },
                 { label: "ElasticTabs", link: "components/elastic-tabs/" },
               ],
             },
             {
-              label: "Actions / 操作",
+              label: "操作",
+              translations: { en: "Actions" },
               items: [
                 { label: "IconAction", link: "components/icon-action/" },
                 { label: "ActionStrip", link: "components/action-strip/" },
               ],
             },
             {
-              label: "Information & input / 情報と入力",
+              label: "情報と入力",
+              translations: { en: "Information & input" },
               items: [
                 { label: "BooleanText", link: "components/boolean-text/" },
                 { label: "ChoiceGroup", link: "components/choice-group/" },
@@ -105,14 +140,16 @@ export default defineConfig({
               ],
             },
             {
-              label: "Data / データ",
+              label: "データ",
+              translations: { en: "Data" },
               items: [
                 { label: "DataTable", link: "components/data-table/" },
                 { label: "HistoryGutter", link: "components/history-gutter/" },
               ],
             },
             {
-              label: "Feedback / フィードバック",
+              label: "フィードバック",
+              translations: { en: "Feedback" },
               items: [
                 {
                   label: "ProgressRegion",
