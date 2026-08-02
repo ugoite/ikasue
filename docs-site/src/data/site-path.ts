@@ -9,9 +9,13 @@ export function sitePath(
 }
 
 /** Returns the integrated catalog route, optionally selecting a catalog page. */
-export function catalogPath(componentId?: string): string {
+export function catalogPath(
+  componentId?: string,
+  locale: "ja" | "en" = "ja",
+): string {
+  const localePrefix = locale === "en" ? "en/" : "";
   const query = componentId
     ? `?component=${encodeURIComponent(componentId)}`
     : "";
-  return `${sitePath("catalog/")}${query}`;
+  return `${sitePath(`${localePrefix}catalog/`)}${query}`;
 }

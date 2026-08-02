@@ -17,13 +17,21 @@ const locale = Astro.currentLocale === "en" ? "en" : "ja";
 const metadata = findComponent(id);
 const copy = componentCopy(locale, id);
 const ui = COMPONENT_UI_COPY[locale];
+const englishPropertyDefaults: Partial<Record<string, string>> = {
+  ...(id === "text" ? { value: "Tokyo office" } : {}),
+  ...(id === "boolean-text" ? { label: "Enable automatic save" } : {}),
+  ...(id === "status-icon" ? { label: "Synced" } : {}),
+};
+const displayDefault = (key: string, value: unknown) =>
+  locale === "en" ? (englishPropertyDefaults[key] ?? value) : value;
 const contract = JSON.stringify(
   {
     component: metadata.name,
     id: metadata.id,
-    props: Object.fromEntries(
-      metadata.props.map((property) => [property.key, property.default]),
-    ),
+    props: Object.fromEntries(metadata.props.map((property) => [
+      property.key,
+      displayDefault(property.key, property.default),
+    ])),
     events:
       id === "text"
         ? ["ikasue:commit"]
@@ -48,7 +56,7 @@ const contract = JSON.stringify(
   <p class="lede">{copy.summary}</p>
 
   <div class="doc-links">
-    <a href={catalogPath(metadata.id)} target="_blank" rel="noreferrer">
+    <a href={catalogPath(metadata.id, locale)} target="_blank" rel="noreferrer">
       {ui.catalogLink}
     </a>
     <span>{ui.demoId} <code>{metadata.demo}</code></span>
@@ -86,7 +94,7 @@ const contract = JSON.stringify(
             <tr>
               <th scope="row"><code>{property.key}</code><small>{copy.propertyLabels[property.key] ?? property.key}</small></th>
               <td><code>{property.type}</code></td>
-              <td><code>{String(property.default)}</code></td>
+              <td><code>{String(displayDefault(property.key, property.default))}</code></td>
               <td>{property.values.length ? property.values.join(" · ") : "—"}</td>
             </tr>
           )) : (
