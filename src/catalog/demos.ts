@@ -1,4 +1,10 @@
 import { appendLabel, element, setText, svgIcon, type Cleanup } from "./dom";
+import {
+  createFormListState,
+  getFormField,
+  updateFormListField,
+  type FormFieldStatus,
+} from "./form-state";
 import { horizontal, resolvePlane, vertical } from "../plane";
 import type { CatalogPageMetadata, CatalogProps } from "./types";
 
@@ -12,14 +18,16 @@ export interface DemoContext {
     type: string,
     handler: (event: Event) => void,
   ) => void;
-  readonly openDock: (title: string, message: string) => void;
+  readonly openDialog: (title: string, message: string) => void;
 }
 
 interface TextOptions {
   readonly value: string;
   readonly editable: boolean;
   readonly editor: string;
-  readonly state?: string;
+  readonly state?: FormFieldStatus;
+  readonly label?: string;
+  readonly onCommit?: (value: string) => void;
 }
 
 function addListener(
@@ -200,16 +208,25 @@ function renderText(
   stack.append(paragraph(context, "部署"));
   const host = element(context.document, "span", "info-text");
   host.id = "demoText";
-  createInfoText(
-    host,
-    {
-      value: String(props.value ?? "東京オフィス"),
-      editable: props.editable === true,
-      editor: String(props.editor ?? "text"),
-      state: String(props.state ?? "clean"),
-    },
-    context,
-  );
+  let value = String(props.value ?? "東京オフィス");
+  const draw = (): void => {
+    createInfoText(
+      host,
+      {
+        value,
+        editable: props.editable === true,
+        editor: String(props.editor ?? "text"),
+        state: String(props.state ?? "clean") as FormFieldStatus,
+        label: "部署",
+        onCommit: (nextValue) => {
+          value = nextValue;
+          draw();
+        },
+      },
+      context,
+    );
+  };
+  draw();
   stack.append(host);
   stack.append(
     paragraph(
@@ -459,7 +476,7 @@ function renderForm(
   props: CatalogProps,
   context: DemoContext,
 ): void {
-  const states =
+  const statuses: readonly FormFieldStatus[] =
     props.state === "mixed"
       ? ["created", "modified", "clean"]
       : props.state === "error"
@@ -473,21 +490,48 @@ function renderForm(
     ["東京オフィス", "select"],
     ["顧客データの整理", "textarea"],
   ];
-  for (const [index, labelText] of labels.entries()) {
+  const definitions = labels.map((label, index) => {
     const [value, editor] = values[index] ?? ["", "text"];
+    return {
+      id:
+        ["name", "location", "description"][index] ?? `field-${String(index)}`,
+      label,
+      value,
+      editor,
+      status: statuses[index] ?? "clean",
+    };
+  });
+  let formState = createFormListState(
+    definitions.map(({ id, value, status }) => ({
+      id,
+      value,
+      status,
+    })),
+  );
+  for (const definition of definitions) {
     const row = element(context.document, "div", "form-row");
-    appendLabel(context.document, row, labelText);
+    appendLabel(context.document, row, definition.label);
     const field = element(context.document, "span", "info-text");
-    createInfoText(
-      field,
-      {
-        editable: true,
-        value,
-        editor,
-        state: states[index] ?? "clean",
-      },
-      context,
-    );
+    const renderField = (): void => {
+      const state = getFormField(formState, definition.id);
+      if (!state) return;
+      createInfoText(
+        field,
+        {
+          editable: true,
+          value: state.value,
+          editor: definition.editor,
+          state: state.status,
+          label: definition.label,
+          onCommit: (value) => {
+            formState = updateFormListField(formState, definition.id, value);
+            renderField();
+          },
+        },
+        context,
+      );
+    };
+    renderField();
     row.append(field);
     form.append(row);
   }
@@ -538,6 +582,7 @@ function startInfoEdit(
   let editor: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
   if (options.editor === "select") {
     const select = element(context.document, "select");
+    const selectControl = element(context.document, "span", "select-control");
     for (const value of ["東京オフィス", "大阪オフィス", "福岡オフィス"]) {
       const option = element(context.document, "option");
       option.value = value;
@@ -545,6 +590,8 @@ function startInfoEdit(
       option.selected = value === old;
       select.append(option);
     }
+    selectControl.append(select);
+    host.append(selectControl);
     editor = select;
   } else if (options.editor === "textarea") {
     const textarea = element(context.document, "textarea");
@@ -558,7 +605,8 @@ function startInfoEdit(
     input.value = old;
     editor = input;
   }
-  host.append(editor);
+  if (options.label) editor.setAttribute("aria-label", options.label);
+  if (!host.contains(editor)) host.append(editor);
   editor.focus();
   if ("select" in editor) editor.select();
   let finished = false;
@@ -568,8 +616,8 @@ function startInfoEdit(
     const value = editor.value;
     editor.remove();
     host.dataset.editing = "false";
-    if (read) read.textContent = value;
-    if (host.dataset.state === "clean") host.dataset.state = "modified";
+    if (options.onCommit) options.onCommit(value);
+    else if (read) read.textContent = value;
   };
   const cancel = (): void => {
     if (finished) return;
@@ -938,7 +986,7 @@ function renderDialog(
       intent === "danger"
         ? "この操作は取り消せません。上の対象情報を確認してから確定してください。"
         : "上の情報を残したまま判断できます。";
-    context.openDock(`${intent} dialog`, message);
+    context.openDialog(`${intent} dialog`, message);
   });
   stack.append(open);
   container.append(stack);
