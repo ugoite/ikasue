@@ -4,7 +4,7 @@ Planar adaptive UI components for information-dense workspaces.
 
 This repository contains the distributable `@ugoite/ikasue` package, an interactive component catalog, and a Starlight documentation site. The visual direction is intentionally flat: regions negotiate space on one plane, and additions push existing content instead of floating above it.
 
-- [Documentation source](docs-site/src/content/docs/index.md)
+- [Documentation source](docs-site/src/content/docs/overview.md)
 - [Component matrix](docs-site/src/content/docs/components/index.mdx)
 - Standalone interactive catalog (`npm run catalog`)
 
