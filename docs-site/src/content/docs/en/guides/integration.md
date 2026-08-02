@@ -1,55 +1,52 @@
 ---
 title: Integration
-description: Mount the framework-neutral runtime package in an existing application.
+description: Mount the plane-centered runtime in an existing application.
 ---
 
 ## Install the package
 
-`@ugoite/ikasue` is published to GitHub Packages. Configure npm for the `@ugoite` scope in the consuming project, then install the package from the GitHub npm registry.
+`@ugoite/ikasue` is published to GitHub Packages. Configure the `@ugoite` scope in the consuming project and use the organization’s normal package-manager and CI secret store for authentication.
 
 ```sh
 npm install @ugoite/ikasue --registry=https://npm.pkg.github.com
 ```
 
-The repository intentionally does not document or invent credentials. Use your organization’s supported GitHub Packages authentication and keep the token in the package manager’s normal user or CI secret store.
+Credentials belong in the managed GitHub Packages configuration, not in this documentation.
 
-## Mount and unmount
+## Mount and use the plane API
 
-```ts
-import { mountCatalog } from "@ugoite/ikasue";
+```js
+import {
+  horizontal,
+  mountCatalog,
+  resolvePlane,
+  vertical,
+} from "@ugoite/ikasue";
 import "@ugoite/ikasue/style.css";
 
-const mount = document.getElementById("workspace");
-const handle = mount
-  ? mountCatalog(mount, {
+const target = document.querySelector("#workspace");
+const handle = target
+  ? mountCatalog(target, {
       label: "Operations workspace",
-      component: "axis-flow",
-      search: "?component=axis-flow",
+      component: "data-table",
     })
   : undefined;
 
-// On route teardown:
+const header = horizontal(["title", "actions"], { fit: "elastic", gap: 1 });
+const body = vertical(["filters", "table"], { fit: "elastic", gap: 1 });
+const layout = resolvePlane(vertical(["header", "body"], { gap: 1 }));
+
 handle?.dispose();
 ```
 
-Use one mount per owned target. The returned handle owns the runtime listeners and generated subtree; call `dispose()` when the host route removes the target.
+`mountCatalog` owns listeners and the generated catalog subtree for its target. Call `dispose()` during route teardown. `vertical`, `horizontal`, and `resolvePlane` are serializable, framework-neutral plane contracts.
 
-## Events and layout ownership
+## State ownership
 
-The runtime exports `COMMIT_EVENT` and `LAYOUT_REQUEST_EVENT`, plus `dispatchCommit` and `dispatchLayoutRequest`. A `Text` editor commits a value through the commit event. A `FocusRegion` asks its nearest `FocusPlane` for space through the bubbling layout request.
-
-```ts
-import { LAYOUT_REQUEST_EVENT, dispatchLayoutRequest } from "@ugoite/ikasue";
-
-dispatchLayoutRequest(document.querySelector("#detail")!, "secondary");
-```
-
-The event is a request, not an imperative resize command. The owning plane decides whether the requested allocation fits the current viewport.
+Before adding wrapper layers, decide which component owns values, status, selection, and draft. `FormList` is specifically the owner of values and status. Passing focus and draft to child `Text` creates local editing state; it must not recolor saved source data before confirmation.
 
 ## CSS and host layout
 
-Import `@ugoite/ikasue/style.css` once at the application boundary. Give the mount target a real block size and avoid applying an ancestor transform that changes the meaning of directional motion. Keep the host's own focus styles visible.
+Import `@ugoite/ikasue/style.css` once at the application boundary. Give the mount target a real block size and avoid an ancestor transform that changes directional layout. Keep host focus styles visible.
 
-The docs site includes the interactive catalog at the relative `catalog/` route, so component demo links stay on the same origin and follow the configured Astro base path. The standalone Vite catalog remains available from the root `npm run catalog` command.
-
-The English documentation is manually authored and reviewed alongside the source locale. Do not add external machine-translated prose or rely on an external translation service when updating it.
+The docs site’s [catalog](../catalog/) is built under the same Astro base path. Astro components should use `sitePath` or `catalogPath` for generated links; content links remain relative.

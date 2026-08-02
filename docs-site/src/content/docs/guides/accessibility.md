@@ -3,29 +3,29 @@ title: Accessibility / アクセシビリティ
 description: Semantic, keyboard, motion, and resilience requirements for ikasue.
 ---
 
-Accessibility is a behavioral requirement, not a theme option. The planar language should make the information relationship clearer without asking assistive technology users to infer it from paint or motion.
+アクセシビリティはtheme optionではなく、component contractの一部です。planeの関係をpaintやmotionから推測させず、semantic structure、keyboard、文章、状態属性で公開します。
 
-## Semantic structure
+## semantic structure
 
-- Use real headings, buttons, links, form controls, tables, and landmarks.
-- Label regions and groups according to their task, not their CSS class.
-- Use `aria-current`, selected, checked, expanded, busy, and live attributes only when their native equivalent is not available or is insufficient.
-- Keep the accessible name stable while an icon action changes from enabled to busy.
+- 本物のheading、button、link、form control、table、landmarkを使う。
+- regionとgroupにはCSS classではなくtaskを表すlabelを付ける。
+- nativeの意味で足りないときだけselected、checked、expanded、busy、live stateを補う。
+- icon actionがenabledからbusyへ変わってもaccessible nameを安定させる。
 
-## Keyboard geometry
+## keyboardとplane geometry
 
-Tab follows the reading order. Arrow keys follow the visual axis for tabs, choices, tables, and focus regions. Home and End reach axis extremes when the component exposes them. A separator, rail toggle, icon action, and dialog action are real buttons with real focus styles.
+Tabは読み順に従います。ChoiceGroupはradioに近い矢印操作、DataTableはcell axisの矢印操作、TextはEnter/F2、Escape、Enter、Tabのediting contractを持ちます。`Rule`のような受動的要素はTabに入れません。
 
-Editing follows a consistent commit/cancel model: Enter or F2 starts where documented, Escape cancels, Enter commits, and Tab commits before moving onward. Focus returns to the opener when a temporary edge or bottom region closes.
+一時的な`BottomDialog`を開いたら最初のactionへfocusを移し、close後にopenerへ戻します。planeが縮んでもfocus対象を不可視にせず、必要なら`scroll`で到達可能にします。
 
-## Non-color and reduced-motion cues
+## non-colorとreduced motion
 
-Black communicates structure. Status colors communicate status, never decoration alone. Pair every color cue with a check, icon shape, text, selected area, line, or busy attribute.
+黒はstructure、状態色はstatusだけに使います。色にはcheck、icon shape、文章、selection surface、line、busy attributeなどを組み合わせます。
 
-When `prefers-reduced-motion: reduce` is active, transition and animation durations become zero. The region still changes allocation and exposes the same text, focus, and semantic state.
+`prefers-reduced-motion: reduce`ではtransitionとanimation durationを0にします。motionがなくてもplaneの再配分、text、focus、semantic stateは変わらず理解できます。
 
-## Narrow layouts and clipboard
+## narrow layoutとclipboard
 
-The catalog remains operable at narrow mobile widths and under text zoom. Horizontal data surfaces may scroll, but keyboard focus must not disappear. If clipboard permissions fail, keep selection and inline editing available and explain the failure in a short status message rather than throwing.
+text zoomとnarrow mobileで操作できるようにします。横方向のDataTableはscrollできてもkeyboard focusを失わせません。clipboard permissionがない場合はselectionとinline editingを残し、短いstatus messageで制限を伝えます。
 
-See the [component matrix](../components/) and each page's “Behavior & accessibility” section for the component-specific contract.
+各component pageの「振る舞いとアクセシビリティ」と[component inventory](../components/)を、実装時の個別チェックリストとして使ってください。

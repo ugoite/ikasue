@@ -1,55 +1,52 @@
 ---
 title: Integration / 統合
-description: Mount the framework-neutral runtime package in an existing application.
+description: Mount the plane-centered runtime in an existing application.
 ---
 
-## Install the package
+## packageをinstallする
 
-`@ugoite/ikasue` is published to GitHub Packages. Configure npm for the `@ugoite` scope in the consuming project, then install the package from the GitHub npm registry.
+`@ugoite/ikasue`はGitHub Packagesへ公開されます。利用側projectで`@ugoite` scopeのregistryを設定し、package managerとCIのsecret storeで認証してください。
 
 ```sh
 npm install @ugoite/ikasue --registry=https://npm.pkg.github.com
 ```
 
-The repository intentionally does not document or invent credentials. Use your organization’s supported GitHub Packages authentication and keep the token in the package manager’s normal user or CI secret store.
+認証情報はこのdocsへ書かず、組織が管理するGitHub Packagesの通常の設定を使います。
 
-## Mount and unmount
+## mountとplane API
 
-```ts
-import { mountCatalog } from "@ugoite/ikasue";
+```js
+import {
+  horizontal,
+  mountCatalog,
+  resolvePlane,
+  vertical,
+} from "@ugoite/ikasue";
 import "@ugoite/ikasue/style.css";
 
-const mount = document.getElementById("workspace");
-const handle = mount
-  ? mountCatalog(mount, {
+const target = document.querySelector("#workspace");
+const handle = target
+  ? mountCatalog(target, {
       label: "Operations workspace",
-      component: "axis-flow",
-      search: "?component=axis-flow",
+      component: "data-table",
     })
   : undefined;
 
-// On route teardown:
+const header = horizontal(["title", "actions"], { fit: "elastic", gap: 1 });
+const body = vertical(["filters", "table"], { fit: "elastic", gap: 1 });
+const layout = resolvePlane(vertical(["header", "body"], { gap: 1 }));
+
 handle?.dispose();
 ```
 
-Use one mount per owned target. The returned handle owns the runtime listeners and generated subtree; call `dispose()` when the host route removes the target.
+`mountCatalog` owns listeners and the generated catalog subtree for its target. `dispose()`をroute teardownで呼びます。`vertical`、`horizontal`、`resolvePlane`はDOM frameworkから独立したserializableなplane contractです。
 
-## Events and layout ownership
+## state ownership
 
-The runtime exports `COMMIT_EVENT` and `LAYOUT_REQUEST_EVENT`, plus `dispatchCommit` and `dispatchLayoutRequest`. A `Text` editor commits a value through the commit event. A `FocusRegion` asks its nearest `FocusPlane` for space through the bubbling layout request.
+componentを複数のwrapperで囲む前に、どのcomponentが値、status、selection、draftを所有するかを決めます。特に`FormList`はvaluesとstatusのownerです。子`Text`にfocusとdraftを渡しても、それは編集中の局所表示であり、保存済みデータをrecolorしてはいけません。
 
-```ts
-import { LAYOUT_REQUEST_EVENT, dispatchLayoutRequest } from "@ugoite/ikasue";
+## CSSとhost layout
 
-dispatchLayoutRequest(document.querySelector("#detail")!, "secondary");
-```
+`@ugoite/ikasue/style.css`はapplication boundaryで一度だけimportします。mount targetには実際のblock sizeを与え、ancestor transformでdirectional layoutの意味を変えないようにします。host側のfocus styleも残してください。
 
-The event is a request, not an imperative resize command. The owning plane decides whether the requested allocation fits the current viewport.
-
-## CSS and host layout
-
-Import `@ugoite/ikasue/style.css` once at the application boundary. Give the mount target a real block size and avoid applying an ancestor transform that changes the meaning of directional motion. Keep the host's own focus styles visible.
-
-The docs site includes the interactive catalog at the relative `catalog/` route, so component demo links stay on the same origin and follow the configured Astro base path. The standalone Vite catalog remains available from the root `npm run catalog` command.
-
-The English documentation locale is manually authored and reviewed against the source contracts. Do not add external machine-translated prose or rely on an external translation service when updating it.
+docs siteの[catalog](../catalog/)は同じAstro base pathの中にbuildされます。GitHub Pagesのsite pathを想定したリンクはAstro component内で`sitePath`または`catalogPath`を使い、contentのinternal linkはrelative pathにします。

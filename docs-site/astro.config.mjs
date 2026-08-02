@@ -30,8 +30,8 @@ export default defineConfig({
       },
       sidebar: [
         {
-          label: "はじめに",
-          translations: { en: "Start here" },
+          label: "思想",
+          translations: { en: "Philosophy" },
           items: [
             { label: "概要", translations: { en: "Overview" }, link: "" },
             {
@@ -40,19 +40,9 @@ export default defineConfig({
               link: "philosophy/",
             },
             {
-              label: "使い方",
-              translations: { en: "Usage" },
-              link: "guides/usage/",
-            },
-            {
-              label: "統合",
-              translations: { en: "Integration" },
-              link: "guides/integration/",
-            },
-            {
-              label: "インタラクティブカタログ",
-              translations: { en: "Interactive catalog" },
-              link: "catalog/",
+              label: "コンポーネント契約",
+              translations: { en: "Developer model" },
+              link: "components/developer-model/",
             },
           ],
         },
@@ -66,6 +56,16 @@ export default defineConfig({
               link: "guides/behavioral-contracts/",
             },
             {
+              label: "使い方",
+              translations: { en: "Usage" },
+              link: "guides/usage/",
+            },
+            {
+              label: "統合",
+              translations: { en: "Integration" },
+              link: "guides/integration/",
+            },
+            {
               label: "アクセシビリティ",
               translations: { en: "Accessibility" },
               link: "guides/accessibility/",
@@ -74,6 +74,11 @@ export default defineConfig({
               label: "リリース",
               translations: { en: "Release" },
               link: "guides/release/",
+            },
+            {
+              label: "インタラクティブカタログ",
+              translations: { en: "Interactive catalog" },
+              link: "catalog/",
             },
           ],
         },
@@ -90,11 +95,6 @@ export default defineConfig({
               label: "基盤",
               translations: { en: "Foundation" },
               items: [
-                {
-                  label: "開発者モデル",
-                  translations: { en: "Developer model" },
-                  link: "components/developer-model/",
-                },
                 { label: "ThemeRoot", link: "components/theme-root/" },
                 { label: "Text", link: "components/text/" },
                 { label: "Rule", link: "components/rule/" },
@@ -105,21 +105,8 @@ export default defineConfig({
               label: "配置",
               translations: { en: "Layout" },
               items: [
-                { label: "Stack", link: "components/stack/" },
-                { label: "Cluster", link: "components/cluster/" },
-                { label: "FocusPlane", link: "components/focus-plane/" },
-                { label: "FocusRegion", link: "components/focus-region/" },
-                { label: "AxisFlow", link: "components/axis-flow/" },
-                { label: "EdgeRegion", link: "components/edge-region/" },
-                { label: "BottomDock", link: "components/bottom-dock/" },
-              ],
-            },
-            {
-              label: "ナビゲーション",
-              translations: { en: "Navigation" },
-              items: [
-                { label: "EdgeNav", link: "components/edge-nav/" },
-                { label: "ElasticTabs", link: "components/elastic-tabs/" },
+                { label: "Vertical", link: "components/vertical/" },
+                { label: "Horizontal", link: "components/horizontal/" },
               ],
             },
             {
@@ -158,6 +145,17 @@ export default defineConfig({
                 { label: "MessageRegion", link: "components/message-region/" },
                 { label: "BottomDialog", link: "components/bottom-dialog/" },
               ],
+            },
+          ],
+        },
+        {
+          label: "例",
+          translations: { en: "Examples" },
+          items: [
+            {
+              label: "サイト形状の例",
+              translations: { en: "Five site shapes" },
+              link: "examples/",
             },
           ],
         },
