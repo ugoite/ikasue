@@ -2,8 +2,17 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-const repositoryRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
-const docsRoot = path.join(repositoryRoot, "docs-site", "src", "content", "docs");
+const repositoryRoot = path.resolve(
+  path.dirname(new URL(import.meta.url).pathname),
+  "..",
+);
+const docsRoot = path.join(
+  repositoryRoot,
+  "docs-site",
+  "src",
+  "content",
+  "docs",
+);
 const englishRoot = path.join(docsRoot, "en");
 
 function collectFiles(root, skipTopLevel = undefined) {
@@ -16,7 +25,8 @@ function collectFiles(root, skipTopLevel = undefined) {
       const relativePath = path.join(relativeDirectory, entry.name);
       const absolutePath = path.join(directory, entry.name);
       if (entry.isDirectory()) visit(absolutePath, relativePath);
-      else if (entry.isFile()) files.push(relativePath.split(path.sep).join("/"));
+      else if (entry.isFile())
+        files.push(relativePath.split(path.sep).join("/"));
     }
   }
 
@@ -65,7 +75,8 @@ function findRootAbsoluteLinks(source) {
 
     const referenceLink = /^\s*\[[^\]\n]+\]:\s*(?:<([^>\n]*)>|([^\s]+))/;
     const referenceMatch = line.match(referenceLink);
-    if (referenceMatch) destinations.push(referenceMatch[1] ?? referenceMatch[2]);
+    if (referenceMatch)
+      destinations.push(referenceMatch[1] ?? referenceMatch[2]);
 
     const htmlLinks = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
     for (const match of line.matchAll(htmlLinks)) {
@@ -73,7 +84,8 @@ function findRootAbsoluteLinks(source) {
     }
 
     const expressionLinks = /\bhref\s*=\s*\{\s*["']([^"']+)["']\s*\}/gi;
-    for (const match of line.matchAll(expressionLinks)) destinations.push(match[1]);
+    for (const match of line.matchAll(expressionLinks))
+      destinations.push(match[1]);
 
     for (const destination of destinations) {
       if (destination.startsWith("/") && !isAllowedDestination(destination)) {
@@ -87,12 +99,20 @@ function findRootAbsoluteLinks(source) {
 
 const rootFiles = collectFiles(docsRoot, "en");
 const englishFiles = collectFiles(englishRoot);
-const missing = rootFiles.filter((filePath) => !englishFiles.includes(filePath));
+const missing = rootFiles.filter(
+  (filePath) => !englishFiles.includes(filePath),
+);
 const extra = englishFiles.filter((filePath) => !rootFiles.includes(filePath));
 const errors = [];
 
-if (missing.length) errors.push(`Missing English files:\n${missing.map((filePath) => `  - ${filePath}`).join("\n")}`);
-if (extra.length) errors.push(`Extra English files:\n${extra.map((filePath) => `  - ${filePath}`).join("\n")}`);
+if (missing.length)
+  errors.push(
+    `Missing English files:\n${missing.map((filePath) => `  - ${filePath}`).join("\n")}`,
+  );
+if (extra.length)
+  errors.push(
+    `Extra English files:\n${extra.map((filePath) => `  - ${filePath}`).join("\n")}`,
+  );
 
 for (const locale of [
   { name: "root", directory: docsRoot, files: rootFiles },
@@ -100,7 +120,9 @@ for (const locale of [
 ]) {
   for (const relativePath of locale.files.filter(isMarkdownFile)) {
     const absolutePath = path.join(locale.directory, relativePath);
-    for (const finding of findRootAbsoluteLinks(fs.readFileSync(absolutePath, "utf8"))) {
+    for (const finding of findRootAbsoluteLinks(
+      fs.readFileSync(absolutePath, "utf8"),
+    )) {
       errors.push(
         `${locale.name}/${relativePath}:${finding.line} uses a root-absolute internal link ${finding.destination}; use a relative link instead`,
       );
@@ -113,5 +135,7 @@ if (errors.length) {
   console.error(errors.join("\n"));
   process.exitCode = 1;
 } else {
-  console.log(`Docs sync check passed: ${rootFiles.length} mirrored files; no root-absolute internal links.`);
+  console.log(
+    `Docs sync check passed: ${rootFiles.length} mirrored files; no root-absolute internal links.`,
+  );
 }
