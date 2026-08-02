@@ -209,7 +209,7 @@ export function mountCatalog(
     copy.append(japanese);
     item.append(copy);
     listenAndTrack(item, "click", () => {
-      selectComponent(component.id);
+      selectComponent(component.id, true, true);
     });
     return item;
   };
@@ -289,6 +289,7 @@ export function mountCatalog(
     const eyebrowNode = element(document, "div", "eyebrow");
     eyebrowNode.textContent = eyebrow;
     const titleNode = element(document, "h1");
+    titleNode.tabIndex = -1;
     titleNode.textContent = title;
     const summaryNode = element(document, "p", "summary");
     summaryNode.textContent = summary;
@@ -306,6 +307,9 @@ export function mountCatalog(
   };
 
   const renderStandardPage = (component: CatalogPageMetadata): void => {
+    content.append(
+      appendPageHeading("ikasue component", component.name, component.summary),
+    );
     const grid = element(document, "div", "doc-grid");
     const main = element(document, "div", "doc-main");
     const side = element(document, "aside", "doc-side");
@@ -493,7 +497,7 @@ export function mountCatalog(
     renderDeveloperDemo(stage, context());
   };
 
-  const renderPage = (): void => {
+  const renderPage = (focusHeading = false): void => {
     for (const item of pageCleanup) item();
     pageCleanup = [];
     content.replaceChildren();
@@ -502,6 +506,7 @@ export function mountCatalog(
     else if (component.demo === "developer") renderDeveloper();
     else renderStandardPage(component);
     contentScroll.scrollTop = 0;
+    if (focusHeading) focusPageHeading(content);
   };
 
   const bindProperties = (component: CatalogPageMetadata): void => {
@@ -545,7 +550,11 @@ export function mountCatalog(
     }
   };
 
-  const selectComponent = (id: CatalogPageId, updateUrl = true): void => {
+  const selectComponent = (
+    id: CatalogPageId,
+    updateUrl = true,
+    focusHeading = false,
+  ): void => {
     if (disposed || (id === currentId && !updateUrl)) return;
     currentId = id;
     currentProps = defaultProps(id);
@@ -559,7 +568,7 @@ export function mountCatalog(
         window.history.pushState({}, "", nextUrl);
     }
     renderNav();
-    renderPage();
+    renderPage(focusHeading);
     if ((window?.innerWidth ?? 1024) < 901) root.dataset.nav = "closed";
     syncNavButton();
   };
@@ -636,6 +645,12 @@ export function mountCatalog(
       root.remove();
     },
   };
+}
+
+function focusPageHeading(content: HTMLElement): void {
+  content
+    .querySelector<HTMLElement>(".page-head h1")
+    ?.focus({ preventScroll: true });
 }
 
 function createIconButton(
