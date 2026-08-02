@@ -10,9 +10,13 @@ ikasue is a planar adaptive UI component library for information-dense work. Eve
 
 ## Required component inventory
 
-The catalog must document and demonstrate the following 24 components:
+The reference has 25 navigable pages: one conceptual page and 24 contract
+entries. The catalog keeps the conceptual page in `CATALOG_CONCEPTS` and
+preserves the 24-entry component contract in `CATALOG_COMPONENTS`.
 
-- Design philosophy, Developer model
+The 24 required component entries are:
+
+- Developer model
 - ThemeRoot, Text, Rule, StatusIcon
 - Stack, Cluster, FocusPlane, FocusRegion, AxisFlow, EdgeRegion, BottomDock
 - EdgeNav, ElasticTabs
@@ -20,6 +24,10 @@ The catalog must document and demonstrate the following 24 components:
 - BooleanText, ChoiceGroup, FormList
 - DataTable, HistoryGutter
 - ProgressRegion, MessageRegion, BottomDialog
+
+The separate conceptual page is:
+
+- Design philosophy
 
 ## Behavioral contracts
 
