@@ -511,6 +511,49 @@ export const PRINCIPLES = [
   ],
 ] as const;
 
+export const PRINCIPLES_EN = [
+  [
+    "Flat Plane",
+    "Place every component on the same plane. New regions make room by changing grid tracks or flow instead of covering existing regions.",
+  ],
+  [
+    "Directional Origin",
+    "Right-side content enters from the right, left navigation from the left, and bottom dialogs from below. Motion explains the geography of information.",
+  ],
+  [
+    "Space Negotiation",
+    "Display regions negotiate the width and height they need from focus, content, viewport, and priority instead of relying on fixed spans.",
+  ],
+  [
+    "Infinite Axis, Finite Viewport",
+    "Accept any number of items on either axis. When they no longer fit, add navigation at that axis edge instead of hiding them in overflow.",
+  ],
+  [
+    "Information Is Editable",
+    "Do not split Text from TextInput. Give information an editable capability and editor kind while keeping reading as the default state.",
+  ],
+  [
+    "Selection Owns Area",
+    "Show selection with a little more area and a quiet surface, not only an underline or heavy border. Keep unselected content calm.",
+  ],
+  [
+    "No Card Taxonomy",
+    "Do not add boxes to create categories. Separate meaning with space, boundaries, order, and edge navigation.",
+  ],
+  [
+    "Semantic Color Only",
+    "Black is structural. Use blue, green, red, and yellow for state only; do not scatter them as a decorative palette.",
+  ],
+  [
+    "Readable During Work",
+    "Keep previous content visible during loading or updates, and show motion only on the region being processed.",
+  ],
+  [
+    "Keyboard Is Geometry",
+    "Tab, arrows, Home/End, and copy/paste should follow the same directions as visual movement.",
+  ],
+] as const;
+
 const PHILOSOPHY: Partial<Record<CatalogPageId, string>> = {
   "theme-root":
     "themeは装飾presetではなく、全componentが共有する判断規則。白、黒、OS fontを固定基盤とし、選択面の濃度、線、密度、motionだけを調整する。",

@@ -1,12 +1,11 @@
 ---
 import { Code } from "@astrojs/starlight/components";
-import {
-  componentMeta,
-  componentPhilosophy,
-  findComponent,
-} from "../../../src/catalog/metadata";
+import { findComponent } from "../../../src/catalog/metadata";
 import type { CatalogComponentId } from "../../../src/catalog/types";
-import { COMPONENT_GUIDANCE } from "../data/component-guidance";
+import {
+  COMPONENT_UI_COPY,
+  componentCopy,
+} from "../data/component-copy";
 import { catalogPath } from "../data/site-path";
 
 interface Props {
@@ -14,9 +13,10 @@ interface Props {
 }
 
 const { id } = Astro.props;
+const locale = Astro.currentLocale === "en" ? "en" : "ja";
 const metadata = findComponent(id);
-const guidance = COMPONENT_GUIDANCE[id];
-const [goodFor, avoidFor, interaction] = componentMeta(id);
+const copy = componentCopy(locale, id);
+const ui = COMPONENT_UI_COPY[locale];
 const contract = JSON.stringify(
   {
     component: metadata.name,
@@ -42,66 +42,68 @@ const contract = JSON.stringify(
 ---
 
 <div class="component-doc">
-  <p class="eyebrow">{metadata.ja} · {metadata.cat}</p>
-  <p class="lede">{metadata.summary}</p>
+  <p class="eyebrow">
+    {locale === "ja" ? `${metadata.ja} · ${copy.category}` : copy.category}
+  </p>
+  <p class="lede">{copy.summary}</p>
 
   <div class="doc-links">
     <a href={catalogPath(metadata.id)} target="_blank" rel="noreferrer">
-      Open interactive catalog ↗
+      {ui.catalogLink}
     </a>
-    <span>Demo id: <code>{metadata.demo}</code></span>
+    <span>{ui.demoId} <code>{metadata.demo}</code></span>
   </div>
 
-  <h2>Contract / 契約</h2>
-  <p>{componentPhilosophy(id)}</p>
-  <Code code={contract} lang="json" title={`${metadata.name} contract`} />
+  <h2>{ui.contract}</h2>
+  <p>{copy.philosophy}</p>
+  <Code code={contract} lang="json" title={`${metadata.name} ${ui.contract}`} />
 
   <div class="guidance-grid">
     <section>
-      <h2>Use it when / 使う場面</h2>
-      <p>{guidance.useWhen}</p>
+      <h2>{ui.useWhen}</h2>
+      <p>{copy.useWhen}</p>
     </section>
     <section>
-      <h2>Avoid it when / 避ける場面</h2>
-      <p>{guidance.avoidWhen}</p>
+      <h2>{ui.avoidWhen}</h2>
+      <p>{copy.avoidWhen}</p>
     </section>
   </div>
 
-  <h2>Implementation / 実装の入口</h2>
-  <p>{guidance.implementation}</p>
-  <Code code={`import { mountCatalog } from "@ugoite/ikasue";\n\nconst target = document.querySelector("#workspace");\nif (target) {\n  mountCatalog(target, { component: "${metadata.id}" });\n}`} lang="ts" title="integration sketch" />
+  <h2>{ui.implementation}</h2>
+  <p>{copy.implementation}</p>
+  <Code code={`import { mountCatalog } from "@ugoite/ikasue";\n\nconst target = document.querySelector("#workspace");\nif (target) {\n  mountCatalog(target, { component: "${metadata.id}" });\n}`} lang="ts" title={ui.integrationSketch} />
 
-  <h2>Properties / props</h2>
+  <h2>{ui.properties}</h2>
   <div class="property-table">
     <table>
-      <caption>{metadata.name} properties / props一覧</caption>
+      <caption>{ui.propertiesCaption(metadata.name)}</caption>
       <thead>
-        <tr><th scope="col">Key</th><th scope="col">Type</th><th scope="col">Default</th><th scope="col">Values</th></tr>
+        <tr><th scope="col">{ui.key}</th><th scope="col">{ui.type}</th><th scope="col">{ui.defaultValue}</th><th scope="col">{ui.values}</th></tr>
       </thead>
       <tbody>
         {
           metadata.props.length ? metadata.props.map((property) => (
             <tr>
-              <th scope="row"><code>{property.key}</code><small>{property.label}</small></th>
+              <th scope="row"><code>{property.key}</code><small>{copy.propertyLabels[property.key] ?? property.key}</small></th>
               <td><code>{property.type}</code></td>
               <td><code>{String(property.default)}</code></td>
               <td>{property.values.length ? property.values.join(" · ") : "—"}</td>
             </tr>
           )) : (
-            <tr><td colspan="4">This conceptual runtime entry has no configurable props. / 設定propsなし。</td></tr>
+            <tr><td colspan="4">{ui.noProps}</td></tr>
           )
         }
       </tbody>
     </table>
   </div>
 
-  <h2>Behavior & accessibility / 振る舞いとアクセシビリティ</h2>
+  <h2>{ui.behaviorAccessibility}</h2>
   <dl class="behavior-list">
-    <div><dt>Good for / 適する対象</dt><dd>{goodFor}</dd></div>
-    <div><dt>Not for / 適さない対象</dt><dd>{avoidFor}</dd></div>
-    <div><dt>Interaction / 操作</dt><dd>{interaction}</dd></div>
-    <div><dt>Keyboard / キーボード</dt><dd>{guidance.keyboard}</dd></div>
-    <div><dt>Accessibility / a11y</dt><dd>{guidance.accessibility}</dd></div>
+    <div><dt>{ui.goodFor}</dt><dd>{copy.goodFor}</dd></div>
+    <div><dt>{ui.avoidFor}</dt><dd>{copy.avoidFor}</dd></div>
+    <div><dt>{ui.interaction}</dt><dd>{copy.interaction}</dd></div>
+    <div><dt>{ui.keyboard}</dt><dd>{copy.keyboard}</dd></div>
+    <div><dt>{ui.accessibility}</dt><dd>{copy.accessibility}</dd></div>
   </dl>
 </div>
 
