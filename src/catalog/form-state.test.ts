@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  commitFormListFields,
   createFormListState,
   formListStatus,
   getFormField,
-  updateFormListField,
 } from "./form-state";
 
 describe("FormList state ownership", () => {
@@ -21,35 +21,68 @@ describe("FormList state ownership", () => {
     expect(formListStatus(state, "location")).toBe("clean");
   });
 
-  it("updates only the field explicitly committed by its owner", () => {
+  it("applies all local drafts only when the owner explicitly commits them", () => {
     const state = createFormListState([
       { id: "name", value: "プロジェクト藍" },
       { id: "location", value: "東京オフィス" },
     ]);
 
-    const next = updateFormListField(state, "name", "プロジェクト蒼");
+    const drafts = {
+      name: "プロジェクト蒼",
+      location: "大阪オフィス",
+    };
+    expect(formListStatus(state, "name")).toBe("clean");
+    expect(getFormField(state, "name")?.value).toBe("プロジェクト藍");
+
+    const next = commitFormListFields(state, drafts);
 
     expect(getFormField(next, "name")).toMatchObject({
       value: "プロジェクト蒼",
       status: "modified",
     });
-    expect(getFormField(next, "location")).toBe(
-      getFormField(state, "location"),
-    );
+    expect(getFormField(next, "location")).toMatchObject({
+      value: "大阪オフィス",
+      status: "modified",
+    });
   });
 
-  it("computes a field status from the FormList values and baseline", () => {
+  it("returns a clean source status when a draft returns to its original value", () => {
     const state = createFormListState([
       { id: "name", value: "プロジェクト藍" },
-      { id: "new-field", value: "", status: "created" },
     ]);
 
-    const modified = updateFormListField(state, "name", "変更済み");
-    const clean = updateFormListField(modified, "name", "プロジェクト藍");
-    const created = updateFormListField(state, "new-field", "入力済み");
+    const modified = commitFormListFields(state, { name: "変更済み" });
+    const clean = commitFormListFields(modified, {
+      name: "プロジェクト藍",
+    });
 
     expect(formListStatus(modified, "name")).toBe("modified");
     expect(formListStatus(clean, "name")).toBe("clean");
-    expect(formListStatus(created, "new-field")).toBe("created");
+  });
+
+  it("keeps initial server statuses until a draft is sent", () => {
+    const state = createFormListState([
+      { id: "new-field", value: "入力済み", status: "created" },
+      { id: "review", value: "要確認", status: "error" },
+      { id: "removed", value: "旧情報", status: "deleted" },
+    ]);
+
+    expect(formListStatus(state, "new-field")).toBe("created");
+    expect(formListStatus(state, "review")).toBe("error");
+    expect(formListStatus(state, "removed")).toBe("deleted");
+
+    const next = commitFormListFields(state, { "new-field": "" });
+
+    expect(formListStatus(next, "new-field")).toBe("clean");
+    expect(formListStatus(next, "review")).toBe("error");
+    expect(formListStatus(next, "removed")).toBe("deleted");
+  });
+
+  it("ignores drafts for fields that FormList does not own", () => {
+    const state = createFormListState([{ id: "name", value: "藍" }]);
+
+    const next = commitFormListFields(state, { missing: "蒼" });
+
+    expect(next).toBe(state);
   });
 });

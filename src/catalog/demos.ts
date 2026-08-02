@@ -1,8 +1,8 @@
 import { appendLabel, element, setText, svgIcon, type Cleanup } from "./dom";
 import {
+  commitFormListFields,
   createFormListState,
   getFormField,
-  updateFormListField,
   type FormFieldStatus,
 } from "./form-state";
 import { horizontal, resolvePlane, vertical } from "../plane";
@@ -26,6 +26,7 @@ interface TextOptions {
   readonly editable: boolean;
   readonly editor: string;
   readonly state?: FormFieldStatus;
+  readonly draft?: boolean;
   readonly label?: string;
   readonly onCommit?: (value: string) => void;
 }
@@ -508,6 +509,31 @@ function renderForm(
       status,
     })),
   );
+  let drafts: Readonly<Record<string, string>> = {};
+  const actions = element(context.document, "div", "form-list-actions");
+  const send = textAction(context, "FormListへ送信");
+  send.dataset.action = "form-list-send";
+  send.setAttribute("aria-label", "未送信のdraftをFormListへ送信");
+  const sendStatus = paragraph(
+    context,
+    "未送信のdraftはありません。",
+    "form-list-status",
+  );
+  sendStatus.setAttribute("role", "status");
+  sendStatus.setAttribute("aria-live", "polite");
+  actions.append(send, sendStatus);
+
+  const updateSendStatus = (message?: string): void => {
+    if (message) {
+      sendStatus.textContent = message;
+      return;
+    }
+    const count = Object.keys(drafts).length;
+    sendStatus.textContent = count
+      ? `${String(count)}件のdraftが未送信です。`
+      : "未送信のdraftはありません。";
+  };
+  const fieldRenderers: Array<() => void> = [];
   for (const definition of definitions) {
     const row = element(context.document, "div", "form-row");
     appendLabel(context.document, row, definition.label);
@@ -515,27 +541,43 @@ function renderForm(
     const renderField = (): void => {
       const state = getFormField(formState, definition.id);
       if (!state) return;
+      const draft = drafts[definition.id];
+      const hasDraft = draft !== undefined;
       createInfoText(
         field,
         {
           editable: true,
-          value: state.value,
+          value: draft ?? state.value,
           editor: definition.editor,
-          state: state.status,
+          state: hasDraft ? "clean" : state.status,
+          draft: hasDraft,
           label: definition.label,
           onCommit: (value) => {
-            formState = updateFormListField(formState, definition.id, value);
+            drafts = { ...drafts, [definition.id]: value };
             renderField();
+            updateSendStatus();
           },
         },
         context,
       );
     };
+    fieldRenderers.push(renderField);
     renderField();
     row.append(field);
     form.append(row);
   }
-  container.append(form);
+  addListener(context, send, "click", () => {
+    const count = Object.keys(drafts).length;
+    if (!count) {
+      updateSendStatus("送信するdraftはありません。");
+      return;
+    }
+    formState = commitFormListFields(formState, drafts);
+    drafts = {};
+    for (const renderField of fieldRenderers) renderField();
+    updateSendStatus(`${String(count)}件のdraftをFormListへ送信しました。`);
+  });
+  container.append(actions, form);
 }
 
 export function createInfoText(
@@ -545,7 +587,8 @@ export function createInfoText(
 ): void {
   host.className = "info-text";
   host.dataset.editable = String(options.editable);
-  host.dataset.state = options.state ?? "clean";
+  host.dataset.draft = String(options.draft === true);
+  host.dataset.state = options.draft ? "clean" : (options.state ?? "clean");
   host.dataset.editing = "false";
   host.dataset.editor = options.editor;
   const read = element(context.document, "span", "read-value");
