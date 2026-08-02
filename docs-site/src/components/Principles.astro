@@ -1,0 +1,49 @@
+---
+import { PRINCIPLES } from "../../../src/catalog/metadata";
+---
+
+<div class="principles not-content">
+  {
+    PRINCIPLES.map(([title, description], index) => (
+      <article>
+        <span class="principle-index">{String(index + 1).padStart(2, "0")}</span>
+        <div>
+          <h3>{title}</h3>
+          <p>{description}</p>
+        </div>
+      </article>
+    ))
+  }
+</div>
+
+<style>
+  .principles {
+    display: grid;
+    gap: 0;
+    margin-block: 1.5rem;
+    border-block-start: 1px solid var(--sl-color-gray-5);
+  }
+
+  article {
+    display: grid;
+    grid-template-columns: 3rem 1fr;
+    gap: 1rem;
+    padding: 1rem 0;
+    border-block-end: 1px solid var(--sl-color-gray-5);
+  }
+
+  .principle-index {
+    color: var(--sl-color-text-accent);
+    font-family: var(--sl-font-mono);
+    font-size: var(--sl-text-sm);
+  }
+
+  h3,
+  p {
+    margin: 0;
+  }
+
+  p {
+    margin-block-start: 0.4rem;
+  }
+</style>

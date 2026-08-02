@@ -26,5 +26,13 @@ description = "Run the catalog development entry point"
 run = "npm run catalog"
 
 [tasks.docs]
-description = "Run the phase 1 documentation placeholder"
-run = "npm run docs"
+description = "Run the Astro + Starlight documentation site"
+run = "npm run docs:dev"
+
+[tasks.docs-build]
+description = "Build the Astro + Starlight documentation site"
+run = "npm run docs:build"
+
+[tasks.docs-check]
+description = "Type-check the Astro + Starlight documentation site"
+run = "npm run docs:check"

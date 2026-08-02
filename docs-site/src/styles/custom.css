@@ -1,0 +1,34 @@
+:root {
+  --sl-font: "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  --sl-font-mono: "SFMono-Regular", "Cascadia Code", "Roboto Mono", monospace;
+  --sl-color-accent-low: #e8eef2;
+  --sl-color-accent: #075985;
+  --sl-color-accent-high: #0c4a6e;
+  --sl-color-text-accent: #0e7490;
+}
+
+:root[data-theme="dark"] {
+  --sl-color-accent-low: #123346;
+  --sl-color-accent: #67e8f9;
+  --sl-color-accent-high: #cffafe;
+  --sl-color-text-accent: #67e8f9;
+}
+
+.hero {
+  border-block-end: 1px solid var(--sl-color-gray-5);
+}
+
+.hero h1 {
+  max-width: 18ch;
+  letter-spacing: -0.04em;
+}
+
+.hero .tagline {
+  max-width: 58ch;
+}
+
+@media (max-width: 50rem) {
+  .hero h1 {
+    max-width: none;
+  }
+}
