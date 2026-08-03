@@ -161,6 +161,31 @@ export default defineConfig({
               translations: { en: "Five site shapes" },
               link: "examples/",
             },
+            {
+              label: "運用ダッシュボード",
+              translations: { en: "Operations dashboard" },
+              link: "examples/operations-dashboard/",
+            },
+            {
+              label: "エディター + preview",
+              translations: { en: "Editor + preview" },
+              link: "examples/editor-preview/",
+            },
+            {
+              label: "計画 / calendar",
+              translations: { en: "Planning / calendar" },
+              link: "examples/planning-calendar/",
+            },
+            {
+              label: "現場 / mobile service",
+              translations: { en: "Field / mobile service" },
+              link: "examples/field-mobile-service/",
+            },
+            {
+              label: "可観測性 / incident console",
+              translations: { en: "Observability / incident console" },
+              link: "examples/observability-incident-console/",
+            },
           ],
         },
       ],
