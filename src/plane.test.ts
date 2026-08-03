@@ -120,6 +120,28 @@ describe("plane model", () => {
     expect(last.canNext).toBe(false);
   });
 
+  it("turns a constrained wrapped plane into rail navigation", () => {
+    const resolved = resolvePlane(
+      horizontal(["one", "two", "three"], {
+        fit: "wrap",
+        gap: 1,
+        available: 2,
+        focus: "two",
+        navigation: true,
+      }),
+    );
+
+    expect(resolved.lines).toBe(1);
+    expect(resolved.overflow).toBe(false);
+    expect(resolved.children.map((child) => child.state)).toEqual([
+      "collapsed",
+      "focused",
+      "collapsed",
+    ]);
+    expect(resolved.previous).toBe("one");
+    expect(resolved.next).toBe("three");
+  });
+
   it("uses safe defaults and drops invalid child entries", () => {
     expect(
       normalizePlane({

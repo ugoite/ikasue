@@ -6,6 +6,8 @@ export type PlaneAxis = "vertical" | "horizontal";
  *
  * - `elastic` keeps children on one line and gives the focused child priority.
  * - `wrap` keeps child sizes and starts a new line when the available extent is full.
+ *   A constrained navigable plane gives the focused child the whole extent so
+ *   its owning rail, rather than overflow, becomes the way to move between children.
  */
 export type PlaneFit = "elastic" | "wrap";
 
@@ -397,6 +399,12 @@ function resolveWrapped(
     return resolveSingleLine(plane, available);
 
   const index = focusIndex(plane);
+  if (
+    plane.navigation &&
+    requestedExtent(plane.children, plane.gap) > available
+  ) {
+    return resolveFocused(plane, available, index);
+  }
   const focus = resolvedFocus(plane, index);
   const children: ResolvedPlaneChild[] = [];
   let line = 0;
