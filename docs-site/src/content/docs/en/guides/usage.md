@@ -5,7 +5,7 @@ description: Compose ikasue components around one negotiated plane.
 
 ## The smallest mount
 
-Mount the package into an existing DOM target. The catalog is framework-neutral and can live inside an application shell.
+Mount the package’s standalone runtime surface into an existing DOM target. `mountCatalog` is framework-neutral and can live inside an application shell. On GitHub Pages, the same native renderer is embedded in each component page.
 
 ```js
 import { mountCatalog } from "@ugoite/ikasue";
@@ -65,4 +65,4 @@ A `PlaneSpec` gives components one vocabulary for available space, child order, 
 
 ## Check the composition
 
-Read each component’s property table, JavaScript implementation / usage, and Rust implementation sketch, then use the catalog to verify defaults and keyboard behavior. The [Examples](../examples/) page compares the plane model across five distinct site shapes.
+Read each component’s property table, JavaScript implementation / usage, Rust implementation sketch, and page-local interactive demo as one component contract. The [Examples](../examples/) page compares the plane model across five distinct site shapes.

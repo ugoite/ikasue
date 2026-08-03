@@ -79,11 +79,6 @@ export default defineConfig({
               translations: { en: "Release" },
               link: "guides/release/",
             },
-            {
-              label: "インタラクティブカタログ",
-              translations: { en: "Interactive catalog" },
-              link: "catalog/",
-            },
           ],
         },
         {

@@ -1,12 +1,13 @@
 ---
 import { Code, TabItem, Tabs } from "@astrojs/starlight/components";
+import "../../../src/styles.css";
 import {
   componentSource,
   findRegistryEntry,
 } from "../../../src/catalog/registry";
 import type { CatalogComponentId } from "../../../src/catalog/types";
 import { COMPONENT_UI_COPY } from "../data/component-copy";
-import { catalogPath, sitePath } from "../data/site-path";
+import { sitePath } from "../data/site-path";
 
 interface Props {
   id: CatalogComponentId;
@@ -61,12 +62,23 @@ const contract = JSON.stringify(
   <p class="lede">{copy.summary}</p>
 
   <div class="doc-links">
-    <a href={catalogPath(entry.id, locale)}>
-      {ui.catalogLink}
-    </a>
     <span>{ui.demoId} <code>{entry.demo}</code></span>
     <a href={sitePath(`${localePrefix}components/`)}>{ui.matrixLink}</a>
   </div>
+
+  <section
+    class="component-interactive"
+    aria-labelledby={`interactive-${entry.id}`}
+  >
+    <h2 id={`interactive-${entry.id}`}>{ui.interactiveDemo}</h2>
+    <p class="interactive-note">{ui.interactiveNote}</p>
+    <div
+      data-component-demo
+      data-component={entry.id}
+      data-locale={locale}
+      aria-label={`${entry.page[locale].title} ${ui.interactiveDemo}`}
+    ></div>
+  </section>
 
   <h2>{ui.contract}</h2>
   <p>{copy.philosophy}</p>
@@ -154,6 +166,24 @@ const contract = JSON.stringify(
   </dl>
 </div>
 
+<script>
+  import { mountCatalog } from "../../../src/index";
+  import type { CatalogComponentId } from "../../../src/catalog/types";
+
+  document
+    .querySelectorAll<HTMLElement>("[data-component-demo]")
+    .forEach((target) => {
+      const component = target.dataset.component as CatalogComponentId | undefined;
+      if (!component) return;
+      mountCatalog(target, {
+        component,
+        embedded: true,
+        locale: target.dataset.locale === "en" ? "en" : "ja",
+        showComponentPicker: false,
+      });
+    });
+</script>
+
 <style>
   .component-doc {
     --plane-border: color-mix(in srgb, var(--sl-color-white) 18%, transparent);
@@ -169,6 +199,17 @@ const contract = JSON.stringify(
   .lede {
     max-width: 52rem;
     font-size: var(--sl-text-lg);
+  }
+
+  .component-interactive {
+    margin-block: 2rem 3rem;
+    padding-block: 1.25rem 0;
+    border-block: 1px solid var(--sl-color-gray-5);
+  }
+
+  .interactive-note {
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-sm);
   }
 
   .doc-links {

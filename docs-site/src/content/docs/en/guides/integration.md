@@ -49,4 +49,4 @@ Before adding wrapper layers, decide which component owns values, status, select
 
 Import `@ugoite/ikasue/style.css` once at the application boundary. Give the mount target a real block size and avoid an ancestor transform that changes directional layout. Keep host focus styles visible.
 
-The docs site’s [catalog](../catalog/) is built under the same Astro base path. Astro components should use `sitePath` or `catalogPath` for generated links; content links remain relative.
+The docs site builds each component page under the same Astro base path and embeds its interactive demo on that page. Astro components should use `sitePath` for generated links; content links remain relative.

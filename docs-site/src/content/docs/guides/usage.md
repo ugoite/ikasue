@@ -5,7 +5,7 @@ description: Compose ikasue components around one negotiated plane.
 
 ## 最小のmount
 
-packageを既存のDOM targetへmountします。catalogはframework-neutralで、既存のapp shellの内側に置けます。
+packageのstandalone runtime surfaceを既存のDOM targetへmountします。`mountCatalog`はframework-neutralで、既存のapp shellの内側に置けます。GitHub Pagesのcomponent docsでは同じnative rendererを各component pageへembeddedします。
 
 ```js
 import { mountCatalog } from "@ugoite/ikasue";
@@ -65,4 +65,4 @@ const workspaceLayout = resolvePlane(workspace);
 
 ## compositionの確認
 
-component pageのproperty table、JavaScript implementation / usage、Rust implementation sketchを読み、catalogで既定値とkeyboard behaviorを確認してください。さらに[例](../examples/)で異なるsite shapeに組み合わせたときのplaneの動きを比べられます。
+component pageのproperty table、JavaScript implementation / usage、Rust implementation sketchと、ページ内のinteractive demoを同じcomponent contractとして確認してください。さらに[例](../examples/)で異なるsite shapeに組み合わせたときのplaneの動きを比べられます。

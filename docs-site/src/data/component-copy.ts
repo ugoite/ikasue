@@ -11,8 +11,9 @@ export type ComponentCopy = CatalogDocumentationCopy;
 export const COMPONENT_COPY = REGISTRY_COMPONENT_COPY;
 
 export interface ComponentUiCopy {
-  readonly catalogLink: string;
   readonly demoId: string;
+  readonly interactiveDemo: string;
+  readonly interactiveNote: string;
   readonly contract: string;
   readonly useWhen: string;
   readonly avoidWhen: string;
@@ -40,14 +41,16 @@ export interface ComponentUiCopy {
   readonly category: string;
   readonly summary: string;
   readonly demo: string;
-  readonly openCatalog: string;
+  readonly demoOnPage: string;
   readonly matrixLink: string;
 }
 
 export const COMPONENT_UI_COPY: Record<DocsLocale, ComponentUiCopy> = {
   ja: {
-    catalogLink: "インタラクティブカタログを開く ↗",
     demoId: "デモ ID:",
+    interactiveDemo: "インタラクティブデモ",
+    interactiveNote:
+      "同じregistry / native rendererをページ内に埋め込み、property変更をその場で確認できます。",
     contract: "契約",
     useWhen: "使う場面",
     avoidWhen: "避ける場面",
@@ -70,7 +73,7 @@ export const COMPONENT_UI_COPY: Record<DocsLocale, ComponentUiCopy> = {
     keyboard: "キーボード",
     accessibility: "アクセシビリティ",
     matrixNote:
-      "インタラクティブカタログと同じメタデータから描画する、現在の17 componentの一覧です。",
+      "component page内のインタラクティブデモと同じregistry metadataから描画する、現在の17 componentの一覧です。",
     matrixContract:
       "各pageはPlane API、state ownership、keyboard、accessibility、JavaScript / Rust sourceを同じ契約として説明します。",
     matrixCaption: "ikasue component inventory",
@@ -78,12 +81,14 @@ export const COMPONENT_UI_COPY: Record<DocsLocale, ComponentUiCopy> = {
     category: "カテゴリ",
     summary: "概要",
     demo: "デモ",
-    openCatalog: "カタログを開く ↗",
+    demoOnPage: "component page内",
     matrixLink: "component一覧へ戻る",
   },
   en: {
-    catalogLink: "Open interactive catalog ↗",
     demoId: "Demo ID:",
+    interactiveDemo: "Interactive demo",
+    interactiveNote:
+      "The page embeds the same registry and native renderer so property changes can be checked in place.",
     contract: "Contract",
     useWhen: "Use it when",
     avoidWhen: "Avoid it when",
@@ -106,7 +111,7 @@ export const COMPONENT_UI_COPY: Record<DocsLocale, ComponentUiCopy> = {
     keyboard: "Keyboard",
     accessibility: "Accessibility",
     matrixNote:
-      "This matrix uses the same metadata as the interactive catalog and lists the current 17-component inventory.",
+      "This matrix uses the same registry metadata as the page-local interactive demos and lists the current 17-component inventory.",
     matrixContract:
       "Every page explains the Plane API, state ownership, keyboard behavior, accessibility, and JavaScript / Rust sources as one contract.",
     matrixCaption: "ikasue component inventory",
@@ -114,7 +119,7 @@ export const COMPONENT_UI_COPY: Record<DocsLocale, ComponentUiCopy> = {
     category: "Category",
     summary: "Summary",
     demo: "Demo",
-    openCatalog: "Open catalog ↗",
+    demoOnPage: "On the component page",
     matrixLink: "Back to component inventory",
   },
 };

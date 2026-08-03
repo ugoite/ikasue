@@ -25,9 +25,9 @@ root localeとEnglish localeは両方とも手書きです。`npm run docs:sync`
 
 ## GitHub Pages boundary
 
-Pages workflowはAstro + Starlightのstatic siteだけをbuildし、`actions/configure-pages`、`actions/upload-pages-artifact`、`actions/deploy-pages`で公開します。`astro.config.mjs`は`GITHUB_REPOSITORY`からproject baseを導き、generated linkは`sitePath` / `catalogPath`でそのbaseを含めます。
+Pages workflowはAstro + Starlightのstatic siteだけをbuildし、`actions/configure-pages`、`actions/upload-pages-artifact`、`actions/deploy-pages`で公開します。`astro.config.mjs`は`GITHUB_REPOSITORY`からproject baseを導き、generated linkは`sitePath`でそのbaseを含めます。
 
-Pagesはdocsとinteractive catalogのhostです。packageの配布先ではありません。
+Pagesは各component pageに説明とinteractive demoを含むdocsのhostです。packageの配布先ではありません。
 
 ## GitHub Packages boundary
 
