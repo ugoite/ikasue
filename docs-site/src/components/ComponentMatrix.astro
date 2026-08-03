@@ -35,11 +35,7 @@ const localePrefix = locale === "en" ? "en/" : "";
               <td>{component.documentation[locale].category}</td>
               <td>{component.summary[locale]}</td>
               <td>
-                <a
-                  href={catalogPath(component.id, locale)}
-                  target="_blank"
-                  rel="noreferrer"
-                >
+                <a href={catalogPath(component.id, locale)}>
                   {ui.openCatalog}
                 </a>
               </td>
