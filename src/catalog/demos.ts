@@ -12,10 +12,19 @@ import {
   type TableState,
 } from "./table-state";
 import { findRegistryEntry } from "./registry";
-import { horizontal, resolvePlane, vertical } from "../plane";
+import {
+  horizontal,
+  resolvePlane,
+  vertical,
+  type PlaneAxis,
+  type PlaneFit,
+  type ResolvedPlane,
+} from "../plane";
 import type {
   CatalogLocale,
   CatalogComponentRegistryEntry,
+  CatalogComponentId,
+  CatalogLocalizedText,
   CatalogProps,
   CatalogPropertyValue,
 } from "./types";
@@ -34,6 +43,73 @@ export interface DemoContext {
     handler: (event: Event) => void,
   ) => void;
   readonly openDialog: (title: string, message: string) => void;
+}
+
+/** A registry-backed child rendered inside a native vertical or horizontal plane. */
+export interface NativePlaneChild {
+  readonly id: string;
+  readonly basis: number;
+  readonly min: number;
+  readonly label: CatalogLocalizedText;
+  readonly componentId: CatalogComponentId;
+  readonly props: CatalogProps;
+}
+
+/** The shared composition contract used by catalog demos and examples. */
+export interface NativePlaneComposition {
+  readonly id: string;
+  readonly componentId: "vertical" | "horizontal";
+  readonly axis: PlaneAxis;
+  readonly fit: PlaneFit;
+  readonly gap: number;
+  readonly available: number;
+  readonly focus?: string;
+  readonly navigation: boolean;
+  readonly children: readonly NativePlaneChild[];
+}
+
+export interface NativePlaneRenderOptions {
+  readonly onFocusChange?: (id: string) => void;
+  readonly onResolved?: (resolved: ResolvedPlane) => void;
+}
+
+export interface NativePlaneRenderer {
+  readonly stage: HTMLElement;
+  readonly resolved: ResolvedPlane;
+  update(composition: NativePlaneComposition): void;
+  destroy(): void;
+}
+
+/** Resolve every native composition through the same vertical/horizontal API. */
+export function resolveNativePlane(
+  composition: NativePlaneComposition,
+): ResolvedPlane {
+  const children = composition.children.map(({ id, basis, min }) => ({
+    id,
+    basis,
+    min,
+  }));
+  const plane =
+    composition.axis === "horizontal"
+      ? horizontal(children, {
+          fit: composition.fit,
+          gap: composition.gap,
+          available: composition.available,
+          ...(composition.focus === undefined
+            ? {}
+            : { focus: composition.focus }),
+          navigation: composition.navigation,
+        })
+      : vertical(children, {
+          fit: composition.fit,
+          gap: composition.gap,
+          available: composition.available,
+          ...(composition.focus === undefined
+            ? {}
+            : { focus: composition.focus }),
+          navigation: composition.navigation,
+        });
+  return resolvePlane(plane);
 }
 
 interface TextOptions {
@@ -109,6 +185,278 @@ function localized<T>(
   values: Readonly<Record<CatalogLocale, T>>,
 ): T {
   return values[context.locale ?? "ja"];
+}
+
+function listenForNativePlane(
+  target: EventTarget,
+  type: string,
+  handler: (event: Event) => void,
+  cleanup: Cleanup[],
+): void {
+  target.addEventListener(type, handler);
+  cleanup.push(() => {
+    target.removeEventListener(type, handler);
+  });
+}
+
+/**
+ * Mounts one registry-backed plane. This is the only renderer that creates
+ * plane-demo, plane-viewport, plane-item, and plane-navigation elements.
+ */
+export function renderNativePlane(
+  mount: HTMLElement,
+  initial: NativePlaneComposition,
+  context: DemoContext,
+  options: NativePlaneRenderOptions = {},
+): NativePlaneRenderer {
+  const stage = element(context.document, "div", "plane-demo");
+  stage.id = initial.id;
+  stage.setAttribute("role", "region");
+  stage.dataset.planeId = initial.id;
+  stage.dataset.componentId = initial.componentId;
+  mount.replaceChildren(stage);
+
+  let composition = initial;
+  let currentResolved = resolveNativePlane(composition);
+  const drawCleanup: Cleanup[] = [];
+  let destroyed = false;
+
+  const renderer: NativePlaneRenderer = {
+    stage,
+    get resolved() {
+      return currentResolved;
+    },
+    update(next) {
+      if (destroyed) return;
+      composition = next;
+      draw();
+    },
+    destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      for (const item of drawCleanup.splice(0)) item();
+      mount.replaceChildren();
+    },
+  };
+
+  const setFocus = (id: string): void => {
+    composition = { ...composition, focus: id };
+    options.onFocusChange?.(id);
+    draw();
+  };
+
+  const draw = (): void => {
+    if (destroyed) return;
+    for (const item of drawCleanup.splice(0)) item();
+    currentResolved = resolveNativePlane(composition);
+    const resolved = currentResolved;
+    const locale = context.locale ?? "ja";
+    const english = locale === "en";
+    const viewport = element(context.document, "div", "plane-viewport");
+    viewport.dataset.axis = resolved.axis;
+    viewport.dataset.fit = resolved.fit;
+    viewport.dataset.overflow = String(resolved.overflow);
+    viewport.setAttribute("data-overflow-policy", "hidden");
+    const navigation = element(context.document, "nav", "plane-navigation");
+    navigation.dataset.axis = resolved.axis;
+    navigation.dataset.fit = resolved.fit;
+    navigation.dataset.focus = resolved.focus ?? "";
+    navigation.dataset.previous = resolved.previous ?? "";
+    navigation.dataset.next = resolved.next ?? "";
+    navigation.dataset.canPrevious = String(resolved.canPrevious);
+    navigation.dataset.canNext = String(resolved.canNext);
+    navigation.setAttribute(
+      "aria-label",
+      english ? "Plane region navigation" : "plane領域navigation",
+    );
+
+    stage.dataset.axis = resolved.axis;
+    stage.dataset.fit = resolved.fit;
+    stage.dataset.focus = resolved.focus ?? "";
+    stage.dataset.overflow = String(resolved.overflow);
+    stage.dataset.navigation = String(resolved.navigation);
+    stage.dataset.available = String(
+      resolved.available ?? composition.available,
+    );
+    stage.dataset.extent = String(resolved.extent);
+    stage.dataset.lines = String(resolved.lines);
+    stage.dataset.overflowPolicy =
+      resolved.navigation &&
+      resolved.children.some(({ collapsed }) => collapsed)
+        ? "rail"
+        : "visible";
+    stage.style.setProperty(
+      "--plane-available",
+      String(resolved.available ?? composition.available),
+    );
+    stage.style.setProperty("--plane-gap", String(resolved.gap));
+    stage.style.setProperty("--plane-lines", String(resolved.lines));
+
+    const lines = Array.from({ length: resolved.lines }, (_, lineIndex) => {
+      const line = element(context.document, "div", "plane-line");
+      line.dataset.line = String(lineIndex);
+      return line;
+    });
+    const childContext: DemoContext = {
+      ...context,
+      track: (item) => {
+        drawCleanup.push(item);
+      },
+      listen: (target, type, handler) => {
+        listenForNativePlane(target, type, handler, drawCleanup);
+      },
+    };
+    for (const child of resolved.children) {
+      const descriptor = composition.children[child.index];
+      if (!descriptor) continue;
+      const item = element(context.document, "section", "plane-item");
+      item.dataset.id = child.id;
+      item.dataset.regionId = descriptor.id;
+      item.dataset.componentId = descriptor.componentId;
+      item.dataset.line = String(child.line);
+      item.dataset.offset = String(child.offset);
+      item.dataset.size = String(child.size);
+      item.dataset.state = child.state;
+      item.dataset.focused = String(child.focused);
+      item.dataset.visible = String(child.visible);
+      item.dataset.collapsed = String(child.collapsed);
+      item.hidden = child.collapsed;
+      item.style.setProperty("--plane-size", String(child.size));
+      item.style.setProperty("--plane-offset", String(child.offset));
+      item.style.setProperty("--plane-line", String(child.line));
+      item.setAttribute("role", "group");
+      item.setAttribute(
+        "aria-label",
+        `${descriptor.label[locale]} · ${descriptor.componentId}`,
+      );
+
+      const header = element(context.document, "header", "plane-item-header");
+      const label = element(context.document, "strong");
+      label.textContent = descriptor.label[locale];
+      const component = element(context.document, "code");
+      component.textContent = descriptor.componentId;
+      header.append(label, component);
+
+      const native = element(context.document, "div", "plane-item-native");
+      native.dataset.componentId = descriptor.componentId;
+      native.dataset.regionId = descriptor.id;
+      native.hidden = child.collapsed;
+      if (child.visible) {
+        renderDemo(
+          native,
+          findRegistryEntry(descriptor.componentId),
+          descriptor.props,
+          childContext,
+        );
+      }
+      item.append(header, native);
+      lines[child.line]?.append(item);
+    }
+    viewport.append(...lines);
+
+    const previous = iconButton(
+      childContext,
+      resolved.axis === "horizontal" ? "left" : "up",
+      english ? "Previous region" : "前の領域",
+    );
+    previous.classList.add("plane-navigation-arrow");
+    previous.dataset.direction = "previous";
+    previous.disabled = !resolved.canPrevious;
+    if (resolved.previous) {
+      listenForNativePlane(
+        previous,
+        "click",
+        () => {
+          setFocus(resolved.previous as string);
+        },
+        drawCleanup,
+      );
+    }
+
+    const selections = element(
+      context.document,
+      "div",
+      "plane-navigation-items",
+    );
+    selections.setAttribute("role", "group");
+    selections.setAttribute(
+      "aria-label",
+      english ? "Plane regions" : "plane領域選択",
+    );
+    for (const child of resolved.children) {
+      const descriptor = composition.children[child.index];
+      if (!descriptor) continue;
+      const selection = textAction(childContext, descriptor.label[locale]);
+      selection.classList.add("plane-navigation-item");
+      selection.dataset.focusId = child.id;
+      selection.dataset.componentId = descriptor.componentId;
+      selection.dataset.state = child.state;
+      selection.dataset.collapsed = String(child.collapsed);
+      selection.setAttribute("aria-pressed", String(child.focused));
+      selection.setAttribute(
+        "aria-label",
+        english
+          ? `${descriptor.label.en}${child.collapsed ? " (collapsed)" : ""}`
+          : `${descriptor.label.ja}${child.collapsed ? "（collapsed）" : ""}`,
+      );
+      listenForNativePlane(
+        selection,
+        "click",
+        () => {
+          setFocus(child.id);
+        },
+        drawCleanup,
+      );
+      selections.append(selection);
+    }
+
+    const next = iconButton(
+      childContext,
+      resolved.axis === "horizontal" ? "right" : "down",
+      english ? "Next region" : "次の領域",
+    );
+    next.classList.add("plane-navigation-arrow");
+    next.dataset.direction = "next";
+    next.disabled = !resolved.canNext;
+    if (resolved.next) {
+      listenForNativePlane(
+        next,
+        "click",
+        () => {
+          setFocus(resolved.next as string);
+        },
+        drawCleanup,
+      );
+    }
+    navigation.append(previous, selections, next);
+    stage.replaceChildren(viewport, navigation);
+    options.onResolved?.(resolved);
+  };
+
+  context.track(() => {
+    renderer.destroy();
+  });
+  draw();
+  return renderer;
+}
+
+/** Mounts multiple native planes into one host without introducing an example renderer. */
+export function renderPlaneComposition(
+  mount: HTMLElement,
+  compositions: readonly NativePlaneComposition[],
+  context: DemoContext,
+): readonly NativePlaneRenderer[] {
+  mount.replaceChildren();
+  return compositions.map((composition) => {
+    const planeMount = element(
+      context.document,
+      "div",
+      "plane-composition-mount",
+    );
+    planeMount.dataset.planeId = composition.id;
+    mount.append(planeMount);
+    return renderNativePlane(planeMount, composition, context);
+  });
 }
 
 export function renderDemo(
@@ -381,8 +729,9 @@ function renderPlane(
   props: CatalogProps,
   context: DemoContext,
 ): void {
-  const componentId = component.id;
-  const axis = componentId === "horizontal" ? "horizontal" : "vertical";
+  const axis: "vertical" | "horizontal" =
+    component.id === "horizontal" ? "horizontal" : "vertical";
+  const componentId = axis;
   const fitProperty = component.properties.find(
     (property) => property.key === "fit",
   );
@@ -407,18 +756,75 @@ function renderPlane(
     ? Math.max(0, Math.floor(countValue))
     : 4;
   let focusId: string | undefined = count > 0 ? "item-1" : undefined;
-  const stage = element(context.document, "div", "plane-demo");
-  stage.id = `plane-${componentId}-stage`;
-  stage.setAttribute("role", "region");
-  stage.setAttribute(
-    "aria-label",
-    context.locale === "en"
-      ? `${component.displayName} resolved plane`
-      : `${component.displayNameJa}のresolved plane`,
-  );
+  const stageId = `plane-${componentId}-stage`;
+  const stageMount = element(context.document, "div", "plane-demo-mount");
 
   const fitDescriptions = planeFitDescriptions(context.locale === "en");
   const controls = element(context.document, "div", "plane-controls");
+  const result = paragraph(context, "", "plane-result");
+  result.setAttribute("role", "status");
+  result.setAttribute("aria-live", "polite");
+  result.id = `${stageId}-result`;
+
+  const createChildren = (
+    fit: "elastic" | "wrap",
+  ): readonly NativePlaneChild[] =>
+    Array.from({ length: count }, (_, index) => {
+      const number = index + 1;
+      const label = {
+        ja: `要素 ${String(number)}`,
+        en: `Item ${String(number)}`,
+      };
+      return {
+        id: `item-${String(number)}`,
+        basis: requestedBasis,
+        min: fit === "elastic" ? requestedBasis * 0.5 : requestedBasis,
+        label,
+        componentId: "text",
+        props: {
+          editable: false,
+          editor: "text",
+          state: "clean",
+          value: context.locale === "en" ? label.en : label.ja,
+        },
+      };
+    });
+
+  const createComposition = (
+    fit: "elastic" | "wrap",
+    focus: string | undefined,
+  ): NativePlaneComposition => ({
+    id: stageId,
+    componentId,
+    axis,
+    fit,
+    gap: gapValues[String(props.gap ?? "md")] ?? 2,
+    available,
+    ...(focus === undefined ? {} : { focus }),
+    navigation: true,
+    children: createChildren(fit),
+  });
+
+  const syncResolved = (resolved: ResolvedPlane): void => {
+    if (fitOptions.length) {
+      const description = controls.querySelector<HTMLElement>(
+        ".plane-fit-description",
+      );
+      if (description) description.textContent = fitDescriptions[resolved.fit];
+      syncFitTabs(
+        controls.querySelector<HTMLElement>("[role=tablist]"),
+        resolved.fit,
+        fitOptions,
+      );
+    }
+    result.textContent = planeResultText(
+      resolved,
+      requestedBasis,
+      count,
+      context.locale === "en",
+    );
+  };
+
   if (fitOptions.length) {
     const tablist = element(context.document, "div", "plane-fit-tabs");
     tablist.setAttribute("role", "tablist");
@@ -427,16 +833,16 @@ function renderPlane(
       context.locale === "en" ? "Plane fit policy" : "planeの適応方針",
     );
     const description = paragraph(context, "", "plane-fit-description");
-    description.id = `${stage.id}-description`;
+    description.id = `${stageId}-description`;
     const activate = (nextFit: (typeof fitOptions)[number]): void => {
       activeFit = nextFit;
       context.updateProperty?.("fit", nextFit);
-      stage.dataset.transition = "fit";
       syncFitTabs(tablist, activeFit, fitOptions);
-      draw();
+      renderer.stage.setAttribute("data-transition", "fit");
+      renderer.update(createComposition(activeFit, focusId));
       if (context.window) {
         const settle = context.window.setTimeout(() => {
-          stage.dataset.transition = "settled";
+          renderer.stage.setAttribute("data-transition", "settled");
         }, 0);
         context.track(() => context.window?.clearTimeout(settle));
       }
@@ -444,9 +850,9 @@ function renderPlane(
     for (const option of fitOptions) {
       const tab = element(context.document, "button", "plane-fit-tab");
       tab.type = "button";
-      tab.id = `${stage.id}-tab-${option}`;
+      tab.id = `${stageId}-tab-${option}`;
       tab.setAttribute("role", "tab");
-      tab.setAttribute("aria-controls", stage.id);
+      tab.setAttribute("aria-controls", stageId);
       tab.textContent = option;
       tab.dataset.fit = option;
       addListener(context, tab, "click", () => {
@@ -478,8 +884,6 @@ function renderPlane(
         ?.focus();
     });
     controls.append(tablist, description);
-    stage.setAttribute("aria-describedby", description.id);
-
     const fitHelp = element(context.document, "dl", "plane-fit-help");
     for (const option of ["elastic", "wrap"] as const) {
       const term = element(context.document, "dt");
@@ -490,199 +894,28 @@ function renderPlane(
     }
     controls.append(fitHelp);
   }
-
-  const result = paragraph(context, "", "plane-result");
-  result.setAttribute("role", "status");
-  result.setAttribute("aria-live", "polite");
-  result.id = `${stage.id}-result`;
   controls.append(result);
 
-  const viewport = element(context.document, "div", "plane-viewport");
-  const navigation = element(context.document, "nav", "plane-navigation");
-  navigation.setAttribute(
-    "aria-label",
-    context.locale === "en" ? "Plane region navigation" : "plane領域navigation",
+  container.append(controls, stageMount);
+  const renderer = renderNativePlane(
+    stageMount,
+    createComposition(activeFit, focusId),
+    context,
+    {
+      onFocusChange: (id) => {
+        focusId = id;
+      },
+      onResolved: (resolved) => {
+        focusId = resolved.focus;
+        syncResolved(resolved);
+      },
+    },
   );
-  stage.append(viewport, navigation);
-
-  const draw = (): void => {
-    const children = Array.from({ length: count }, (_, index) => ({
-      id: `item-${String(index + 1)}`,
-      basis: requestedBasis,
-      min: activeFit === "elastic" ? requestedBasis * 0.5 : requestedBasis,
-    }));
-    const plane =
-      axis === "horizontal"
-        ? horizontal(children, {
-            fit: activeFit,
-            gap: gapValues[String(props.gap ?? "md")] ?? 2,
-            available,
-            ...(focusId === undefined ? {} : { focus: focusId }),
-            navigation: true,
-          })
-        : vertical(children, {
-            fit: activeFit,
-            gap: gapValues[String(props.gap ?? "md")] ?? 2,
-            available,
-            ...(focusId === undefined ? {} : { focus: focusId }),
-            navigation: true,
-          });
-    const resolved = resolvePlane(plane);
-    focusId = resolved.focus;
-    stage.dataset.axis = resolved.axis;
-    stage.dataset.fit = resolved.fit;
-    stage.dataset.overflow = String(resolved.overflow);
-    stage.dataset.available = String(resolved.available ?? available);
-    stage.dataset.extent = String(resolved.extent);
-    stage.dataset.lines = String(resolved.lines);
-    stage.style.setProperty(
-      "--plane-available",
-      String(resolved.available ?? available),
-    );
-    stage.style.setProperty("--plane-gap", String(resolved.gap));
-    stage.style.setProperty("--plane-lines", String(resolved.lines));
-    viewport.replaceChildren();
-    navigation.replaceChildren();
-    const lines = Array.from({ length: resolved.lines }, (_, lineIndex) => {
-      const line = element(context.document, "div", "plane-line");
-      line.dataset.line = String(lineIndex);
-      return line;
-    });
-    for (const child of resolved.children) {
-      if (!child.visible) continue;
-      const item = element(context.document, "div", "plane-item");
-      item.dataset.line = String(child.line);
-      item.dataset.offset = String(child.offset);
-      item.dataset.state = child.state;
-      item.dataset.focused = String(child.focused);
-      item.style.setProperty("--plane-size", String(child.size));
-      item.style.setProperty("--plane-offset", String(child.offset));
-      item.style.setProperty("--plane-line", String(child.line));
-      item.setAttribute("role", "group");
-      item.setAttribute(
-        "aria-label",
-        planeItemLabel(
-          child.index,
-          child.size,
-          child.offset,
-          child.line,
-          child.state,
-          context.locale === "en",
-        ),
-      );
-      const label = element(context.document, "strong");
-      label.textContent = planeItemNumber(child.index, context.locale === "en");
-      const details = element(context.document, "small");
-      details.textContent = planeItemLabel(
-        child.index,
-        child.size,
-        child.offset,
-        child.line,
-        child.state,
-        context.locale === "en",
-      );
-      item.append(label, details);
-      lines[child.line]?.append(item);
-    }
-    viewport.append(...lines);
-
-    const previous = iconButton(
-      context,
-      axis === "horizontal" ? "left" : "up",
-      context.locale === "en" ? "Previous region" : "前の領域",
-    );
-    previous.classList.add("plane-navigation-arrow");
-    previous.disabled = !resolved.canPrevious;
-    addListener(context, previous, "click", () => {
-      if (!resolved.previous) return;
-      focusId = resolved.previous;
-      draw();
-      navigation
-        .querySelector<HTMLButtonElement>(
-          `[data-focus-id="${resolved.previous}"]`,
-        )
-        ?.focus();
-    });
-
-    const selections = element(
-      context.document,
-      "div",
-      "plane-navigation-items",
-    );
-    selections.setAttribute("role", "group");
-    selections.setAttribute(
-      "aria-label",
-      context.locale === "en" ? "Plane regions" : "plane領域選択",
-    );
-    for (const child of resolved.children) {
-      const selection = textAction(
-        context,
-        `${planeItemNumber(child.index, context.locale === "en")}${
-          child.collapsed
-            ? context.locale === "en"
-              ? " · collapsed"
-              : " ・collapsed"
-            : ""
-        }`,
-      );
-      selection.classList.add("plane-navigation-item");
-      selection.dataset.focusId = child.id;
-      selection.dataset.state = child.state;
-      selection.setAttribute("aria-pressed", String(child.focused));
-      selection.setAttribute(
-        "aria-label",
-        context.locale === "en"
-          ? `${planeItemNumber(child.index, true)}${child.collapsed ? " (collapsed)" : ""}`
-          : `${planeItemNumber(child.index, false)}${child.collapsed ? "（collapsed）" : ""}`,
-      );
-      addListener(context, selection, "click", () => {
-        focusId = child.id;
-        draw();
-        navigation
-          .querySelector<HTMLButtonElement>(`[data-focus-id="${child.id}"]`)
-          ?.focus();
-      });
-      selections.append(selection);
-    }
-
-    const next = iconButton(
-      context,
-      axis === "horizontal" ? "right" : "down",
-      context.locale === "en" ? "Next region" : "次の領域",
-    );
-    next.classList.add("plane-navigation-arrow");
-    next.disabled = !resolved.canNext;
-    addListener(context, next, "click", () => {
-      if (!resolved.next) return;
-      focusId = resolved.next;
-      draw();
-      navigation
-        .querySelector<HTMLButtonElement>(`[data-focus-id="${resolved.next}"]`)
-        ?.focus();
-    });
-    navigation.append(previous, selections, next);
-
-    if (fitOptions.length) {
-      const description = controls.querySelector<HTMLElement>(
-        ".plane-fit-description",
-      );
-      if (description) description.textContent = fitDescriptions[resolved.fit];
-      syncFitTabs(
-        controls.querySelector<HTMLElement>("[role=tablist]"),
-        resolved.fit,
-        fitOptions,
-      );
-    }
-    result.textContent = planeResultText(
-      resolved,
-      requestedBasis,
-      children.length,
-      context.locale === "en",
-    );
-  };
-
-  container.append(controls, stage);
-  draw();
+  const description = controls.querySelector<HTMLElement>(
+    ".plane-fit-description",
+  );
+  if (description)
+    renderer.stage.setAttribute("aria-describedby", description.id);
 }
 
 function isPlaneFit(
@@ -725,23 +958,6 @@ function formatPlaneNumber(value: number): string {
   return Number.isInteger(value)
     ? String(value)
     : value.toFixed(2).replace(/0+$/, "");
-}
-
-function planeItemNumber(index: number, english: boolean): string {
-  return english ? `Item ${String(index + 1)}` : `要素 ${String(index + 1)}`;
-}
-
-function planeItemLabel(
-  index: number,
-  size: number,
-  offset: number,
-  line: number,
-  state: "focused" | "visible" | "collapsed",
-  english: boolean,
-): string {
-  return english
-    ? `${planeItemNumber(index, true)}; state ${state}; size ${formatPlaneNumber(size)}; offset ${formatPlaneNumber(offset)}; line ${String(line + 1)}`
-    : `${planeItemNumber(index, false)}、state=${state}、縮小後size ${formatPlaneNumber(size)}、offset ${formatPlaneNumber(offset)}、line ${String(line + 1)}`;
 }
 
 function planeResultText(

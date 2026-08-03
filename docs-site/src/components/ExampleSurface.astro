@@ -1,7 +1,6 @@
 ---
 import "../../../src/styles.css";
 import {
-  exampleSpec,
   exampleSurfaceCopy,
   type ExampleKind,
   type ExampleLocale,
@@ -14,7 +13,6 @@ interface Props {
 
 const { kind, locale } = Astro.props as Props;
 const surface = exampleSurfaceCopy(locale, kind);
-const spec = exampleSpec(kind);
 const surfaceId = `example-surface-${kind}`;
 ---
 
@@ -37,60 +35,7 @@ const surfaceId = `example-surface-${kind}`;
     <span class="surface__axis">{surface.axis}</span>
   </header>
 
-  <div class="surface__model-note">
-    <span
-      >{
-        locale === "en"
-          ? "Native registry composition"
-          : "native registry composition"
-      }</span
-    >
-    <code>{spec.planes.map((plane) => plane.componentId).join(" · ")}</code>
-  </div>
-
-  <div class="surface__planes">
-    {
-      spec.planes.map((plane) => (
-        <section
-          class="example-plane"
-          data-example-plane={plane.id}
-          data-axis={plane.axis}
-          data-fit={plane.fit}
-          aria-label={`${surface.title} · ${plane.id}`}
-        >
-          <div class="example-plane__viewport" data-example-viewport>
-            {plane.regions.map((region) => (
-              <section
-                class="example-region"
-                data-example-region={region.id}
-                data-component-id={region.componentId}
-                aria-labelledby={`${surfaceId}-${plane.id}-${region.id}`}
-              >
-                <header class="example-region__header">
-                  <h4 id={`${surfaceId}-${plane.id}-${region.id}`}>
-                    {region.label[locale]}
-                  </h4>
-                  <code>{region.componentId}</code>
-                </header>
-                <div class="example-region__native" data-example-native />
-              </section>
-            ))}
-          </div>
-          <nav
-            class="example-plane__navigation"
-            data-example-navigation
-            aria-label={
-              locale === "en"
-                ? `${plane.id} region navigation`
-                : `${plane.id}領域navigation`
-            }
-          />
-        </section>
-      ))
-    }
-  </div>
-
-  <p class="surface__dialog" data-example-dialog hidden role="status"></p>
+  <div class="surface__mount" data-native-plane-mount></div>
 </section>
 
 <script>
@@ -132,8 +77,7 @@ const surfaceId = `example-surface-${kind}`;
     border-block-end: 1px solid var(--line);
   }
 
-  .surface__header h3,
-  .example-region__header h4 {
+  .surface__header h3 {
     margin: 0;
     color: var(--ink);
     font-weight: 700;
@@ -146,9 +90,7 @@ const surfaceId = `example-surface-${kind}`;
 
   .surface__kicker,
   .surface__axis,
-  .surface__status,
-  .surface__model-note,
-  .example-region__header code {
+  .surface__status {
     color: var(--faint);
     font-family: var(--mono);
     font-size: 0.65rem;
@@ -181,209 +123,10 @@ const surfaceId = `example-surface-${kind}`;
     border-block-start: 1px solid var(--line);
   }
 
-  .surface__model-note {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 0.5rem 1rem;
-    padding: 0.65rem var(--surface-pad);
-    border-block-end: 1px solid var(--line);
-    background: var(--selection);
-  }
-
-  .surface__model-note code {
-    color: var(--ink);
-  }
-
-  .surface__planes {
+  .surface__mount {
     display: grid;
     gap: 1.25rem;
     padding: var(--surface-pad);
-  }
-
-  .example-plane {
-    display: grid;
-    min-inline-size: 0;
-    min-block-size: 19rem;
-    border-block: 1px solid var(--line);
-    overflow: hidden;
-  }
-
-  .example-plane[data-axis="horizontal"] {
-    grid-template-columns: minmax(0, 1fr) 3.2rem;
-  }
-
-  .example-plane[data-axis="vertical"] {
-    grid-template-rows: minmax(15rem, 1fr) auto;
-  }
-
-  .example-plane__viewport {
-    display: flex;
-    min-inline-size: 0;
-    min-block-size: 0;
-    gap: calc(var(--example-plane-gap, 1) * 0.45rem);
-    overflow: hidden;
-  }
-
-  .example-plane[data-axis="horizontal"] .example-plane__viewport {
-    flex-direction: row;
-  }
-
-  .example-plane[data-axis="vertical"] .example-plane__viewport {
-    flex-direction: column;
-  }
-
-  .example-plane[data-fit="wrap"] .example-plane__viewport {
-    flex-wrap: wrap;
-  }
-
-  .example-region {
-    --example-region-size: 1;
-    display: grid;
-    min-inline-size: 0;
-    min-block-size: 0;
-    flex: var(--example-region-size) 1 0;
-    overflow: hidden;
-    border-inline-end: 1px solid var(--line);
-    background: var(--canvas);
-  }
-
-  .example-plane[data-axis="vertical"] .example-region {
-    border-inline-end: 0;
-    border-block-end: 1px solid var(--line);
-  }
-
-  .example-region:last-child {
-    border: 0;
-  }
-
-  .example-region[data-focused="true"] {
-    background: color-mix(in srgb, var(--selection) 42%, var(--canvas));
-  }
-
-  .example-region__header {
-    display: flex;
-    min-block-size: 2.6rem;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.6rem;
-    padding: 0.55rem var(--surface-pad);
-    border-block-end: 1px solid var(--line);
-    background: var(--selection);
-  }
-
-  .example-region__header h4 {
-    font-size: 0.82rem;
-  }
-
-  .example-region__header code {
-    color: var(--muted);
-    text-transform: none;
-  }
-
-  .example-region__native {
-    min-inline-size: 0;
-    min-block-size: 0;
-    padding: 0.75rem var(--surface-pad);
-  }
-
-  .example-region__native :where(.data-table-wrap, .progress-region) {
-    border-block: 0;
-  }
-
-  .example-plane__navigation {
-    display: flex;
-    min-inline-size: 0;
-    min-block-size: 0;
-    border-inline-start: 1px solid var(--line);
-    background: var(--canvas);
-  }
-
-  .example-plane[data-axis="vertical"] .example-plane__navigation {
-    flex-direction: row;
-    border-block-start: 1px solid var(--line);
-    border-inline-start: 0;
-  }
-
-  .example-plane__arrow,
-  .example-plane__direct-button {
-    display: grid;
-    min-inline-size: 0;
-    min-block-size: 2.5rem;
-    place-items: center;
-    border: 0;
-    padding: 0.35rem;
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-  }
-
-  .example-plane__arrow:hover:not(:disabled),
-  .example-plane__arrow:focus-visible,
-  .example-plane__direct-button:hover,
-  .example-plane__direct-button:focus-visible,
-  .example-plane__direct-button[aria-pressed="true"] {
-    background: var(--selection);
-    color: var(--ink);
-  }
-
-  .example-plane__arrow:disabled {
-    cursor: default;
-    opacity: 0.35;
-  }
-
-  .example-plane__arrow svg {
-    inline-size: 1rem;
-    block-size: 1rem;
-    fill: none;
-    stroke: currentColor;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-width: 1.7;
-  }
-
-  .example-plane[data-axis="horizontal"] .example-plane__navigation {
-    flex-direction: column;
-  }
-
-  .example-plane__direct {
-    display: flex;
-    min-inline-size: 0;
-    min-block-size: 0;
-    flex: 1 1 auto;
-    flex-direction: column;
-  }
-
-  .example-plane[data-axis="vertical"] .example-plane__direct {
-    flex-direction: row;
-  }
-
-  .example-plane__direct-button {
-    flex: 1 1 0;
-    color: var(--faint);
-    font-family: var(--mono);
-    font-size: 0.62rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .surface__dialog {
-    margin: 0;
-    padding: 0.7rem var(--surface-pad);
-    border-block-start: 1px solid var(--line);
-    background: var(--selection);
-    color: var(--muted);
-  }
-
-  @media (max-width: 48rem) {
-    .example-plane[data-axis="horizontal"] {
-      grid-template-columns: minmax(0, 1fr) 2.8rem;
-    }
-
-    .example-region__header code {
-      display: none;
-    }
   }
 
   @media (prefers-reduced-motion: reduce) {

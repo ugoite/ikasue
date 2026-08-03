@@ -711,7 +711,7 @@ render_dashboard(layout, data_table, message, status);`,
     source: {
       javascript: `import { horizontal, resolvePlane, vertical } from "@ugoite/ikasue";
 
-const components = ["horizontal", "vertical", "form-list", "text", "rule", "action-strip"];
+const components = ["horizontal", "vertical", "form-list", "text", "rule", "action-strip", "status-icon"];
 const fields = vertical(["title", "slug", "body", "status"], {
   fit: "elastic",
   gap: 1,
