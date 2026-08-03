@@ -4,12 +4,15 @@ description: Five radically different site shapes built from the same plane mode
 ---
 
 import { TabItem, Tabs } from "@astrojs/starlight/components";
+import ExampleSurface from "../../../../components/ExampleSurface.astro";
 
 The same component system can produce very different information shapes. These five examples compare a dense operations dashboard, an editor with preview, a planning calendar, a field/mobile service surface, and an observability/incident console. Each starts by deciding where new information belongs and what it should make room for.
 
 ## 1. Dense operations dashboard
 
 This shape puts filters, a queue, detail, and status into one workspace. Use `Horizontal` for short filters and actions, then `Vertical` for queue and detail order. A narrow dashboard can adapt without hiding filters in an overlay. `DataTable` cell selection and a `MessageRegion` target remain evidence on the same plane.
+
+<ExampleSurface kind="operations" locale="en" />
 
 <Tabs>
   <TabItem label="JavaScript implementation / usage">
@@ -75,6 +78,8 @@ let data_table = ComponentContract::new("data-table")
 
 This shape keeps an editor on the left and a readable preview on the right. A `Horizontal` plane gives the selected work a little more area without turning the preview into a floating card. `FormList` owns frontmatter values and status; child draft remains unconfirmed local state.
 
+<ExampleSurface kind="editor" locale="en" />
+
 <Tabs>
   <TabItem label="JavaScript implementation / usage">
 
@@ -132,6 +137,8 @@ let form_list = FormListState {
 ## 3. Planning / calendar
 
 This planning surface compares days horizontally while events read vertically inside each day. When width is tight, `wrap` or `scroll` is explicit, so a later day is not silently discarded. `ChoiceGroup` can select the displayed planning mode without changing the axis contract.
+
+<ExampleSurface kind="planning" locale="en" />
 
 <Tabs>
   <TabItem label="JavaScript implementation / usage">
@@ -192,6 +199,8 @@ let choices = ChoiceGroup::new(Choice::Standard);
 
 This shape supports a job, photos, a checklist, and short decisions on an unreliable network. Keep job context vertical and actions horizontal. A `BottomDialog` enters as a bottom row, so the map or job evidence is not covered. At narrow widths, switch explicitly from `elastic` to `scroll`.
 
+<ExampleSurface kind="field" locale="en" />
+
 <Tabs>
   <TabItem label="JavaScript implementation / usage">
 
@@ -250,6 +259,8 @@ let dialog = BottomDialog::confirm().dismissible(true);
 ## 5. Observability / incident console
 
 This console combines a timeline, service state, and incident detail. Keep timeline and service list as separate vertical responsibilities, then make a `MessageRegion` point back to the incident target. `ProgressRegion` retains previous metrics while new data arrives, so evidence does not disappear into a spinner.
+
+<ExampleSurface kind="observability" locale="en" />
 
 <Tabs>
   <TabItem label="JavaScript implementation / usage">
