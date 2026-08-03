@@ -42,6 +42,7 @@ export function svgIcon(document: Document, name: string): SVGSVGElement {
     textarea: ["M5 6h14M5 10h14M5 14h9M17 18l3-3"],
     copy: ["M8 8h11v11H8zM5 16H4V5h11v1"],
     reset: ["M4 4v6h6M5.5 14a7 7 0 1 0 .6-7.8L4 10"],
+    search: ["M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14M16 16l4 4"],
     close: ["M6 6l12 12M18 6L6 18"],
   };
   const commands = paths[name] ?? paths.text ?? [];
