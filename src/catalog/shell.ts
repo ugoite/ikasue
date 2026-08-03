@@ -1,4 +1,5 @@
 import {
+  createInfoText,
   renderDemo,
   renderDeveloperDemo,
   renderPhilosophyDemo,
@@ -52,10 +53,13 @@ export function mountCatalog(
 
   const cleanup: Cleanup[] = [];
   let pageCleanup: Cleanup[] = [];
+  let propertyCleanup: Cleanup[] = [];
+  let navCleanup: Cleanup[] = [];
   let disposed = false;
   const querySearch = options.search ?? window?.location.search ?? "";
   let currentId = options.component ?? parseComponentQuery(querySearch);
   let currentProps = cloneProps(currentId);
+  let navQuery = "";
 
   const shell = element(document, "div", "app-shell");
   const appPlane = element(document, "div", "app-plane");
@@ -99,7 +103,26 @@ export function mountCatalog(
     "プロパティを初期値へ戻す",
     "初期値へ戻す",
   );
-  topActions.append(copyButton, resetButton);
+  const searchButton = createIconButton(
+    document,
+    "search",
+    "コンポーネントを検索",
+    "検索",
+  );
+  searchButton.dataset.searchToggle = "true";
+  searchButton.setAttribute("aria-expanded", "false");
+  const searchPanel = element(document, "div", "search-panel");
+  searchPanel.id = "catalogSearchPanel";
+  searchPanel.setAttribute("role", "search");
+  searchPanel.hidden = true;
+  const searchInput = element(document, "input");
+  searchInput.id = "catalogSearch";
+  searchInput.type = "search";
+  searchInput.setAttribute("aria-label", "コンポーネントを検索");
+  searchInput.placeholder = "componentを検索";
+  searchPanel.append(searchInput);
+  searchButton.setAttribute("aria-controls", searchPanel.id);
+  topActions.append(copyButton, resetButton, searchButton, searchPanel);
   topline.append(brand, topActions);
   const contentScroll = element(document, "div", "content-scroll");
   contentScroll.id = "contentScroll";
@@ -169,6 +192,20 @@ export function mountCatalog(
     },
   });
 
+  const propertyContext = (): DemoContext => ({
+    document,
+    root,
+    window,
+    track: (item) => propertyCleanup.push(item),
+    listen: (targetElement, type, handler) =>
+      propertyCleanup.push(listen(targetElement, type, handler)),
+    openDialog: (title, message) => {
+      dialogTitle.textContent = title;
+      dialogText.textContent = message;
+      dialog.dataset.open = "true";
+    },
+  });
+
   const syncNavButton = (): void => {
     const open = root.dataset.nav === "open";
     navToggle.setAttribute("aria-expanded", String(open));
@@ -179,17 +216,34 @@ export function mountCatalog(
   };
 
   const renderNav = (): void => {
+    for (const item of navCleanup) item();
+    navCleanup = [];
     navList.replaceChildren();
+    const query = navQuery.trim().toLocaleLowerCase();
+    let matchCount = 0;
     for (const [label, category] of CATALOG_GROUPS) {
       const groupItems = CATALOG_PAGES.filter(
-        (component) => component.cat === category,
+        (component) =>
+          component.cat === category && matchesNavQuery(component, query),
       );
       if (!groupItems.length) continue;
+      matchCount += groupItems.length;
       const groupLabel = element(document, "div", "nav-group");
       groupLabel.textContent = label;
       navList.append(groupLabel);
       for (const component of groupItems)
         navList.append(createNavItem(component));
+    }
+    if (query && !matchCount) {
+      const empty = element(document, "p", "nav-empty");
+      empty.setAttribute("role", "status");
+      empty.textContent = `「${navQuery.trim()}」に一致するcomponentはありません。`;
+      navList.append(empty);
+    } else if (query) {
+      const status = element(document, "p", "nav-filter-status");
+      status.setAttribute("role", "status");
+      status.textContent = `${String(matchCount)}件のcomponentを表示中`;
+      navList.prepend(status);
     }
   };
 
@@ -208,10 +262,40 @@ export function mountCatalog(
     japanese.textContent = component.ja;
     copy.append(japanese);
     item.append(copy);
-    listenAndTrack(item, "click", () => {
-      selectComponent(component.id, true, true);
-    });
+    navCleanup.push(
+      listen(item, "click", () => {
+        selectComponent(component.id, true, true);
+      }),
+    );
     return item;
+  };
+
+  const contractText = (component: CatalogPageMetadata): string => {
+    const rustName = component.name.replace(/[^A-Za-z0-9]/g, "");
+    const rustProps = Object.entries(currentProps)
+      .map(
+        ([key, value]) =>
+          `${key}: ${typeof value === "boolean" ? String(value) : `${JSON.stringify(value)}.into()`}`,
+      )
+      .join(", ");
+    return `// JavaScript / JSON\n${JSON.stringify({ component: component.name, ...currentProps }, null, 2)}\n\n// Rust\nUiNode::${rustName}({ ${rustProps} })`;
+  };
+
+  const updateProperty = (
+    component: CatalogPageMetadata,
+    key: string,
+    value: string | boolean,
+  ): void => {
+    if (currentProps[key] === value) return;
+    currentProps[key] = value;
+    const stage = content.querySelector<HTMLElement>("#demoStage");
+    if (stage) {
+      for (const item of pageCleanup) item();
+      pageCleanup = [];
+      renderDemo(stage, component, currentProps, context());
+    }
+    const spec = content.querySelector<HTMLElement>("#specCode");
+    if (spec) spec.textContent = contractText(component);
   };
 
   const renderProperties = (component: CatalogPageMetadata): HTMLDivElement => {
@@ -220,45 +304,78 @@ export function mountCatalog(
       const row = element(document, "div", "property-row");
       const label = element(document, "label");
       const title = element(document, "span");
+      const inputId = `catalog-${component.id}-${property.key}`;
+      title.id = `${inputId}-label`;
       title.textContent = property.label;
       const detail = element(document, "small");
       detail.textContent = `${property.key} / default: ${String(property.default)}`;
       label.append(title, detail);
       const control = element(document, "div", "property-control");
-      const inputId = `catalog-${component.id}-${property.key}`;
       if (property.type === "select") {
-        control.classList.add("select-control");
-        const select = element(document, "select");
-        select.id = inputId;
-        select.dataset.prop = property.key;
-        for (const value of property.values) {
-          const option = element(document, "option");
-          option.value = value;
-          option.textContent = value;
-          option.selected = String(currentProps[property.key]) === value;
-          select.append(option);
-        }
-        label.htmlFor = inputId;
-        control.append(select);
+        const infoText = element(document, "span", "info-text");
+        infoText.id = inputId;
+        infoText.dataset.prop = property.key;
+        infoText.setAttribute("aria-labelledby", title.id);
+        createInfoText(
+          infoText,
+          {
+            value: String(currentProps[property.key] ?? ""),
+            editable: true,
+            editor: "select",
+            values: property.values,
+            label: property.label,
+            onCommit: (value) => {
+              updateProperty(component, property.key, value);
+            },
+          },
+          propertyContext(),
+        );
+        control.append(infoText);
       } else if (property.type === "boolean") {
-        const switchControl = element(document, "label", "switch-control");
-        const checkbox = element(document, "input");
-        checkbox.type = "checkbox";
-        checkbox.id = inputId;
-        checkbox.checked = currentProps[property.key] === true;
-        checkbox.dataset.prop = property.key;
+        const boolean = element(document, "button", "boolean-text");
+        boolean.type = "button";
+        boolean.id = inputId;
+        boolean.dataset.prop = property.key;
+        boolean.setAttribute("role", "checkbox");
+        boolean.setAttribute("aria-labelledby", title.id);
+        let checked = currentProps[property.key] === true;
+        const check = element(document, "span", "check-slot");
         const state = element(document, "span");
-        state.textContent = checkbox.checked ? "on" : "off";
-        switchControl.append(checkbox, state);
-        control.append(switchControl);
+        const syncBoolean = (): void => {
+          boolean.setAttribute("aria-checked", String(checked));
+          state.textContent = checked ? "on" : "off";
+          check.replaceChildren();
+          if (checked) check.append(svgIcon(document, "check"));
+        };
+        boolean.append(check, state);
+        syncBoolean();
+        propertyCleanup.push(
+          listen(boolean, "click", () => {
+            checked = !checked;
+            syncBoolean();
+            updateProperty(component, property.key, checked);
+          }),
+        );
+        control.append(boolean);
       } else {
-        const input = element(document, "input");
-        input.type = "text";
-        input.id = inputId;
-        input.value = String(currentProps[property.key] ?? "");
-        input.dataset.prop = property.key;
-        label.htmlFor = inputId;
-        control.append(input);
+        const infoText = element(document, "span", "info-text");
+        infoText.id = inputId;
+        infoText.dataset.prop = property.key;
+        infoText.setAttribute("aria-labelledby", title.id);
+        createInfoText(
+          infoText,
+          {
+            value: String(currentProps[property.key] ?? ""),
+            editable: true,
+            editor: "text",
+            label: property.label,
+            onCommit: (value) => {
+              updateProperty(component, property.key, value);
+            },
+          },
+          propertyContext(),
+        );
+        control.append(infoText);
       }
       row.append(label, control);
       list.append(row);
@@ -269,14 +386,7 @@ export function mountCatalog(
   const renderContract = (component: CatalogPageMetadata): HTMLPreElement => {
     const pre = element(document, "pre", "code-block");
     pre.id = "specCode";
-    const rustName = component.name.replace(/[^A-Za-z0-9]/g, "");
-    const rustProps = Object.entries(currentProps)
-      .map(
-        ([key, value]) =>
-          `${key}: ${typeof value === "boolean" ? String(value) : `${JSON.stringify(value)}.into()`}`,
-      )
-      .join(", ");
-    pre.textContent = `// JavaScript / JSON\n${JSON.stringify({ component: component.name, ...currentProps }, null, 2)}\n\n// Rust\nUiNode::${rustName}({ ${rustProps} })`;
+    pre.textContent = contractText(component);
     return pre;
   };
 
@@ -346,7 +456,6 @@ export function mountCatalog(
     content.append(grid);
     topTitle.textContent = component.name;
     renderDemo(demoStage, component, currentProps, context());
-    bindProperties(component);
   };
 
   const appendMeta = (section: HTMLElement, id: CatalogPageId): void => {
@@ -500,6 +609,8 @@ export function mountCatalog(
   const renderPage = (focusHeading = false): void => {
     for (const item of pageCleanup) item();
     pageCleanup = [];
+    for (const item of propertyCleanup) item();
+    propertyCleanup = [];
     content.replaceChildren();
     const component = findPage(currentId);
     if (component.demo === "philosophy") renderPhilosophy();
@@ -507,47 +618,6 @@ export function mountCatalog(
     else renderStandardPage(component);
     contentScroll.scrollTop = 0;
     if (focusHeading) focusPageHeading(content);
-  };
-
-  const bindProperties = (component: CatalogPageMetadata): void => {
-    for (const control of content.querySelectorAll<
-      HTMLInputElement | HTMLSelectElement
-    >("[data-prop]")) {
-      const handler = (): void => {
-        const property = component.props.find(
-          (item) => item.key === control.dataset.prop,
-        );
-        if (!property) return;
-        const next =
-          property.type === "boolean"
-            ? (control as HTMLInputElement).checked
-            : control.value;
-        if (currentProps[property.key] === next) return;
-        currentProps[property.key] = next;
-        const state = control.closest(".switch-control")?.querySelector("span");
-        if (state && property.type === "boolean")
-          state.textContent = next === true ? "on" : "off";
-        const stage = content.querySelector<HTMLElement>("#demoStage");
-        if (stage) {
-          for (const item of pageCleanup) item();
-          pageCleanup = [];
-          renderDemo(stage, component, currentProps, context());
-        }
-        const spec = content.querySelector<HTMLElement>("#specCode");
-        if (spec) {
-          const rustName = component.name.replace(/[^A-Za-z0-9]/g, "");
-          const rustProps = Object.entries(currentProps)
-            .map(
-              ([key, value]) =>
-                `${key}: ${typeof value === "boolean" ? String(value) : `${JSON.stringify(value)}.into()`}`,
-            )
-            .join(", ");
-          spec.textContent = `// JavaScript / JSON\n${JSON.stringify({ component: component.name, ...currentProps }, null, 2)}\n\n// Rust\nUiNode::${rustName}({ ${rustProps} })`;
-        }
-      };
-      listenAndTrack(control, "input", handler);
-      listenAndTrack(control, "change", handler);
-    }
   };
 
   const selectComponent = (
@@ -605,6 +675,31 @@ export function mountCatalog(
       buttons[next]?.focus();
     }
   });
+  const setSearchOpen = (open: boolean): void => {
+    searchPanel.hidden = !open;
+    searchButton.setAttribute("aria-expanded", String(open));
+    if (open) {
+      searchInput.focus();
+      return;
+    }
+    navQuery = "";
+    searchInput.value = "";
+    renderNav();
+    searchButton.focus();
+  };
+  listenAndTrack(searchButton, "click", () => {
+    setSearchOpen(searchPanel.hidden);
+  });
+  listenAndTrack(searchInput, "input", () => {
+    navQuery = searchInput.value;
+    renderNav();
+  });
+  listenAndTrack(searchInput, "keydown", (event) => {
+    if ((event as KeyboardEvent).key === "Escape") {
+      event.preventDefault();
+      setSearchOpen(false);
+    }
+  });
   if (window) {
     listenAndTrack(window, "popstate", () => {
       const next = parseComponentQuery(window.location.search);
@@ -641,6 +736,8 @@ export function mountCatalog(
       if (disposed) return;
       disposed = true;
       for (const item of pageCleanup) item();
+      for (const item of propertyCleanup) item();
+      for (const item of navCleanup) item();
       for (const item of cleanup) item();
       root.remove();
     },
@@ -655,19 +752,37 @@ function focusPageHeading(content: HTMLElement): void {
 
 function createIconButton(
   document: Document,
-  kind: "copy" | "reset" | "close",
+  kind: "copy" | "reset" | "search" | "close",
   label: string,
   tooltip: string,
 ): HTMLButtonElement {
-  const icon = kind === "copy" ? "copy" : kind === "reset" ? "reset" : "close";
+  const icon =
+    kind === "copy"
+      ? "copy"
+      : kind === "reset"
+        ? "reset"
+        : kind === "search"
+          ? "search"
+          : "close";
   const button = element(document, "button", "icon-button");
   button.type = "button";
   button.setAttribute("aria-label", label);
   button.append(svgIcon(document, icon));
   const hint = element(document, "span", "tooltip");
+  hint.setAttribute("role", "tooltip");
   hint.textContent = tooltip;
   button.append(hint);
   return button;
+}
+
+function matchesNavQuery(
+  component: CatalogPageMetadata,
+  query: string,
+): boolean {
+  if (!query) return true;
+  return [component.id, component.name, component.ja].some((value) =>
+    value.toLocaleLowerCase().includes(query),
+  );
 }
 
 function richParagraph(

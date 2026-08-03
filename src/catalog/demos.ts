@@ -31,6 +31,7 @@ interface TextOptions {
   readonly value: string;
   readonly editable: boolean;
   readonly editor: string;
+  readonly values?: readonly string[];
   readonly state?: FormFieldStatus;
   readonly draft?: boolean;
   readonly label?: string;
@@ -57,6 +58,7 @@ function iconButton(
   button.setAttribute("aria-label", label);
   button.append(svgIcon(context.document, icon));
   const hint = element(context.document, "span", "tooltip");
+  hint.setAttribute("role", "tooltip");
   hint.textContent = tooltip;
   button.append(hint);
   return button;
@@ -625,6 +627,7 @@ export function createInfoText(
   host.dataset.editor = options.editor;
   const read = element(context.document, "span", "read-value");
   read.tabIndex = options.editable ? 0 : -1;
+  if (options.label) read.setAttribute("aria-label", options.label);
   read.textContent = options.value;
   host.replaceChildren(read);
   if (options.editable) {
@@ -655,10 +658,16 @@ function startInfoEdit(
   const read = host.querySelector<HTMLElement>(".read-value");
   const old = read?.textContent ?? "";
   let editor: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+  let editorContainer: HTMLElement | null = null;
   if (options.editor === "select") {
     const select = element(context.document, "select");
     const selectControl = element(context.document, "span", "select-control");
-    for (const value of ["東京オフィス", "大阪オフィス", "福岡オフィス"]) {
+    const values = options.values ?? [
+      "東京オフィス",
+      "大阪オフィス",
+      "福岡オフィス",
+    ];
+    for (const value of values) {
       const option = element(context.document, "option");
       option.value = value;
       option.textContent = value;
@@ -667,6 +676,7 @@ function startInfoEdit(
     }
     selectControl.append(select);
     host.append(selectControl);
+    editorContainer = selectControl;
     editor = select;
   } else if (options.editor === "textarea") {
     const textarea = element(context.document, "textarea");
@@ -690,14 +700,16 @@ function startInfoEdit(
     finished = true;
     const value = editor.value;
     editor.remove();
+    editorContainer?.remove();
     host.dataset.editing = "false";
+    if (read) read.textContent = value;
     if (options.onCommit) options.onCommit(value);
-    else if (read) read.textContent = value;
   };
   const cancel = (): void => {
     if (finished) return;
     finished = true;
     editor.remove();
+    editorContainer?.remove();
     host.dataset.editing = "false";
     read?.focus();
   };
@@ -713,6 +725,8 @@ function startInfoEdit(
       commit();
     }
   });
+  if (options.editor === "select")
+    addListener(context, editor, "change", commit);
   addListener(context, editor, "blur", commit);
 }
 
