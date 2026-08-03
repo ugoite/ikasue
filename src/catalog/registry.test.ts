@@ -4,6 +4,7 @@ import { componentSource as docsComponentSource } from "../../docs-site/src/data
 
 import {
   CATALOG_REGISTRY,
+  CATALOG_PAGE_COPY,
   CATALOG_CONCEPTS,
   CATALOG_PAGES,
   COMPONENT_IDS,
@@ -12,6 +13,7 @@ import {
   COMPONENT_REGISTRY,
   COMPONENT_SOURCE_RECIPES,
   CONCEPT_REGISTRY,
+  PHILOSOPHY_PAGE_COPY,
   PAGE_IDS,
   componentSource,
   findRegistryEntry,
@@ -75,6 +77,8 @@ describe("component registry completeness", () => {
     expect(Object.keys(COMPONENT_PAGE_COPY).sort()).toEqual(
       [...catalogIds].sort(),
     );
+    expect(Object.keys(CATALOG_PAGE_COPY).sort()).toEqual([...PAGE_IDS].sort());
+    expect(CATALOG_PAGE_COPY.philosophy).toEqual(PHILOSOPHY_PAGE_COPY);
 
     for (const entry of COMPONENT_REGISTRY) {
       const source = componentSource(entry.id);
@@ -114,11 +118,13 @@ describe("component registry completeness", () => {
       expect(source.javascript).toContain("resolvePlane");
       expect(source.rust).toContain("resolve_plane");
       expect(docsComponentSource(entry.id)).toEqual(source);
+      expect(CATALOG_PAGE_COPY[entry.id]).toEqual(entry.page);
       expect(entry.page.ja.title.length).toBeGreaterThan(0);
       expect(entry.page.en.description.length).toBeGreaterThan(0);
     }
 
     const philosophy = findRegistryEntry("philosophy");
+    expect(CATALOG_PAGE_COPY.philosophy).toEqual(philosophy.page);
     expect(philosophy.page.ja.title).toBe(
       "Design philosophy / 平面適応UIの思想",
     );

@@ -1415,7 +1415,7 @@ export const COMPONENT_MATRIX_PAGE_COPY = {
   },
 } as const satisfies Record<CatalogLocale, CatalogPageCopy>;
 
-const PHILOSOPHY_PAGE_COPY = {
+export const PHILOSOPHY_PAGE_COPY = {
   ja: {
     title: "Design philosophy / 平面適応UIの思想",
     description: "ikasueの平面中心の原則。",
@@ -1425,6 +1425,14 @@ const PHILOSOPHY_PAGE_COPY = {
     description: "The plane-centered principles behind ikasue.",
   },
 } as const satisfies Record<CatalogLocale, CatalogPageCopy>;
+
+export const CATALOG_PAGE_COPY = {
+  philosophy: PHILOSOPHY_PAGE_COPY,
+  ...COMPONENT_PAGE_COPY,
+} as const satisfies Record<
+  CatalogPageId,
+  Record<CatalogLocale, CatalogPageCopy>
+>;
 
 const PHILOSOPHY_PRINCIPLES = {
   ja: [
