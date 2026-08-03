@@ -5,6 +5,12 @@ import {
   getFormField,
   type FormFieldStatus,
 } from "./form-state";
+import {
+  commitTableCell,
+  createTableState,
+  getTableCell,
+  type TableState,
+} from "./table-state";
 import { horizontal, resolvePlane, vertical } from "../plane";
 import type { CatalogPageMetadata, CatalogProps } from "./types";
 
@@ -308,45 +314,71 @@ function renderPlane(
   const axis = componentId === "horizontal" ? "horizontal" : "vertical";
   const fit = String(props.fit ?? "elastic");
   const gapValues: Record<string, number> = { none: 0, sm: 1, md: 2, lg: 3 };
-  const count = Number(props.items ?? 4);
-  const children = Array.from(
-    { length: Number.isFinite(count) ? Math.max(0, count) : 4 },
-    (_, index) => ({
-      id: `item-${String(index + 1)}`,
-      basis: 2,
-      min: fit === "elastic" ? 0.75 : 2,
-    }),
-  );
+  const requestedBasisValue = Number(props.basis ?? 2);
+  const requestedBasis = Number.isFinite(requestedBasisValue)
+    ? Math.max(0.5, requestedBasisValue)
+    : 2;
+  const availableValue = Number(props.available ?? 10);
+  const available = Number.isFinite(availableValue)
+    ? Math.max(1, availableValue)
+    : 10;
+  const countValue = Number(props.items ?? 4);
+  const count = Number.isFinite(countValue)
+    ? Math.max(0, Math.floor(countValue))
+    : 4;
+  const children = Array.from({ length: count }, (_, index) => ({
+    id: `item-${String(index + 1)}`,
+    basis: requestedBasis,
+    min: fit === "elastic" ? requestedBasis * 0.5 : requestedBasis,
+  }));
   const plane =
     axis === "horizontal"
       ? horizontal(children, {
           fit: fit as "elastic" | "wrap" | "scroll",
           gap: gapValues[String(props.gap ?? "md")] ?? 2,
-          available: 10,
+          available,
         })
       : vertical(children, {
           fit: fit as "elastic" | "wrap" | "scroll",
           gap: gapValues[String(props.gap ?? "md")] ?? 2,
-          available: 10,
+          available,
         });
   const resolved = resolvePlane(plane);
   const stage = element(context.document, "div", "plane-demo");
   stage.dataset.axis = resolved.axis;
   stage.dataset.fit = resolved.fit;
+  stage.dataset.overflow = String(resolved.overflow);
+  stage.dataset.available = String(resolved.available ?? available);
+  stage.dataset.extent = String(resolved.extent);
+  stage.dataset.lines = String(resolved.lines);
+  stage.style.setProperty(
+    "--plane-available",
+    String(resolved.available ?? available),
+  );
+  stage.style.setProperty("--plane-gap", String(resolved.gap));
   stage.style.setProperty("--plane-lines", String(resolved.lines));
   for (const child of resolved.children) {
     const item = element(context.document, "div", "plane-item");
     item.dataset.line = String(child.line);
+    item.dataset.offset = String(child.offset);
     item.style.setProperty("--plane-size", String(child.size));
     item.style.setProperty("--plane-offset", String(child.offset));
+    item.style.setProperty("--plane-line", String(child.line));
     item.textContent = child.id.replace("item-", "要素 ");
     stage.append(item);
   }
   const note = paragraph(
     context,
-    resolved.overflow
-      ? "領域が足りないため、選択した適応方針が追加対応を示します。"
-      : `${String(resolved.lines)} line / ${resolved.extent.toFixed(2)} units`,
+    [
+      `axis=${resolved.axis}`,
+      `fit=${resolved.fit}`,
+      `items=${String(children.length)}`,
+      `requested basis=${String(requestedBasis)} units`,
+      `available extent=${String(available)} units`,
+      `resolved lines=${String(resolved.lines)}`,
+      `resolved extent=${resolved.extent.toFixed(2)} units`,
+      `overflow=${String(resolved.overflow)}`,
+    ].join(" / "),
     "plane-note",
   );
   container.append(stage, note);
@@ -707,6 +739,20 @@ function renderTable(
     ["Beta", "開発", "大阪"],
     ["Gamma", "運用", "福岡"],
   ] as const;
+  const tableState = createTableState(
+    rows.flatMap((row, rowIndex) =>
+      row.map((value, columnIndex) => ({
+        id: `${String(rowIndex)}:${String(columnIndex)}`,
+        value,
+        status:
+          props.changes === true && rowIndex === 0 && columnIndex === 0
+            ? "modified"
+            : props.changes === true && rowIndex === 1 && columnIndex === 2
+              ? "created"
+              : "clean",
+      })),
+    ),
+  );
   const cells: HTMLTableCellElement[] = [];
   for (const [rowIndex, row] of rows.entries()) {
     const rowElement = element(context.document, "tr");
@@ -717,11 +763,7 @@ function renderTable(
       cell.dataset.c = String(columnIndex);
       cell.dataset.label = headers[columnIndex] ?? "";
       cell.dataset.state =
-        props.changes === true && rowIndex === 0 && columnIndex === 0
-          ? "modified"
-          : props.changes === true && rowIndex === 1 && columnIndex === 2
-            ? "created"
-            : "clean";
+        getTableCell(tableState, cellKey(cell))?.status ?? "clean";
       cell.textContent = value;
       cells.push(cell);
       rowElement.append(cell);
@@ -731,7 +773,18 @@ function renderTable(
   table.append(head, body);
   wrap.append(table);
   container.append(wrap);
-  enhanceTable(table, cells, props, context);
+  enhanceTable(table, cells, props, context, tableState);
+}
+
+function cellKey(cell: HTMLTableCellElement): string {
+  return `${cell.dataset.r ?? ""}:${cell.dataset.c ?? ""}`;
+}
+
+function syncTableCell(cell: HTMLTableCellElement, state: TableState): void {
+  const current = getTableCell(state, cellKey(cell));
+  if (!current) return;
+  cell.textContent = current.value;
+  cell.dataset.state = current.status;
 }
 
 function enhanceTable(
@@ -739,8 +792,14 @@ function enhanceTable(
   cells: readonly HTMLTableCellElement[],
   props: CatalogProps,
   context: DemoContext,
+  initialState: TableState,
 ): void {
+  let tableState = initialState;
   let selected: HTMLTableCellElement | undefined;
+  const commit = (cell: HTMLTableCellElement, value: string): void => {
+    tableState = commitTableCell(tableState, cellKey(cell), value);
+    syncTableCell(cell, tableState);
+  };
   const select = (cell: HTMLTableCellElement): void => {
     selected = cell;
     for (const candidate of cells) {
@@ -776,7 +835,12 @@ function enhanceTable(
       select(cell);
     });
     addListener(context, cell, "dblclick", () => {
-      if (props.editable === true) editCell(cell, context);
+      if (props.editable === true) {
+        editCell(cell, context, tableState, (nextState) => {
+          tableState = nextState;
+          syncTableCell(cell, tableState);
+        });
+      }
     });
     addListener(context, cell, "keydown", (event) => {
       const keyboard = event as KeyboardEvent;
@@ -792,13 +856,18 @@ function enhanceTable(
         props.editable === true
       ) {
         keyboard.preventDefault();
-        void pasteCell(cell, context);
+        void pasteCell(context, (value) => {
+          commit(cell, value);
+        });
       } else if (
         (keyboard.key === "Enter" || keyboard.key === "F2") &&
         props.editable === true
       ) {
         keyboard.preventDefault();
-        editCell(cell, context);
+        editCell(cell, context, tableState, (nextState) => {
+          tableState = nextState;
+          syncTableCell(cell, tableState);
+        });
       } else if (keyboard.key === "ArrowRight") {
         keyboard.preventDefault();
         move(cell, 0, 1);
@@ -819,8 +888,7 @@ function enhanceTable(
       const value = clipboard?.getData("text");
       if (value !== undefined) {
         event.preventDefault();
-        cell.textContent = value;
-        cell.dataset.state = "modified";
+        commit(cell, value);
       }
     });
   }
@@ -860,22 +928,26 @@ async function copyText(context: DemoContext, value: string): Promise<void> {
 }
 
 async function pasteCell(
-  cell: HTMLTableCellElement,
   context: DemoContext,
+  commit: (value: string) => void,
 ): Promise<void> {
   const clipboard =
     context.window === null ? undefined : context.window.navigator.clipboard;
   if (!clipboard?.readText) return;
   try {
     const value = await clipboard.readText();
-    cell.textContent = value;
-    cell.dataset.state = "modified";
+    commit(value);
   } catch {
     // Clipboard permissions are optional.
   }
 }
 
-function editCell(cell: HTMLTableCellElement, context: DemoContext): void {
+function editCell(
+  cell: HTMLTableCellElement,
+  context: DemoContext,
+  state: TableState,
+  onCommit: (nextState: TableState) => void,
+): void {
   if (cell.querySelector("input")) return;
   const old = cell.textContent;
   const input = element(context.document, "input");
@@ -887,8 +959,7 @@ function editCell(cell: HTMLTableCellElement, context: DemoContext): void {
   const commit = (): void => {
     if (finished) return;
     finished = true;
-    cell.textContent = input.value;
-    cell.dataset.state = "modified";
+    onCommit(commitTableCell(state, cellKey(cell), input.value));
   };
   const cancel = (): void => {
     if (finished) return;
@@ -897,8 +968,13 @@ function editCell(cell: HTMLTableCellElement, context: DemoContext): void {
   };
   addListener(context, input, "keydown", (event) => {
     const keyboard = event as KeyboardEvent;
-    if (keyboard.key === "Enter" || keyboard.key === "Tab") commit();
-    if (keyboard.key === "Escape") cancel();
+    if (keyboard.key === "Enter" || keyboard.key === "Tab") {
+      keyboard.preventDefault();
+      commit();
+    } else if (keyboard.key === "Escape") {
+      keyboard.preventDefault();
+      cancel();
+    }
   });
   addListener(context, input, "blur", commit);
 }

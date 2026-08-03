@@ -62,7 +62,8 @@ const RECIPES: Record<CatalogComponentId, SourceRecipe> = {
     children:
       '[{ id: "summary", basis: 2, min: 1 }, { id: "table", basis: 6, min: 3 }]',
     planeOptions: '{ fit: "elastic", gap: 2, available: 10 }',
-    componentProps: '{ fit: "elastic", gap: "md", items: "4" }',
+    componentProps:
+      '{ fit: "elastic", gap: "md", items: "4", basis: "2", available: "10" }',
     ownership: "Vertical owns order and fit resolution, not child semantics.",
     rustState: "axis: Axis::Vertical, fit: Fit::Elastic",
   },
@@ -70,8 +71,9 @@ const RECIPES: Record<CatalogComponentId, SourceRecipe> = {
     axis: "horizontal",
     children:
       '[{ id: "save", basis: 1 }, { id: "history", basis: 2 }, { id: "refresh", basis: 1 }]',
-    planeOptions: '{ fit: "wrap", gap: 1, available: 5 }',
-    componentProps: '{ fit: "wrap", gap: "sm", items: "4" }',
+    planeOptions: '{ fit: "wrap", gap: 1, available: 10 }',
+    componentProps:
+      '{ fit: "wrap", gap: "sm", items: "4", basis: "2", available: "10" }',
     ownership:
       "Horizontal owns order and fit resolution, not child keyboard behavior.",
     rustState: "axis: Axis::Horizontal, fit: Fit::Wrap",
@@ -130,7 +132,7 @@ const RECIPES: Record<CatalogComponentId, SourceRecipe> = {
     componentProps:
       '{ editable: true, selection: "row-column", changes: true }',
     ownership:
-      "DataTable owns cell selection and table state; clipboard failure does not erase selection.",
+      "DataTable owns cell selection and cell state; focus does not modify status, and only committed differences do. Clipboard failure does not erase selection.",
     rustState: "selected: Cell::new(2, 1), editable: true, changes: true",
   },
   "history-gutter": {
