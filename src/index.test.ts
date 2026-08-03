@@ -108,6 +108,7 @@ describe("catalog query state", () => {
 describe("catalog defaults", () => {
   it("returns fresh default props and restores a changed copy", () => {
     const initial = defaultProps("text");
+    const english = defaultProps("text", "en");
     const changed = { ...initial, editable: false, value: "変更済み" };
     const reset = getDefaultProps("text");
 
@@ -120,6 +121,12 @@ describe("catalog defaults", () => {
     expect(changed).not.toEqual(reset);
     expect(reset).toEqual(initial);
     expect(reset).not.toBe(initial);
+    expect(english).toEqual({
+      editable: true,
+      editor: "text",
+      state: "clean",
+      value: "Tokyo office",
+    });
   });
 });
 

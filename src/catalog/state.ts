@@ -3,7 +3,12 @@ import {
   COMPONENT_REGISTRY,
   findRegistryEntry,
 } from "./registry";
-import type { CatalogComponentId, CatalogPageId, CatalogProps } from "./types";
+import type {
+  CatalogComponentId,
+  CatalogLocale,
+  CatalogPageId,
+  CatalogProps,
+} from "./types";
 
 export const DEFAULT_COMPONENT_ID: CatalogPageId = "philosophy";
 
@@ -51,10 +56,16 @@ export function serializeComponentQuery(
 
 export const serializeCatalogQuery = serializeComponentQuery;
 
-export function defaultProps(id: CatalogPageId): CatalogProps {
+export function defaultProps(
+  id: CatalogPageId,
+  locale: CatalogLocale = "ja",
+): CatalogProps {
   const component = findRegistryEntry(id);
   return Object.fromEntries(
-    component.properties.map((property) => [property.key, property.default]),
+    component.properties.map((property) => [
+      property.key,
+      locale === "en" ? property.defaultEn : property.defaultJa,
+    ]),
   );
 }
 
@@ -63,6 +74,7 @@ export const getDefaultProps = defaultProps;
 export function cloneProps(
   id: CatalogPageId,
   props?: CatalogProps,
+  locale: CatalogLocale = "ja",
 ): CatalogProps {
-  return { ...defaultProps(id), ...props };
+  return { ...defaultProps(id, locale), ...props };
 }

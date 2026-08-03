@@ -119,7 +119,10 @@ export interface CatalogProperty {
   readonly labelJa: string;
   readonly labelEn: string;
   readonly type: CatalogPropertyType;
+  /** Japanese/runtime compatibility default. */
   readonly default: CatalogPropertyValue;
+  readonly defaultJa: CatalogPropertyValue;
+  readonly defaultEn: CatalogPropertyValue;
   readonly values: readonly string[];
 }
 

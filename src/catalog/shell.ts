@@ -13,7 +13,6 @@ import {
   findRegistryEntry,
 } from "./registry";
 import {
-  cloneProps,
   defaultProps,
   parseComponentQuery,
   serializeComponentQuery,
@@ -28,6 +27,13 @@ import type {
 } from "./types";
 
 const DEFAULT_MOUNT_LABEL = "ikasue workspace";
+
+function localized<T>(
+  locale: CatalogLocale,
+  values: Readonly<Record<CatalogLocale, T>>,
+): T {
+  return values[locale];
+}
 
 export interface CatalogSiteNavItem {
   readonly key: "philosophy" | "contracts" | "components" | "examples";
@@ -168,7 +174,7 @@ export function mountCatalog(
   let disposed = false;
   const querySearch = options.search ?? window?.location.search ?? "";
   let currentId = options.component ?? parseComponentQuery(querySearch);
-  let currentProps = cloneProps(currentId);
+  let currentProps = defaultProps(currentId, locale);
   let navQuery = "";
 
   const shell = element(document, "div", "app-shell");
@@ -259,7 +265,10 @@ export function mountCatalog(
   const dialog = element(document, "section", "bottom-dialog");
   dialog.id = "bottomDialog";
   dialog.dataset.open = "false";
-  dialog.setAttribute("aria-label", "下端ダイアログ");
+  dialog.setAttribute(
+    "aria-label",
+    localized(locale, { ja: "下端ダイアログ", en: "Bottom dialog" }),
+  );
   const dialogInner = element(document, "div", "bottom-dialog-inner");
   const dialogHead = element(document, "div", "dialog-head");
   const dialogHeading = element(document, "div");
@@ -267,20 +276,31 @@ export function mountCatalog(
   dialogEyebrow.textContent = "Bottom dialog";
   const dialogTitle = element(document, "h2");
   dialogTitle.id = "dialogTitle";
-  dialogTitle.textContent = "処理を確認";
+  dialogTitle.textContent = localized(locale, {
+    ja: "処理を確認",
+    en: "Review action",
+  });
   dialogHeading.append(dialogEyebrow, dialogTitle);
-  const closeButton = createIconButton(document, "close", "閉じる", "閉じる");
+  const closeButton = createIconButton(
+    document,
+    "close",
+    localized(locale, { ja: "閉じる", en: "Close" }),
+    localized(locale, { ja: "閉じる", en: "Close" }),
+  );
   closeButton.dataset.closeDialog = "true";
   dialogHead.append(dialogHeading, closeButton);
   const dialogText = element(document, "p");
   dialogText.id = "dialogText";
-  dialogText.textContent = "上の情報を残したまま、下端に判断領域を追加します。";
+  dialogText.textContent = localized(locale, {
+    ja: "上の情報を残したまま、下端に判断領域を追加します。",
+    en: "Add a decision area at the bottom while keeping the information above.",
+  });
   const dialogActions = element(document, "div", "cluster");
   dialogActions.style.marginTop = "16px";
   dialogActions.style.justifyContent = "flex-end";
   for (const [label, emphasized] of [
-    ["取消", false],
-    ["確定", true],
+    [localized(locale, { ja: "取消", en: "Cancel" }), false],
+    [localized(locale, { ja: "確定", en: "Confirm" }), true],
   ] as const) {
     const action = element(document, "button", "text-action");
     action.type = "button";
@@ -516,7 +536,9 @@ export function mountCatalog(
       title.id = `${inputId}-label`;
       title.textContent = locale === "en" ? property.labelEn : property.labelJa;
       const detail = element(document, "small");
-      detail.textContent = `${property.key} / default: ${String(property.default)}`;
+      const localeDefault =
+        locale === "en" ? property.defaultEn : property.defaultJa;
+      detail.textContent = `${property.key} / default: ${String(localeDefault)}`;
       label.append(title, detail);
       const control = element(document, "div", "property-control");
       if (property.type === "select") {
@@ -672,7 +694,10 @@ export function mountCatalog(
     const demoStrong = element(document, "strong");
     demoStrong.textContent = "Live behavior";
     const demoHint = element(document, "span");
-    demoHint.textContent = "property変更は即時反映";
+    demoHint.textContent = localized(locale, {
+      ja: "property変更は即時反映",
+      en: "Property changes apply immediately",
+    });
     demoLabel.append(demoStrong, demoHint);
     const demoStage = element(document, "div", "demo-stage");
     demoStage.id = "demoStage";
@@ -807,7 +832,10 @@ export function mountCatalog(
           : "へ翻訳する。表現力は選択と焦点の瞬間だけに使う。",
       ),
     );
-    const demo = appendSection(main, "平面の実演");
+    const demo = appendSection(
+      main,
+      localized(locale, { ja: "平面の実演", en: "Plane demonstration" }),
+    );
     const stage = element(document, "div", "demo-stage");
     stage.id = "philosophyDemo";
     demo.append(stage);
@@ -816,16 +844,37 @@ export function mountCatalog(
       locale === "en" ? "What to avoid" : "禁止するもの",
     );
     appendDefinitionList(forbidden, [
-      ["Z軸", "shadow、floating card、overlay drawer、上に被せるmodal。"],
       [
-        "任意方向motion",
-        "右の内容が左から現れるなど、出現元とanimation方向が一致しない動き。",
+        localized(locale, { ja: "Z軸", en: "Z-axis" }),
+        localized(locale, {
+          ja: "shadow、floating card、overlay drawer、上に被せるmodal。",
+          en: "Shadows, floating cards, overlay drawers, and modals placed over the page.",
+        }),
       ],
       [
-        "固定column思想",
-        "12分割をAPIの中心にすること。必要量はfocusとcontent hintから算出する。",
+        localized(locale, { ja: "任意方向motion", en: "Arbitrary motion" }),
+        localized(locale, {
+          ja: "右の内容が左から現れるなど、出現元とanimation方向が一致しない動き。",
+          en: "Motion whose direction does not match the edge where content enters.",
+        }),
       ],
-      ["入力boxの常設", "情報を読む時間にもeditor chromeを表示し続けること。"],
+      [
+        localized(locale, {
+          ja: "固定column思想",
+          en: "Fixed-column thinking",
+        }),
+        localized(locale, {
+          ja: "12分割をAPIの中心にすること。必要量はfocusとcontent hintから算出する。",
+          en: "Making a twelve-column grid the center of the API instead of deriving area from focus and content hints.",
+        }),
+      ],
+      [
+        localized(locale, { ja: "入力boxの常設", en: "Permanent input boxes" }),
+        localized(locale, {
+          ja: "情報を読む時間にもeditor chromeを表示し続けること。",
+          en: "Keeping editor chrome visible while people are simply reading information.",
+        }),
+      ],
     ]);
     const emphasis = appendSection(
       side,
@@ -869,7 +918,13 @@ export function mountCatalog(
         : "現在のproperties contract",
     );
     contractSection.append(renderContract(component));
-    const model = appendSection(main, "統合された情報model");
+    const model = appendSection(
+      main,
+      localized(locale, {
+        ja: "統合された情報model",
+        en: "Unified information model",
+      }),
+    );
     const textSpec = element(document, "pre", "code-block");
     textSpec.textContent = `TextSpec {
   value: JsonValue,
@@ -882,10 +937,16 @@ export function mountCatalog(
       textSpec,
       paragraph(
         document,
-        "静的textは editable: false、入力可能なtextは editable: true。別componentではない。selectやdateもeditor kindの差であり、通常時は同じ情報表示になる。",
+        localized(locale, {
+          ja: "静的textは editable: false、入力可能なtextは editable: true。別componentではない。selectやdateもeditor kindの差であり、通常時は同じ情報表示になる。",
+          en: "Static text uses editable: false and input-capable text uses editable: true; they are not separate components. Select and date are editor-kind differences, while their read view remains the same.",
+        }),
       ),
     );
-    const layout = appendSection(main, "平面model");
+    const layout = appendSection(
+      main,
+      localized(locale, { ja: "平面model", en: "Plane model" }),
+    );
     const layoutSpec = element(document, "pre", "code-block");
     layoutSpec.textContent = `PlaneSpec {
   axis: Vertical | Horizontal,
@@ -897,10 +958,16 @@ export function mountCatalog(
       layoutSpec,
       paragraph(
         document,
-        "開発者は一軸の順序だけを宣言し、runtimeが利用可能な空間に合わせて子要素を縮小、折返し、またはscrollへ適応する。",
+        localized(locale, {
+          ja: "開発者は一軸の順序だけを宣言し、runtimeが利用可能な空間に合わせて子要素を縮小、折返し、またはscrollへ適応する。",
+          en: "The developer declares order on one axis, and the runtime adapts children to available space by shrinking, wrapping, or scrolling.",
+        }),
       ),
     );
-    const output = appendSection(main, "出力例");
+    const output = appendSection(
+      main,
+      localized(locale, { ja: "出力例", en: "Output example" }),
+    );
     const stage = element(document, "div", "demo-stage");
     stage.id = "developerDemo";
     output.append(stage);
@@ -927,10 +994,34 @@ export function mountCatalog(
       locale === "en" ? "Published packages" : "公開package",
     );
     appendDefinitionList(published, [
-      ["@ugoite/ikasue", "dependency-free DOM enhancerとCustom Elements。"],
-      ["@ugoite/ikasue-solid", "ugoite用の薄いSolid adapter。"],
-      ["ikasue-protocol", "RustのUiDocumentとPlaneSpecを同じ契約で扱う。"],
-      ["ikasue-html", "semantic HTMLとsingle HTML asset生成。"],
+      [
+        "@ugoite/ikasue",
+        localized(locale, {
+          ja: "dependency-free DOM enhancerとCustom Elements。",
+          en: "Dependency-free DOM enhancement and Custom Elements.",
+        }),
+      ],
+      [
+        "@ugoite/ikasue-solid",
+        localized(locale, {
+          ja: "ugoite用の薄いSolid adapter。",
+          en: "A thin Solid adapter for ugoite.",
+        }),
+      ],
+      [
+        "ikasue-protocol",
+        localized(locale, {
+          ja: "RustのUiDocumentとPlaneSpecを同じ契約で扱う。",
+          en: "Uses the same contract for Rust UiDocument and PlaneSpec.",
+        }),
+      ],
+      [
+        "ikasue-html",
+        localized(locale, {
+          ja: "semantic HTMLとsingle HTML asset生成。",
+          en: "Generates semantic HTML and a single HTML asset.",
+        }),
+      ],
     ]);
     grid.append(main, side);
     content.append(grid);
@@ -959,7 +1050,7 @@ export function mountCatalog(
   ): void => {
     if (disposed || (id === currentId && !updateUrl)) return;
     currentId = id;
-    currentProps = defaultProps(id);
+    currentProps = defaultProps(id, locale);
     if (updateUrl && window) {
       const nextSearch = serializeComponentQuery(id, window.location.search);
       const nextUrl = `${window.location.pathname}${nextSearch}${window.location.hash}`;
@@ -1055,7 +1146,7 @@ export function mountCatalog(
     void copyToClipboard(document, window, spec);
   });
   listenAndTrack(resetButton, "click", () => {
-    currentProps = defaultProps(currentId);
+    currentProps = defaultProps(currentId, locale);
     renderPage();
   });
 

@@ -30,15 +30,18 @@ const p = (
   key: string,
   label: string,
   type: CatalogProperty["type"],
-  defaultValue: CatalogPropertyValue,
+  defaultJa: CatalogPropertyValue,
   values: readonly string[] = [],
+  defaultEn: CatalogPropertyValue = defaultJa,
 ): CatalogProperty => ({
   key,
   label,
   labelJa: label,
   labelEn: label,
   type,
-  default: defaultValue,
+  default: defaultJa,
+  defaultJa,
+  defaultEn,
   values,
 });
 
@@ -122,7 +125,7 @@ const BASE_CATALOG_COMPONENTS = [
         "deleted",
         "error",
       ]),
-      p("value", "値", "text", "東京オフィス"),
+      p("value", "値", "text", "東京オフィス", [], "Tokyo office"),
     ],
   },
   {
@@ -151,7 +154,7 @@ const BASE_CATALOG_COMPONENTS = [
         "warning",
         "error",
       ]),
-      p("label", "説明", "text", "同期済み"),
+      p("label", "説明", "text", "同期済み", [], "Synced"),
     ],
   },
   {
@@ -232,7 +235,14 @@ const BASE_CATALOG_COMPONENTS = [
     demo: "boolean",
     props: [
       p("checked", "値", "boolean", true),
-      p("label", "文章", "text", "自動保存を有効にする"),
+      p(
+        "label",
+        "文章",
+        "text",
+        "自動保存を有効にする",
+        [],
+        "Enable automatic save",
+      ),
     ],
   },
   {
