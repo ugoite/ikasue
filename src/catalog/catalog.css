@@ -202,6 +202,10 @@
     min-width: 0;
   }
 
+  .ikasue-root .search-panel[hidden] {
+    display: none;
+  }
+
   .ikasue-root .search-panel input {
     width: min(15rem, 30vw);
     min-width: 0;
@@ -747,14 +751,17 @@
 
   .ikasue-root .plane-demo[data-axis="vertical"] {
     flex-direction: column;
-    height: calc(var(--plane-available, 10) * var(--plane-unit));
+    height: calc(var(--plane-available, 10) * var(--plane-unit) + 2px);
     width: 100%;
   }
 
   .ikasue-root .plane-demo[data-axis="horizontal"] {
     flex-direction: row;
     height: auto;
-    width: min(calc(var(--plane-available, 10) * var(--plane-unit)), 100%);
+    width: min(
+      calc(var(--plane-available, 10) * var(--plane-unit) + 2px),
+      100%
+    );
   }
 
   .ikasue-root .plane-demo[data-fit="wrap"] {
