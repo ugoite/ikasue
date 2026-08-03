@@ -51,6 +51,8 @@ export interface CatalogMountOptions {
   readonly basePath?: string;
   /** Render only the catalog surface when a host site owns the page frame. */
   readonly embedded?: boolean;
+  /** Keep the component picker in an embedded mount when a host needs it. */
+  readonly showComponentPicker?: boolean;
 }
 
 export interface CatalogMount {
@@ -166,6 +168,7 @@ export function mountCatalog(
   const locale = options.locale ?? "ja";
   const basePath = normalizeBasePath(options.basePath);
   const embedded = options.embedded ?? false;
+  const showComponentPicker = options.showComponentPicker ?? embedded;
   const root = element(document, "section", "ikasue-root");
   root.setAttribute("aria-label", getCatalogMountLabel(options.label));
   root.dataset.embedded = String(embedded);
@@ -254,11 +257,26 @@ export function mountCatalog(
   searchInput.type = "search";
   searchInput.setAttribute(
     "aria-label",
-    locale === "en" ? "Search components" : "コンポーネントを検索",
+    embedded && !showComponentPicker
+      ? locale === "en"
+        ? "Search demo properties"
+        : "demoのpropertyを検索"
+      : locale === "en"
+        ? "Search components"
+        : "コンポーネントを検索",
   );
   searchInput.placeholder =
-    locale === "en" ? "Search components" : "componentを検索";
-  searchPanel.append(searchInput);
+    embedded && !showComponentPicker
+      ? locale === "en"
+        ? "Search demo properties"
+        : "demoのpropertyを検索"
+      : locale === "en"
+        ? "Search components"
+        : "componentを検索";
+  const searchStatus = element(document, "span", "catalog-search-status");
+  searchStatus.dataset.embeddedSearchStatus = "true";
+  searchStatus.setAttribute("role", "status");
+  searchPanel.append(searchInput, searchStatus);
   searchButton.setAttribute("aria-controls", searchPanel.id);
   topActions.append(copyButton, resetButton, searchButton, searchPanel);
   topline.append(brand, topActions);
@@ -278,12 +296,17 @@ export function mountCatalog(
   controlsHeading.textContent =
     locale === "en" ? "Component controls" : "component操作";
   const controlsNote = element(document, "p", "catalog-controls-note");
-  controlsNote.textContent =
-    locale === "en"
-      ? "Select a page-local component demo; site navigation stays in Starlight."
-      : "ページ内のcomponent demoを選択します。サイト移動はStarlightのnavigationを使います。";
-  if (embedded)
-    embeddedControls.append(controlsHeading, controlsNote, topActions, navList);
+  controlsNote.textContent = showComponentPicker
+    ? locale === "en"
+      ? "Select a component demo; site navigation stays in the host page."
+      : "component demoを選択します。サイト移動はhost pageのnavigationを使います。"
+    : locale === "en"
+      ? "Edit this component in place; site navigation stays in Starlight."
+      : "このcomponentをページ内で編集します。サイト移動はStarlightのnavigationを使います。";
+  if (embedded) {
+    embeddedControls.append(controlsHeading, controlsNote, topActions);
+    if (showComponentPicker) embeddedControls.append(navList);
+  }
 
   const dialog = element(document, "section", "bottom-dialog");
   dialog.id = "bottomDialog";
@@ -439,6 +462,7 @@ export function mountCatalog(
     navCleanup = [];
     navList.replaceChildren();
     if (!embedded) navList.append(createSiteNav());
+    if (embedded && !showComponentPicker) return;
     const componentsSection = element(
       document,
       "section",
@@ -700,6 +724,68 @@ export function mountCatalog(
     section.append(headingNode);
     parent.append(section);
     return section;
+  };
+
+  const renderEmbeddedComponent = (
+    component: CatalogComponentRegistryEntry,
+  ): void => {
+    const demoSection = element(document, "section", "embedded-demo-section");
+    demoSection.setAttribute(
+      "aria-label",
+      locale === "en"
+        ? "Interactive component demo"
+        : "コンポーネントのインタラクティブデモ",
+    );
+    const note = element(document, "p", "embedded-demo-note");
+    note.textContent =
+      locale === "en"
+        ? "This surface uses the same registry entry and native renderer as the package runtime. Property changes apply immediately."
+        : "package runtimeと同じregistry entry / native rendererを使います。propertyの変更は即時反映されます。";
+    const demoStage = element(document, "div", "demo-stage");
+    demoStage.id = "demoStage";
+    demoSection.append(note, demoStage);
+
+    const layout = element(document, "div", "embedded-demo-layout");
+    const propertiesSection = appendSection(
+      layout,
+      locale === "en" ? "Properties" : "プロパティ",
+    );
+    if (component.properties.length)
+      propertiesSection.append(renderProperties(component));
+    else {
+      const noProperties = element(document, "p", "summary");
+      noProperties.textContent =
+        locale === "en"
+          ? "This component has no configurable properties."
+          : "設定項目はありません。";
+      propertiesSection.append(noProperties);
+    }
+    content.append(demoSection, layout);
+    if (component.demo === "developer")
+      renderDeveloperDemo(demoStage, context());
+    else renderDemo(demoStage, component, currentProps, context());
+  };
+
+  const applyEmbeddedSearch = (query: string): void => {
+    const normalized = query.trim().toLocaleLowerCase();
+    const rows = Array.from(
+      content.querySelectorAll<HTMLElement>(".property-row"),
+    );
+    let visibleCount = 0;
+    for (const row of rows) {
+      const visible =
+        !normalized || row.textContent.toLocaleLowerCase().includes(normalized);
+      row.hidden = !visible;
+      if (visible) visibleCount += 1;
+    }
+    if (!embedded || showComponentPicker) return;
+    searchStatus.textContent = normalized
+      ? locale === "en"
+        ? `${String(visibleCount)} matching properties`
+        : `${String(visibleCount)}件のpropertyが一致`
+      : locale === "en"
+        ? "Search is scoped to this demo's properties."
+        : "検索対象はこのdemoのpropertyです。";
   };
 
   const renderStandardPage = (
@@ -1066,9 +1152,11 @@ export function mountCatalog(
     content.replaceChildren();
     const page = findRegistryEntry(currentId);
     if (page.kind === "concept") renderPhilosophy();
+    else if (embedded) renderEmbeddedComponent(page);
     else if (page.demo === "developer") renderDeveloper(page);
     else renderStandardPage(page);
     (embedded ? root : contentScroll).scrollTop = 0;
+    applyEmbeddedSearch(navQuery);
     if (focusHeading) focusPageHeading(content);
   };
 
@@ -1136,7 +1224,8 @@ export function mountCatalog(
     }
     navQuery = "";
     searchInput.value = "";
-    renderNav();
+    if (embedded && !showComponentPicker) applyEmbeddedSearch("");
+    else renderNav();
     searchButton.focus();
   };
   listenAndTrack(searchButton, "click", () => {
@@ -1144,7 +1233,8 @@ export function mountCatalog(
   });
   listenAndTrack(searchInput, "input", () => {
     navQuery = searchInput.value;
-    renderNav();
+    if (embedded && !showComponentPicker) applyEmbeddedSearch(navQuery);
+    else renderNav();
   });
   listenAndTrack(searchInput, "keydown", (event) => {
     if ((event as KeyboardEvent).key === "Escape") {

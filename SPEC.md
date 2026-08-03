@@ -58,10 +58,10 @@ The developer declares order, axis, and adaptation policy. The plane owner resol
 
 Every public component has a mirrored page, a property table, philosophy/use/avoid guidance, interaction and keyboard behavior, accessibility notes, and JavaScript implementation/usage plus Rust implementation source tabs. Starlight `Tabs` and `TabItem` are used for those source views.
 
-Astro-generated links use `sitePath` or `catalogPath` so local builds and project GitHub Pages builds include the configured base path. Content-authored internal links remain relative.
+Astro-generated links use `sitePath` so local builds and project GitHub Pages builds include the configured base path. Content-authored internal links remain relative.
 
 ## Deployment boundaries
 
-- GitHub Pages is the only documentation host. The Pages workflow builds the Astro + Starlight site and interactive catalog with `actions/configure-pages`, `actions/upload-pages-artifact`, and `actions/deploy-pages`. The Astro base is derived from `GITHUB_REPOSITORY` for project Pages sites.
+- GitHub Pages is the only documentation host. The Pages workflow builds the Astro + Starlight site, embedding each component’s interactive demo in its component page, with `actions/configure-pages`, `actions/upload-pages-artifact`, and `actions/deploy-pages`. The Astro base is derived from `GITHUB_REPOSITORY` for project Pages sites.
 - GitHub Packages is the package distribution boundary. The package workflow publishes only `@ugoite/ikasue` to `https://npm.pkg.github.com` on `v*` tags with `GITHUB_TOKEN` and `packages: write`.
 - Pages deployment and GitHub Packages publishing are separate workflows and targets. The documentation phase does not change generated build output or package version.

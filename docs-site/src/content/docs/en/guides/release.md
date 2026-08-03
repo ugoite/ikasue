@@ -25,9 +25,9 @@ The root locale and English locale are both authored manually. `npm run docs:syn
 
 ## GitHub Pages boundary
 
-The Pages workflow builds only the Astro + Starlight static site and publishes it with `actions/configure-pages`, `actions/upload-pages-artifact`, and `actions/deploy-pages`. `astro.config.mjs` derives the project base from `GITHUB_REPOSITORY`; generated links use `sitePath` / `catalogPath` so the base is preserved.
+The Pages workflow builds only the Astro + Starlight static site and publishes it with `actions/configure-pages`, `actions/upload-pages-artifact`, and `actions/deploy-pages`. `astro.config.mjs` derives the project base from `GITHUB_REPOSITORY`; generated links use `sitePath` so the base is preserved.
 
-Pages hosts the docs and interactive catalog. It is not the package distribution channel.
+Pages hosts docs whose component pages include their interactive demos. It is not the package distribution channel.
 
 ## GitHub Packages boundary
 

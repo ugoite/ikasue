@@ -27,8 +27,8 @@ ikasueは、情報密度の高いworkspaceのためのframework-neutralなcompon
 4. [振る舞いの契約](../guides/behavioral-contracts/)と[アクセシビリティ](../guides/accessibility/)を実装前に確認する。
 5. [例](../examples/)で、異なるsite shapeへの組み合わせを見る。
 
-## package、catalog、公開境界
+## package、component page、公開境界
 
-packageは`@ugoite/ikasue`です。`vertical`、`horizontal`、`resolvePlane`とcurrent component metadataを公開し、interactive catalogは同じ契約を動かして確認する場所です。[catalog](../catalog/)はGitHub Pagesのdocs buildに含まれ、packageはGitHub Packagesへ別のworkflowで公開されます。
+packageは`@ugoite/ikasue`です。`vertical`、`horizontal`、`resolvePlane`とcurrent component metadataを公開します。GitHub Pagesでは各component pageが説明、契約、source、properties、同じregistry/native rendererによるinteractive demoを一体で持ち、packageはGitHub Packagesへ別のworkflowで公開されます。
 
 root localeは日本語です。[English docs](../en/)も同じpath treeを持つ手書きのlocaleとして管理しています。同期scriptはpathの一致とroot-absolute internal linkの混入を検査します。外部の翻訳serviceへ内容を送ることはありません。

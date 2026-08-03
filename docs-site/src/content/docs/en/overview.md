@@ -27,8 +27,8 @@ The visual rule is small but consequential. Do not add a floating card taxonomy,
 4. Check [Behavioral contracts](../guides/behavioral-contracts/) and [Accessibility](../guides/accessibility/) before implementation.
 5. Compare five radically different site shapes in [Examples](../examples/).
 
-## Package, catalog, and deployment boundaries
+## Package, component pages, and deployment boundaries
 
-The package is `@ugoite/ikasue`. It exposes `vertical`, `horizontal`, `resolvePlane`, and current component metadata; the interactive catalog exercises the same contracts. The [catalog](../catalog/) is included in the GitHub Pages docs build, while the package is published to GitHub Packages by a separate workflow.
+The package is `@ugoite/ikasue`. It exposes `vertical`, `horizontal`, `resolvePlane`, and current component metadata. On GitHub Pages, each component page combines its explanation, contract, sources, properties, and an interactive demo using the same registry and native renderer; the package is published to GitHub Packages by a separate workflow.
 
 The root locale is Japanese. The [Japanese docs](../../) and this English tree are manually authored with matching paths. The sync script checks path parity and rejects root-absolute internal links. Content is never sent to an external translation service.

@@ -26,7 +26,7 @@
     "catalog": "vite --host 0.0.0.0",
     "docs": "npm run docs:dev",
     "docs:dev": "npm --prefix docs-site run dev",
-    "docs:build": "npm --prefix docs-site run build",
+    "docs:build": "npm --prefix docs-site run build && node scripts/check-docs-build.mjs",
     "docs:sync": "node scripts/check-docs-sync.mjs",
     "docs:check": "npm run docs:sync && npm --prefix docs-site run check",
     "format": "prettier --write .",

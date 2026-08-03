@@ -49,4 +49,4 @@ componentを複数のwrapperで囲む前に、どのcomponentが値、status、s
 
 `@ugoite/ikasue/style.css`はapplication boundaryで一度だけimportします。mount targetには実際のblock sizeを与え、ancestor transformでdirectional layoutの意味を変えないようにします。host側のfocus styleも残してください。
 
-docs siteの[catalog](../catalog/)は同じAstro base pathの中にbuildされます。GitHub Pagesのsite pathを想定したリンクはAstro component内で`sitePath`または`catalogPath`を使い、contentのinternal linkはrelative pathにします。
+docs siteのcomponent pageは同じAstro base pathの中にbuildされ、interactive demoもそのページ内に含まれます。GitHub Pagesのsite pathを想定したリンクはAstro component内で`sitePath`を使い、contentのinternal linkはrelative pathにします。

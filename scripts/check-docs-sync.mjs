@@ -172,6 +172,46 @@ if (extra.length)
     `Extra English files:\n${extra.map((filePath) => `  - ${filePath}`).join("\n")}`,
   );
 
+const docsSourceFiles = [
+  ...collectFiles(docsRoot).map((filePath) => path.join(docsRoot, filePath)),
+  path.join(repositoryRoot, "README.md"),
+  path.join(repositoryRoot, "SPEC.md"),
+];
+const forbiddenDocsPatterns = [
+  { label: "catalogPath", pattern: /catalogPath/ },
+  { label: "catalog route", pattern: /(?:\.\.?\/|link:\s*["'])catalog\// },
+  {
+    label: "component query route",
+    pattern: /\?component=/,
+  },
+  {
+    label: "interactive catalog CTA",
+    pattern: /Open interactive catalog|インタラクティブカタログを開く/,
+  },
+  { label: "new tab CTA", pattern: /target\s*=\s*["']_blank/ },
+];
+
+for (const absolutePath of docsSourceFiles) {
+  if (!fs.existsSync(absolutePath)) continue;
+  const source = fs.readFileSync(absolutePath, "utf8");
+  for (const { label, pattern } of forbiddenDocsPatterns) {
+    if (pattern.test(source))
+      errors.push(
+        `${path.relative(repositoryRoot, absolutePath)} contains ${label}`,
+      );
+  }
+}
+
+for (const routePath of [
+  path.join(docsRoot, "catalog"),
+  path.join(englishRoot, "catalog"),
+]) {
+  if (fs.existsSync(routePath))
+    errors.push(
+      `Standalone catalog content route must not exist: ${path.relative(repositoryRoot, routePath)}`,
+    );
+}
+
 const changedDocumentationPaths = [...changedPaths()]
   .filter(isDocumentationPath)
   .sort();
