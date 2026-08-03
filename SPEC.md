@@ -36,8 +36,8 @@ The package exposes a small framework-neutral plane model:
 - `horizontal(children, options)` creates an ordered horizontal `PlaneSpec`.
 - `resolvePlane(input, available?)` normalizes a plane and returns deterministic child positions.
 - `PlaneChild` contains an `id`, optional preferred `basis`, and optional elastic `min`.
-- `PlaneSpec` contains `axis`, `fit`, `gap`, optional `available`, and ordered `children`.
-- `fit` is `elastic`, `wrap`, or `scroll`. Resolved output reports `offset`, `size`, `line`, `extent`, and `overflow`.
+- `PlaneSpec` contains `axis`, `fit`, `gap`, optional `available` and `focus`, a `navigation` flag, and ordered `children`.
+- `fit` is `elastic` or `wrap`. Resolved output reports `offset`, `size`, `line`, child `state` (`focused`, `visible`, or `collapsed`), navigation bounds, `extent`, and `overflow`.
 
 The developer declares order, axis, and adaptation policy. The plane owner resolves available space. Child components do not need a parent reference or a public layout event to participate.
 
@@ -46,7 +46,7 @@ The developer declares order, axis, and adaptation policy. The plane owner resol
 - Properties update live and can be reset to documented defaults.
 - `Text` is readable by default and gains editing capability only when needed. Confirmed values return through normal state updates; the public API does not require custom event names.
 - `FormList` owns values, validation status, and confirmed results. Child focus and draft are local editing state; blur, Enter, and Tab do not commit them. An explicit external-send action applies all drafts together, then clears the child draft affordance. A draft that returns to its original value remains clean when sent, and local draft styling is neutral rather than a created/modified source-status color.
-- `Vertical` and `Horizontal` preserve ordered children while applying their declared fit policy.
+- `Vertical` and `Horizontal` preserve ordered children while applying their declared fit and focus/navigation policy. A constrained navigable plane keeps the focused child readable and collapses the other children for rail selection.
 - Selection, status, and progress use semantic color plus a non-color cue.
 - `DataTable` treats the cell as the task unit and keeps selection, peer context, clipboard behavior, and editing explicit.
 - Temporary bottom decisions add a row inside the plane and return focus to their opener when closed.

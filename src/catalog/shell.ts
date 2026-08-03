@@ -950,7 +950,9 @@ export function mountCatalog(
     const layoutSpec = element(document, "pre", "code-block");
     layoutSpec.textContent = `PlaneSpec {
   axis: Vertical | Horizontal,
-  fit: Elastic | Wrap | Scroll,
+  fit: Elastic | Wrap,
+  focus: Option<ChildId>,
+  navigation: bool,
   children: [PlaneChild],
   gap: Number
 }`;
@@ -959,8 +961,8 @@ export function mountCatalog(
       paragraph(
         document,
         localized(locale, {
-          ja: "開発者は一軸の順序だけを宣言し、runtimeが利用可能な空間に合わせて子要素を縮小、折返し、またはscrollへ適応する。",
-          en: "The developer declares order on one axis, and the runtime adapts children to available space by shrinking, wrapping, or scrolling.",
+          ja: "開発者は一軸の順序、focus、navigationを宣言し、runtimeが利用可能な空間に合わせて子要素をelastic、wrap、またはcollapseへ適応する。",
+          en: "The developer declares order on one axis plus focus and navigation; the runtime adapts children to available space with elastic allocation, wrapping, or collapsed siblings.",
         }),
       ),
     );

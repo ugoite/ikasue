@@ -16,7 +16,7 @@ description: Semantic, keyboard, motion, and resilience requirements for ikasue.
 
 Tabは読み順に従います。ChoiceGroupはradioに近い矢印操作、DataTableはcell axisの矢印操作、TextはEnter/F2、Escape、Enter、Tabのediting contractを持ちます。`Rule`のような受動的要素はTabに入れません。
 
-一時的な`BottomDialog`を開いたら最初のactionへfocusを移し、close後にopenerへ戻します。planeが縮んでもfocus対象を不可視にせず、必要なら`scroll`で到達可能にします。
+一時的な`BottomDialog`を開いたら最初のactionへfocusを移し、close後にopenerへ戻します。planeが縮んだらfocus対象を読みやすく残し、collapsedな領域もowning railのregion selectionから到達可能にします。
 
 ## non-colorとreduced motion
 

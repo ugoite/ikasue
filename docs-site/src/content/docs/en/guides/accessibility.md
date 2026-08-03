@@ -16,7 +16,7 @@ Accessibility is part of each component contract, not a theme option. Do not ask
 
 Tab follows reading order. ChoiceGroup uses radio-like arrow behavior, DataTable uses cell-axis navigation, and Text follows the Enter/F2, Escape, Enter, and Tab editing contract. Passive elements such as `Rule` stay out of the Tab order.
 
-When a temporary `BottomDialog` opens, move focus to its first action and return focus to the opener on close. If a plane becomes tight, do not make the focused item unreachable; use `scroll` when necessary.
+When a temporary `BottomDialog` opens, move focus to its first action and return focus to the opener on close. If a plane becomes tight, keep the focused item readable and make collapsed regions reachable through the owning rail’s region selection.
 
 ## Non-color and reduced-motion cues
 

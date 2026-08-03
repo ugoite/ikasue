@@ -73,10 +73,8 @@ describe("ikasue catalog metadata", () => {
     expect(layoutPages.flatMap((page) => page.props[0].values)).toEqual([
       "elastic",
       "wrap",
-      "scroll",
       "elastic",
       "wrap",
-      "scroll",
     ]);
     expect(
       layoutPages.map((page) => page.props.map((prop) => prop.key)),
@@ -170,11 +168,12 @@ describe("package identity and plane exports", () => {
       axis: "vertical",
       fit: "elastic",
       gap: 0,
+      navigation: false,
       children: [{ id: "item", basis: 1, min: 1 }],
     });
   });
 
-  it("normalizes and resolves shrinking, wrapping, and scrolling policies", () => {
+  it("normalizes and resolves shrinking, wrapping, and focused policies", () => {
     const elastic = resolvePlane(
       horizontal(
         [
@@ -200,11 +199,20 @@ describe("package identity and plane exports", () => {
     expect(wrapped.children.map((child) => child.line)).toEqual([0, 1, 2]);
     expect(wrapped.lines).toBe(3);
 
-    const scrolling = resolvePlane(
-      horizontal(["a", "b"], { fit: "scroll", available: 1 }),
+    const focused = resolvePlane(
+      horizontal(["a", "b", "c"], {
+        available: 1,
+        focus: "b",
+        navigation: true,
+      }),
     );
-    expect(scrolling.overflow).toBe(true);
-    expect(scrolling.children.map((child) => child.size)).toEqual([1, 1]);
+    expect(focused.children.map((child) => child.size)).toEqual([0, 1, 0]);
+    expect(focused.children.map((child) => child.visible)).toEqual([
+      false,
+      true,
+      false,
+    ]);
+    expect(focused.overflow).toBe(false);
   });
 
   it("normalizes an omitted plane to an empty vertical plane", () => {
@@ -212,6 +220,7 @@ describe("package identity and plane exports", () => {
       axis: "vertical",
       fit: "elastic",
       gap: 0,
+      navigation: false,
       children: [],
     });
   });

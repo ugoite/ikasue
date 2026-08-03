@@ -163,10 +163,10 @@ const BASE_CATALOG_COMPONENTS = [
     name: "Vertical",
     ja: "縦平面",
     summary:
-      "順序付きの子要素を縦方向のboundedな平面へ置く。要素サイズと高さを変え、elastic、wrap、scrollの差を確かめられる。",
+      "順序付きの子要素を縦方向のboundedな平面へ置く。要素サイズと高さを変え、elastic、wrap、focus navigationの差を確かめられる。",
     demo: "plane",
     props: [
-      p("fit", "適応", "select", "elastic", ["elastic", "wrap", "scroll"]),
+      p("fit", "適応", "select", "elastic", ["elastic", "wrap"]),
       p("gap", "間隔", "select", "md", ["none", "sm", "md", "lg"]),
       p("items", "項目数", "select", "4", ["3", "4", "6"]),
       p("basis", "要素サイズ", "select", "2", ["1", "2", "3"]),
@@ -179,10 +179,10 @@ const BASE_CATALOG_COMPONENTS = [
     name: "Horizontal",
     ja: "横平面",
     summary:
-      "順序付きの子要素を横方向のboundedな平面へ置く。要素サイズと幅を変え、elastic、wrap、scrollの差を確かめられる。",
+      "順序付きの子要素を横方向のboundedな平面へ置く。要素サイズと幅を変え、elastic、wrap、focus navigationの差を確かめられる。",
     demo: "plane",
     props: [
-      p("fit", "適応", "select", "elastic", ["elastic", "wrap", "scroll"]),
+      p("fit", "適応", "select", "elastic", ["elastic", "wrap"]),
       p("gap", "間隔", "select", "sm", ["none", "sm", "md", "lg"]),
       p("items", "項目数", "select", "4", ["3", "4", "6"]),
       p("basis", "要素サイズ", "select", "2", ["1", "2", "3"]),
@@ -474,13 +474,13 @@ export const COMPONENT_COPY = {
     vertical: {
       category: "配置",
       summary:
-        "順序付きの子要素を縦方向のplaneへ置き、elastic、wrap、scrollの方針で高さに適応する。",
+        "順序付きの子要素を縦方向のplaneへ置き、elasticまたはwrapの方針とfocus navigationで高さに適応する。",
       philosophy:
-        "開発者が宣言するのは子の順序と適応方針。利用可能な高さへの割り当てはplane resolverが決定し、各子が個別に隠す判断をしない。",
+        "開発者が宣言するのは子の順序、適応方針、focus、navigation。利用可能な高さへの割り当てはplane resolverが決定し、collapsedな子も順序を保ったままrailから選べる。",
       useWhen: "form、説明、作業列など、DOM順が縦の読み順になるとき。",
       avoidWhen: "横方向の比較や、意味のないwrapperを増やすためには使わない。",
       implementation:
-        "`vertical(children, { fit, gap, available })`で`PlaneSpec`を作り、各childの`basis`とboundedな`available`を指定する。`resolvePlane`のoffset、size、line、overflowを描画へ反映する。",
+        "`vertical(children, { fit, gap, available, focus, navigation })`で`PlaneSpec`を作り、各childの`basis`とboundedな`available`を指定する。`resolvePlane`のoffset、size、line、state、navigation boundsを描画へ反映する。",
       keyboard:
         "Tabは縦のDOM順に進める。矢印キーを子へ勝手に割り当てず、子componentのwidget契約を保つ。",
       accessibility:
@@ -499,17 +499,17 @@ export const COMPONENT_COPY = {
     horizontal: {
       category: "配置",
       summary:
-        "順序付きの子要素を横方向のplaneへ置き、幅に応じて縮小、折返し、scrollする。",
+        "順序付きの子要素を横方向のplaneへ置き、幅に応じてfocus navigation、縮小、または折返しで適応する。",
       philosophy:
-        "横の関係は同じaxisの読み順として宣言する。overflow時も子の意味を別のoverlayへ逃がさず、resolverの結果を明示する。",
+        "横の関係は同じaxisの読み順として宣言する。狭いときも子の意味を別のoverlayや縮小しすぎる領域へ逃がさず、focusした領域とrailの状態を明示する。",
       useWhen: "toolbar、関連action、短い比較項目を横方向に並べるとき。",
       avoidWhen: "縦の読み順を無理に横へ押し込むとき。",
       implementation:
-        "`horizontal(children, { fit, gap, available })`を作り、各childの`basis`とboundedな`available`を指定する。`resolvePlane`が返すline、offset、size、overflowを使って配置する。",
+        "`horizontal(children, { fit, gap, available, focus, navigation })`を作り、各childの`basis`とboundedな`available`を指定する。`resolvePlane`が返すline、offset、size、state、navigation boundsを使って配置する。",
       keyboard:
         "Tab順は意味のあるDOM順を保つ。矢印キーはChoiceGroupやDataTableなど、所有するwidgetだけが使う。",
       accessibility:
-        "横配置を読み上げ順の変更と誤解しないよう、見出しとlabelをDOM順に揃える。横スクロール時もfocusを見失わせない。",
+        "横配置を読み上げ順の変更と誤解しないよう、見出しとlabelをDOM順に揃える。collapsedな領域もrailのregion selectionからfocusできる。",
       goodFor: "toolbar、関連action、短い比較項目",
       avoidFor: "長い文章、縦のform、overflowを隠すための横配置",
       interaction: "子の順序を保ち、幅が足りないときは契約した方針で適応する。",
@@ -843,15 +843,15 @@ export const COMPONENT_COPY = {
     vertical: {
       category: "Layout",
       summary:
-        "Places ordered children on a vertical plane and adapts to height with elastic, wrap, or scroll policy.",
+        "Places ordered children on a vertical plane and adapts to height with elastic or wrap plus focus navigation.",
       philosophy:
-        "The developer declares order and fit policy. The plane resolver allocates available height; children do not independently decide what to hide.",
+        "The developer declares order, fit, focus, and navigation. The plane resolver allocates available height; collapsed children keep their order and remain selectable from the rail.",
       useWhen:
         "A form, explanation, or work column reads in vertical DOM order.",
       avoidWhen:
         "Horizontal comparison or another decorative wrapper is the real need.",
       implementation:
-        "Create `PlaneSpec` with `vertical(children, { fit, gap, available })`, declare each child `basis` and bounded `available` extent, then render `offset`, `size`, `line`, and `overflow` from `resolvePlane`.",
+        "Create `PlaneSpec` with `vertical(children, { fit, gap, available, focus, navigation })`, declare each child `basis` and bounded `available` extent, then render `offset`, `size`, `line`, `state`, and navigation bounds from `resolvePlane`.",
       keyboard:
         "Tab follows vertical DOM order. Do not assign arrow keys to children unless their own widget contract owns them.",
       accessibility:
@@ -871,18 +871,18 @@ export const COMPONENT_COPY = {
     horizontal: {
       category: "Layout",
       summary:
-        "Places ordered children on a horizontal plane and adapts to width by shrinking, wrapping, or scrolling.",
+        "Places ordered children on a horizontal plane and adapts to width with focus navigation, elastic allocation, or wrapping.",
       philosophy:
-        "A horizontal relationship is an ordered reading axis. When width is tight, the resolver reports adaptation instead of sending meaning into an overlay.",
+        "A horizontal relationship is an ordered reading axis. When width is tight, the resolver keeps the focused region readable and reports collapsed siblings instead of sending meaning into an overlay.",
       useWhen:
         "A toolbar, related action set, or short comparison belongs on one horizontal axis.",
       avoidWhen: "Vertical reading order is being forced into a row.",
       implementation:
-        "Create `horizontal(children, { fit, gap, available })`, declare each child `basis` and bounded `available` extent, and use `resolvePlane` output for line, offset, size, and overflow.",
+        "Create `horizontal(children, { fit, gap, available, focus, navigation })`, declare each child `basis` and bounded `available` extent, and use `resolvePlane` output for line, offset, size, state, and navigation bounds.",
       keyboard:
         "Keep meaningful DOM order. Arrow keys belong to widgets such as ChoiceGroup or DataTable, not to layout by default.",
       accessibility:
-        "Do not let horizontal placement silently change reading order. Keep headings and labels aligned with DOM order and preserve focus during scroll.",
+        "Do not let horizontal placement silently change reading order. Keep headings and labels aligned with DOM order, and make collapsed regions reachable through region selection.",
       goodFor: "Toolbars, related actions, and short comparisons",
       avoidFor: "Long prose, vertical forms, and hiding overflow behind a row",
       interaction:
@@ -1183,7 +1183,8 @@ export const COMPONENT_SOURCE_RECIPES: Record<
     axis: "vertical",
     children:
       '[{ id: "summary", basis: 2, min: 1 }, { id: "table", basis: 6, min: 3 }]',
-    planeOptions: '{ fit: "elastic", gap: 2, available: 10 }',
+    planeOptions:
+      '{ fit: "elastic", gap: 2, available: 10, focus: "summary", navigation: true }',
     componentProps:
       '{ fit: "elastic", gap: "md", items: "4", basis: "2", available: "10" }',
     ownership: "Vertical owns order and fit resolution, not child semantics.",
@@ -1193,7 +1194,8 @@ export const COMPONENT_SOURCE_RECIPES: Record<
     axis: "horizontal",
     children:
       '[{ id: "save", basis: 1 }, { id: "history", basis: 2 }, { id: "refresh", basis: 1 }]',
-    planeOptions: '{ fit: "wrap", gap: 1, available: 10 }',
+    planeOptions:
+      '{ fit: "wrap", gap: 1, available: 10, focus: "history", navigation: true }',
     componentProps:
       '{ fit: "wrap", gap: "sm", items: "4", basis: "2", available: "10" }',
     ownership:
@@ -1250,7 +1252,8 @@ export const COMPONENT_SOURCE_RECIPES: Record<
     axis: "horizontal",
     children:
       '[{ id: "order-id", basis: 2 }, { id: "status", basis: 2 }, { id: "owner", basis: 3 }]',
-    planeOptions: '{ fit: "scroll", gap: 1, available: 8 }',
+    planeOptions:
+      '{ fit: "elastic", gap: 1, available: 8, focus: "status", navigation: true }',
     componentProps:
       '{ editable: true, selection: "row-column", changes: true }',
     ownership:
@@ -1314,7 +1317,13 @@ const component = {
 
 const contract = {
   component,
-  plane: { axis: plane.axis, fit: plane.fit, gap: plane.gap },
+  plane: {
+    axis: plane.axis,
+    fit: plane.fit,
+    gap: plane.gap,
+    focus: plane.focus,
+    navigation: plane.navigation,
+  },
   ownership: ${JSON.stringify(recipe.ownership)},
 };
 
@@ -1335,6 +1344,8 @@ struct PlaneSpec<'a> {
     axis: Axis,
     fit: Fit,
     gap: f32,
+    focus: Option<&'a str>,
+    navigation: bool,
     children: Vec<PlaneChild<'a>>,
 }
 
@@ -1342,6 +1353,8 @@ let plane = PlaneSpec {
     axis: ${axis},
     fit: Fit::Elastic,
     gap: 1.0,
+    focus: Some("filters"),
+    navigation: true,
     children: vec![
         PlaneChild { id: "${children[0]}", basis: 2.0, min: 1.0 },
         PlaneChild { id: "${children[1]}", basis: 4.0, min: 2.0 },
@@ -1456,7 +1469,7 @@ const PHILOSOPHY_PRINCIPLES = {
     ],
     [
       "Simple Adaptation",
-      "収まる間は順序とサイズを保ち、必要になったときだけelastic、wrap、scrollへ決定的に適応する。",
+      "収まる間は順序を保ち、必要になったときだけelastic、wrap、focus navigationへ決定的に適応する。",
     ],
     [
       "Information Is Editable",
@@ -1490,7 +1503,7 @@ const PHILOSOPHY_PRINCIPLES = {
     ],
     [
       "Simple Adaptation",
-      "Preserve order and size while content fits, then deterministically adapt with elastic, wrap, or scroll behavior.",
+      "Preserve order while content fits, then deterministically adapt with elastic, wrap, and focus navigation without overflow-driven containers.",
     ],
     [
       "Information Is Editable",
