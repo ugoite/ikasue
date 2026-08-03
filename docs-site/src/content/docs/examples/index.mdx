@@ -4,12 +4,15 @@ description: Five radically different site shapes built from the same plane mode
 ---
 
 import { TabItem, Tabs } from "@astrojs/starlight/components";
+import ExampleSurface from "../../../components/ExampleSurface.astro";
 
 同じcomponent systemでも、情報のshapeが変わればplaneの使い方は変わります。ここでは、dense operations dashboard、editor + preview、planning/calendar、field/mobile service、observability/incident consoleの5つを比較します。各例は「新しい情報をどこから入れ、何に場所を譲るか」を先に決めています。
 
 ## 1. Dense operations dashboard
 
 filter、queue、detail、statusを一つのworkspaceで判断する形です。`Horizontal`で短いfilterと操作を並べ、`Vertical`でqueueとdetailの順序を保つと、狭い幅でもfilterを隠すoverlayを増やさずに済みます。`DataTable`のcell selectionと`MessageRegion`のtargetを同じplaneの証拠として残せます。
+
+<ExampleSurface kind="operations" locale="ja" />
 
 <Tabs>
   <TabItem label="JavaScript implementation / usage">
@@ -75,6 +78,8 @@ let data_table = ComponentContract::new("data-table")
 
 文書を編集しながらpreviewを読む形です。editorを左、previewを右に置く`Horizontal`は、選択中の情報へ面積を渡しつつ、previewを別のfloating cardへしません。`FormList`はfrontmatterのvalues/statusを所有し、子のdraftは未確定のままです。
 
+<ExampleSurface kind="editor" locale="ja" />
+
 <Tabs>
   <TabItem label="JavaScript implementation / usage">
 
@@ -132,6 +137,8 @@ let form_list = FormListState {
 ## 3. Planning / calendar
 
 日、week、resourceを並べ替えるplanning surfaceです。dayを`Horizontal`のchildrenにし、各dayのeventを`Vertical`にすると、横方向の比較と縦方向の読み順が混ざりません。幅が足りないときは`wrap`または`scroll`を選べるので、後ろへ隠れたdayを無言で捨てません。
+
+<ExampleSurface kind="planning" locale="ja" />
 
 <Tabs>
   <TabItem label="JavaScript implementation / usage">
@@ -192,6 +199,8 @@ let choices = ChoiceGroup::new(Choice::Standard);
 
 networkが不安定な現場で、job、写真、checklist、短い判断を扱う形です。縦のjob contextを保持し、actionだけを横に並べます。確認が必要なときも`BottomDialog`を下端rowとして追加し、地図やjob evidenceを上から覆いません。narrow widthでは`elastic`から`scroll`へ明示的に切り替えます。
 
+<ExampleSurface kind="field" locale="ja" />
+
 <Tabs>
   <TabItem label="JavaScript implementation / usage">
 
@@ -250,6 +259,8 @@ let dialog = BottomDialog::confirm().dismissible(true);
 ## 5. Observability / incident console
 
 timeline、service status、incident detailを並べるconsoleです。timelineとservice listは別の責務として`Vertical`に置き、detailへのmessageは`MessageRegion`としてtargetを持たせます。loading中も`ProgressRegion`が以前のmetricsを残すので、incidentのevidenceをspinnerで消しません。
+
+<ExampleSurface kind="observability" locale="ja" />
 
 <Tabs>
   <TabItem label="JavaScript implementation / usage">
