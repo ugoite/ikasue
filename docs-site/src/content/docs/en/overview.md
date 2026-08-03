@@ -25,7 +25,7 @@ The visual rule is small but consequential. Do not add a floating card taxonomy,
 2. Choose a responsibility from the current 17-component [inventory](../components/).
 3. Use [Usage](../guides/usage/) and [Integration](../guides/integration/) to bring the package into an existing app.
 4. Check [Behavioral contracts](../guides/behavioral-contracts/) and [Accessibility](../guides/accessibility/) before implementation.
-5. Compare five radically different site shapes in [Examples](../examples/).
+5. See a few elements composed on one plane in [Examples](../examples/).
 
 ## Package, component pages, and deployment boundaries
 

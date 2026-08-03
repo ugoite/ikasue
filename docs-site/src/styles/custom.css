@@ -58,7 +58,10 @@
   --sl-color-backdrop-overlay: rgb(17 17 17 / 36%);
 }
 
+html:has([data-ikasue-frame]),
 body:has([data-ikasue-frame]) {
+  overflow-x: hidden;
+  overflow-x: clip;
   background: var(--canvas);
   color: var(--ink);
 }
@@ -349,7 +352,14 @@ body:has([data-ikasue-frame]) ::selection {
   padding-inline-start: calc(var(--sl-sidebar-item-padding-inline) - 2px);
 }
 
-/* Mobile menu control is still fixed by Starlight; its surface is a flat owned edge. */
+/* Keep the host element neutral so the actual button owns the one boundary. */
+[data-ikasue-sidebar] starlight-menu-button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 [data-ikasue-sidebar] starlight-menu-button button {
   border: 1px solid var(--line);
   border-radius: 0;
@@ -358,7 +368,23 @@ body:has([data-ikasue-frame]) ::selection {
   box-shadow: none;
 }
 
-[data-ikasue-sidebar] starlight-menu-button[aria-expanded="true"] button {
+[data-ikasue-sidebar] starlight-menu-button button :where(svg, svg *) {
+  border: 0;
+  box-shadow: none;
+}
+
+[data-ikasue-sidebar] starlight-menu-button button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+
+[data-ikasue-sidebar]
+  starlight-menu-button:is(
+    [aria-expanded="true"],
+    :has(button[aria-expanded="true"])
+  )
+  button,
+[data-ikasue-sidebar] starlight-menu-button button[aria-expanded="true"] {
   border-color: var(--line-strong);
   background: var(--selection);
   color: var(--ink);
@@ -404,6 +430,8 @@ body:has([data-ikasue-frame]) ::selection {
 
 /* Main content is one plane divided by owned rules, never nested cards. */
 [data-ikasue-content-plane] {
+  min-width: 0;
+  max-width: 100%;
   background: var(--canvas);
 }
 

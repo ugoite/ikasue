@@ -65,4 +65,4 @@ A `PlaneSpec` gives components one vocabulary for available space, child order, 
 
 ## Check the composition
 
-Read each component’s property table, JavaScript implementation / usage, Rust implementation sketch, and page-local interactive demo as one component contract. The [Examples](../examples/) page compares the plane model across five distinct site shapes.
+Read each component’s property table, JavaScript implementation / usage, Rust implementation sketch, and page-local interactive demo as one component contract. The [Examples](../examples/) page shows the plane model with a few simple arrangements.

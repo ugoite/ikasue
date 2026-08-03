@@ -296,6 +296,8 @@
     height: 38px;
     display: grid;
     place-items: center;
+    border: 0;
+    box-shadow: none;
     color: var(--muted);
     transition:
       background var(--motion-fast),
@@ -318,6 +320,11 @@
     background: var(--selection-strong);
     color: var(--ink);
     transform: translateX(2px);
+  }
+
+  .ikasue-root .rail-button:focus-visible,
+  .ikasue-root .icon-button:focus-visible {
+    outline-offset: -2px;
   }
 
   .ikasue-root .nav-copy {
@@ -642,6 +649,8 @@
     padding: 14px 0;
     border-top: var(--rule) solid var(--line);
     border-bottom: var(--rule) solid var(--line);
+    min-width: 0;
+    max-width: 100%;
     overflow: auto;
     white-space: pre;
     color: #30322e;
@@ -732,13 +741,20 @@
     background: var(--ink);
     color: #fff;
     font-size: 0.68rem;
-    max-width: min(20rem, calc(100vw - 24px));
+    inline-size: max-content;
+    min-inline-size: 6ch;
+    max-inline-size: min(20rem, calc(100vw - 24px));
     white-space: normal;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
+    line-break: strict;
+    writing-mode: horizontal-tb;
     text-align: left;
     opacity: 0;
     pointer-events: none;
     z-index: 3;
+    border: 0;
+    box-shadow: none;
     transition:
       opacity var(--motion-fast),
       transform var(--motion-fast);
@@ -761,6 +777,42 @@
   .ikasue-root .top-actions .icon-button:hover .tooltip,
   .ikasue-root .top-actions .icon-button:focus-visible .tooltip {
     transform: translateY(0);
+  }
+
+  /* Action tooltips belong to the strip's lower edge, not to a 38px column. */
+  .ikasue-root .action-strip {
+    position: relative;
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .ikasue-root .action-strip .icon-button {
+    position: static;
+    flex: 0 0 auto;
+  }
+
+  .ikasue-root .action-strip .tooltip {
+    top: calc(100% + 6px);
+    right: auto;
+    bottom: auto;
+    left: 0;
+    transform: translateY(-4px);
+    max-inline-size: min(20rem, calc(100vw - 24px));
+  }
+
+  .ikasue-root .action-strip .icon-button:hover .tooltip,
+  .ikasue-root .action-strip .icon-button:focus-visible .tooltip {
+    transform: translateY(0);
+  }
+
+  /* Pointer movement wins over a lingering keyboard focus in the same group. */
+  .ikasue-root
+    :is(.action-strip, .top-actions):has(.icon-button:hover)
+    .icon-button:focus-visible:not(:hover)
+    .tooltip {
+    opacity: 0;
+    transform: translateY(-4px);
   }
 }
 
@@ -1433,7 +1485,10 @@
   }
 
   .ikasue-root .data-table-wrap {
-    overflow: hidden;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
     border-top: var(--rule) solid var(--line);
     border-bottom: var(--rule) solid var(--line);
   }
@@ -1571,9 +1626,10 @@
   }
 
   .ikasue-root .action-strip {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 2px;
+    max-width: 100%;
   }
   .ikasue-root .action-strip[data-density="compact"] .icon-button {
     width: 32px;
@@ -1727,8 +1783,34 @@
    renderer when the package is mounted inside Starlight content. */
 @layer shell {
   .ikasue-root[data-embedded="true"] {
+    inline-size: 100%;
+    max-inline-size: 100%;
+    min-inline-size: 0;
     min-width: 0;
     min-height: 0;
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
+
+  .ikasue-root[data-embedded="true"]
+    > :where(.catalog-controls, .content, .bottom-dialog),
+  .ikasue-root[data-embedded="true"]
+    :where(
+      .catalog-controls,
+      .embedded-demo-section,
+      .embedded-demo-layout,
+      .embedded-demo-layout > .section,
+      .demo-stage,
+      .property-list,
+      .property-row,
+      .property-control,
+      .plane-demo-mount,
+      .plane-composition-mount,
+      .code-block,
+      .data-table-wrap
+    ) {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .ikasue-root[data-embedded="true"] > .content {
@@ -1759,8 +1841,40 @@
   }
 
   .ikasue-root[data-embedded="true"] .catalog-controls > .top-actions {
+    position: relative;
     justify-content: flex-start;
+    flex-wrap: wrap;
+    min-width: 0;
+    max-width: 100%;
     margin-block: 0.45rem 0.25rem;
+  }
+
+  .ikasue-root[data-embedded="true"]
+    .catalog-controls
+    > .top-actions
+    .icon-button {
+    position: static;
+  }
+
+  .ikasue-root[data-embedded="true"] .catalog-controls > .top-actions .tooltip {
+    top: calc(100% + 6px);
+    right: auto;
+    bottom: auto;
+    left: 0;
+    transform: translateY(-4px);
+  }
+
+  .ikasue-root[data-embedded="true"]
+    .catalog-controls
+    > .top-actions
+    .icon-button:hover
+    .tooltip,
+  .ikasue-root[data-embedded="true"]
+    .catalog-controls
+    > .top-actions
+    .icon-button:focus-visible
+    .tooltip {
+    transform: translateY(0);
   }
 
   .ikasue-root[data-embedded="true"] .embedded-demo-section {
@@ -1822,8 +1936,17 @@
   }
 }
 
+@supports selector(:has(*)) {
+  :where(html, body):has(.ikasue-root[data-embedded="true"]) {
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
+}
+
 @media (max-width: 900px) {
   .ikasue-root[data-embedded="true"] .embedded-demo-layout {
+    min-width: 0;
+    max-width: 100%;
     grid-template-columns: 1fr;
   }
 }

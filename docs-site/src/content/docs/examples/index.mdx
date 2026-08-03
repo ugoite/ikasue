@@ -1,16 +1,14 @@
 ---
 title: Examples / 例
-description: Five radically different site shapes built from the same plane model.
+description: Small arrangements that make the shared plane model visible.
 ---
 
-同じcomponent systemでも、情報のshapeが変わればplaneの使い方は変わります。ここでは、5つのconstruction exampleを個別ページで確認できます。それぞれのページに、実際に描画するsurface、同じ画面を説明するJavaScriptとRustのcode tab、使用するikasue componentsを収録しています。
+Examplesは、複雑な画面を並べるための別サイトではありません。少数の要素を同じplaneへ置くと、axis、利用可能なspace、fit、focusがどう決まるかを最初に確認する場所です。
 
-## 5つのsite shape
+## まず見る配置
 
-- [Dense operations dashboard / 高密度operations dashboard](./operations-dashboard/) — filter、queue、detail、statusを一つのworkspaceで判断する。
-- [Editor + preview / editorとpreview](./editor-preview/) — 確定値とdraftを分けながら、編集とpreviewを横に読む。
-- [Planning / calendar](./planning-calendar/) — dayを横に比較し、各dayのeventを縦に読む。
-- [Field / mobile service](./field-mobile-service/) — 不安定なnetworkでもjob contextとevidenceを保持する。
-- [Observability / incident console](./observability-incident-console/) — timeline、service state、incident detailを一つのconsoleで調べる。
+- [Vertical / 縦平面](../components/vertical/) — `one → two → three`を上から下へ置く。高さが足りないときは`elastic`、focus、navigationの関係を見る。
+- [Horizontal / 横平面](../components/horizontal/) — `one → two → three`を左から右へ置く。幅が足りないときも、page-first scrollingではなく矢印と領域選択で読む。
+- [使い方](../guides/usage/) — compositionを既存のappへ組み込むときの最小契約を読む。
 
-同じconstruction ruleは、[使い方](../guides/usage/)と[behavioral contracts](../guides/behavioral-contracts/)で説明しています。各ページでは、planeのaxis、spaceを所有するlayout component、値とstatusを所有するinformation componentの関係を比較してください。
+両方のcomponent pageは同じregistry/native rendererを使うStarlight内のembedded demoです。fitを変え、制約されたplaneのfocusとnavigationを確認してください。

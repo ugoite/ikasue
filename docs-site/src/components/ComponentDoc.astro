@@ -11,9 +11,10 @@ import { sitePath } from "../data/site-path";
 
 interface Props {
   id: CatalogComponentId;
+  simple?: boolean;
 }
 
-const { id } = Astro.props;
+const { id, simple = false } = Astro.props;
 const locale = Astro.currentLocale === "en" ? "en" : "ja";
 const entry = findRegistryEntry(id);
 const copy = entry.documentation[locale];
@@ -49,121 +50,226 @@ const contract = JSON.stringify(
   null,
   2,
 );
+const compact = simple && (id === "vertical" || id === "horizontal");
+const compactId = id === "horizontal" ? "horizontal" : "vertical";
+const compactCopy = {
+  ja: {
+    vertical: {
+      eyebrow: "配置 / VERTICAL",
+      summary:
+        "3つの要素を、限られた高さの一枚のplaneへ上から順に置きます。axisはverticalです。fitをelasticにすると、focusした要素へ面積を渡し、収まらない要素はnavigationから選べます。",
+      heading: "3要素を縦に置く",
+      note: "axis: vertical / 利用可能範囲: 6 / fit: elastic / 矢印と領域選択でfocusを移動",
+    },
+    horizontal: {
+      eyebrow: "配置 / HORIZONTAL",
+      summary:
+        "3つの要素を、限られた幅の一枚のplaneへ左から順に置きます。axisはhorizontalです。fitをelasticにすると、focusした要素へ面積を渡し、収まらない要素はnavigationから選べます。",
+      heading: "3要素を横に置く",
+      note: "axis: horizontal / 利用可能範囲: 6 / fit: elastic / 矢印と領域選択でfocusを移動",
+    },
+  },
+  en: {
+    vertical: {
+      eyebrow: "LAYOUT / VERTICAL",
+      summary:
+        "Place three elements from top to bottom on one plane with bounded height. With a vertical axis and elastic fit, the focused element gets room; constrained siblings remain available through navigation.",
+      heading: "Three items on one vertical plane",
+      note: "axis: vertical / available: 6 / fit: elastic / move focus with arrows or region selection",
+    },
+    horizontal: {
+      eyebrow: "LAYOUT / HORIZONTAL",
+      summary:
+        "Place three elements from left to right on one plane with bounded width. With a horizontal axis and elastic fit, the focused element gets room; constrained siblings remain available through navigation.",
+      heading: "Three items on one horizontal plane",
+      note: "axis: horizontal / available: 6 / fit: elastic / move focus with arrows or region selection",
+    },
+  },
+} as const;
+const compactText = compactCopy[locale][compactId];
 ---
 
-<div class="component-doc">
-  <p class="eyebrow">
-    {
-      locale === "ja"
-        ? `${entry.displayNameJa} · ${copy.category}`
-        : copy.category
-    }
-  </p>
-  <p class="lede">{copy.summary}</p>
-
-  <div class="doc-links">
-    <span>{ui.demoId} <code>{entry.demo}</code></span>
-    <a href={sitePath(`${localePrefix}components/`)}>{ui.matrixLink}</a>
-  </div>
-
-  <section
-    class="component-interactive"
-    aria-labelledby={`interactive-${entry.id}`}
-  >
-    <h2 id={`interactive-${entry.id}`}>{ui.interactiveDemo}</h2>
-    <p class="interactive-note">{ui.interactiveNote}</p>
-    <div
-      data-component-demo
-      data-component={entry.id}
-      data-locale={locale}
-      aria-label={`${entry.page[locale].title} ${ui.interactiveDemo}`}
-    ></div>
-  </section>
-
-  <h2>{ui.contract}</h2>
-  <p>{copy.philosophy}</p>
-  <Code
-    code={contract}
-    lang="json"
-    title={`${entry.page[locale].title} ${ui.contract}`}
-  />
-
-  <div class="guidance-grid">
-    <section>
-      <h2>{ui.useWhen}</h2>
-      <p>{copy.useWhen}</p>
-    </section>
-    <section>
-      <h2>{ui.avoidWhen}</h2>
-      <p>{copy.avoidWhen}</p>
-    </section>
-  </div>
-
-  <h2>{ui.implementation}</h2>
-  <p>{copy.implementation}</p>
-  <p class="source-note">{ui.implementationUsage}</p>
-  <Tabs>
-    <TabItem label={ui.javascript}>
-      <Code code={source.javascript} lang="js" title={ui.javascript} />
-    </TabItem>
-    <TabItem label={ui.rust}>
-      <Code code={source.rust} lang="rust" title={ui.rust} />
-    </TabItem>
-  </Tabs>
-
-  <h2>{ui.properties}</h2>
-  <div class="property-table">
-    <table>
-      <caption>{ui.propertiesCaption(entry.displayName)}</caption>
-      <thead>
-        <tr
-          ><th scope="col">{ui.key}</th><th scope="col">{ui.type}</th><th
-            scope="col">{ui.defaultValue}</th
-          ><th scope="col">{ui.values}</th></tr
+<div class:list={["component-doc", { "component-doc--simple": compact }]}>
+  {
+    compact ? (
+      <>
+        <p class="eyebrow">{compactText.eyebrow}</p>
+        <p class="lede">{compactText.summary}</p>
+        <section
+          class="component-interactive"
+          aria-labelledby={`interactive-${entry.id}`}
         >
-      </thead>
-      <tbody>
-        {
-          entry.properties.length ? (
-            entry.properties.map((property) => (
-              <tr>
-                <th scope="row">
-                  <>
-                    <code>{property.key}</code>
-                    <small>
-                      {locale === "ja" ? property.labelJa : property.labelEn}
-                    </small>
-                  </>
-                </th>
-                <td>
-                  <code>{property.type}</code>
-                </td>
-                <td>
-                  <code>{String(displayDefault(property))}</code>
-                </td>
-                <td>
-                  {property.values.length ? property.values.join(" · ") : "—"}
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colspan="4">{ui.noProps}</td>
-            </tr>
-          )
-        }
-      </tbody>
-    </table>
-  </div>
+          <h2 id={`interactive-${entry.id}`}>{compactText.heading}</h2>
+          <p class="interactive-note">{compactText.note}</p>
+          <div
+            data-component-demo
+            data-component={entry.id}
+            data-locale={locale}
+            aria-label={`${entry.page[locale].title} ${compactText.heading}`}
+          />
+        </section>
+        <h2>{locale === "en" ? "Minimal composition" : "最小composition"}</h2>
+        <p class="source-note">
+          {locale === "en"
+            ? "The snippet below is the same registry source used by this demo."
+            : "下のsnippetは、このdemoが使うregistryのsourceと同じです。"}
+        </p>
+        <Tabs>
+          <TabItem label={ui.javascript}>
+            <Code code={source.javascript} lang="js" title={ui.javascript} />
+          </TabItem>
+          <TabItem label={ui.rust}>
+            <Code code={source.rust} lang="rust" title={ui.rust} />
+          </TabItem>
+        </Tabs>
+      </>
+    ) : (
+      <>
+        <p class="eyebrow">
+          {locale === "ja"
+            ? `${entry.displayNameJa} · ${copy.category}`
+            : copy.category}
+        </p>
+        <p class="lede">{copy.summary}</p>
 
-  <h2>{ui.behaviorAccessibility}</h2>
-  <dl class="behavior-list">
-    <div><dt>{ui.goodFor}</dt><dd>{copy.goodFor}</dd></div>
-    <div><dt>{ui.avoidFor}</dt><dd>{copy.avoidFor}</dd></div>
-    <div><dt>{ui.interaction}</dt><dd>{copy.interaction}</dd></div>
-    <div><dt>{ui.keyboard}</dt><dd>{copy.keyboard}</dd></div>
-    <div><dt>{ui.accessibility}</dt><dd>{copy.accessibility}</dd></div>
-  </dl>
+        <div class="doc-links">
+          <span>
+            {ui.demoId} <code>{entry.demo}</code>
+          </span>
+          <a href={sitePath(`${localePrefix}components/`)}>{ui.matrixLink}</a>
+        </div>
+
+        <section
+          class="component-interactive"
+          aria-labelledby={`interactive-${entry.id}`}
+        >
+          <h2 id={`interactive-${entry.id}`}>{ui.interactiveDemo}</h2>
+          <p class="interactive-note">{ui.interactiveNote}</p>
+          <div
+            data-component-demo
+            data-component={entry.id}
+            data-locale={locale}
+            aria-label={`${entry.page[locale].title} ${ui.interactiveDemo}`}
+          />
+        </section>
+
+        <h2>{ui.contract}</h2>
+        <p>{copy.philosophy}</p>
+        <Code
+          code={contract}
+          lang="json"
+          title={`${entry.page[locale].title} ${ui.contract}`}
+        />
+
+        <div class="guidance-grid">
+          <section>
+            <h2>{ui.useWhen}</h2>
+            <p>{copy.useWhen}</p>
+          </section>
+          <section>
+            <h2>{ui.avoidWhen}</h2>
+            <p>{copy.avoidWhen}</p>
+          </section>
+        </div>
+
+        <h2>{ui.implementation}</h2>
+        <p>{copy.implementation}</p>
+        <p class="source-note">{ui.implementationUsage}</p>
+        <Tabs>
+          <TabItem label={ui.javascript}>
+            <Code code={source.javascript} lang="js" title={ui.javascript} />
+          </TabItem>
+          <TabItem label={ui.rust}>
+            <Code code={source.rust} lang="rust" title={ui.rust} />
+          </TabItem>
+        </Tabs>
+
+        <h2>{ui.properties}</h2>
+        <div class="property-table">
+          <table>
+            <caption>{ui.propertiesCaption(entry.displayName)}</caption>
+            <thead>
+              <tr>
+                <>
+                  <th scope="col">{ui.key}</th>
+                  <th scope="col">{ui.type}</th>
+                  <th scope="col">{ui.defaultValue}</th>
+                  <th scope="col">{ui.values}</th>
+                </>
+              </tr>
+            </thead>
+            <tbody>
+              {entry.properties.length ? (
+                entry.properties.map((property) => (
+                  <tr>
+                    <th scope="row">
+                      <>
+                        <code>{property.key}</code>
+                        <small>
+                          {locale === "ja"
+                            ? property.labelJa
+                            : property.labelEn}
+                        </small>
+                      </>
+                    </th>
+                    <td>
+                      <code>{property.type}</code>
+                    </td>
+                    <td>
+                      <code>{String(displayDefault(property))}</code>
+                    </td>
+                    <td>
+                      {property.values.length
+                        ? property.values.join(" · ")
+                        : "—"}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colspan="4">{ui.noProps}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <h2>{ui.behaviorAccessibility}</h2>
+        <dl class="behavior-list">
+          <div>
+            <>
+              <dt>{ui.goodFor}</dt>
+              <dd>{copy.goodFor}</dd>
+            </>
+          </div>
+          <div>
+            <>
+              <dt>{ui.avoidFor}</dt>
+              <dd>{copy.avoidFor}</dd>
+            </>
+          </div>
+          <div>
+            <>
+              <dt>{ui.interaction}</dt>
+              <dd>{copy.interaction}</dd>
+            </>
+          </div>
+          <div>
+            <>
+              <dt>{ui.keyboard}</dt>
+              <dd>{copy.keyboard}</dd>
+            </>
+          </div>
+          <div>
+            <>
+              <dt>{ui.accessibility}</dt>
+              <dd>{copy.accessibility}</dd>
+            </>
+          </div>
+        </dl>
+      </>
+    )
+  }
 </div>
 
 <script>
@@ -173,7 +279,8 @@ const contract = JSON.stringify(
   document
     .querySelectorAll<HTMLElement>("[data-component-demo]")
     .forEach((target) => {
-      const component = target.dataset.component as CatalogComponentId | undefined;
+      const component = target.dataset.component as
+        CatalogComponentId | undefined;
       if (!component) return;
       mountCatalog(target, {
         component,
@@ -187,6 +294,17 @@ const contract = JSON.stringify(
 <style>
   .component-doc {
     --plane-border: color-mix(in srgb, var(--sl-color-white) 18%, transparent);
+  }
+
+  .component-doc--simple :global(.catalog-controls),
+  .component-doc--simple :global(.embedded-demo-layout),
+  .component-doc--simple :global(.embedded-demo-note) {
+    display: none;
+  }
+
+  .component-doc--simple :global(.ikasue-root) {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .eyebrow {
