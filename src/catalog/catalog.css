@@ -194,6 +194,26 @@
     display: flex;
     align-items: center;
     gap: 4px;
+    min-width: 0;
+  }
+
+  .ikasue-root .search-panel {
+    display: flex;
+    min-width: 0;
+  }
+
+  .ikasue-root .search-panel input {
+    width: min(15rem, 30vw);
+    min-width: 0;
+    border: 0;
+    border-bottom: 1px solid var(--line-strong);
+    padding: 7px 8px;
+    background: var(--selection);
+  }
+
+  .ikasue-root .search-panel input:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 1px;
   }
 
   .ikasue-root .content-scroll {
@@ -386,6 +406,17 @@
     color: var(--faint);
     font-weight: 400;
   }
+
+  .ikasue-root .nav-filter-status,
+  .ikasue-root .nav-empty {
+    padding: 10px 8px;
+    color: var(--muted);
+    font-size: 0.78rem;
+  }
+
+  .ikasue-root .nav-empty {
+    border-top: var(--rule) solid var(--line);
+  }
 }
 
 @layer docs {
@@ -503,22 +534,21 @@
     margin-top: 2px;
   }
 
-  .ikasue-root .property-control select,
-  .ikasue-root .property-control input[type="text"] {
-    width: 100%;
-    border: 0;
-    border-bottom: 1px solid var(--line-strong);
-    padding: 7px 24px 7px 8px;
-    background: var(--selection);
-    color: var(--ink);
-  }
-
-  .ikasue-root .property-control,
-  .ikasue-root .info-text .select-control {
+  .ikasue-root .property-control {
     position: relative;
+    min-width: 0;
   }
 
-  .ikasue-root .property-control.select-control::after,
+  .ikasue-root .property-control .info-text {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .ikasue-root .property-control .info-text .read-value {
+    min-width: 0;
+    width: 100%;
+  }
+
   .ikasue-root .info-text .select-control::after {
     content: "";
     position: absolute;
@@ -530,31 +560,6 @@
     border-bottom: 1px solid var(--ink);
     transform: translateY(-65%) rotate(45deg);
     pointer-events: none;
-  }
-
-  .ikasue-root .property-control input[type="text"] {
-    padding-right: 8px;
-  }
-
-  .ikasue-root .property-control select {
-    appearance: none;
-    cursor: pointer;
-  }
-
-  .ikasue-root .property-control select:focus-visible,
-  .ikasue-root .property-control input[type="text"]:focus-visible {
-    outline: 2px solid var(--ink);
-    outline-offset: 1px;
-  }
-
-  .ikasue-root .switch-control {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .ikasue-root .switch-control input {
-    accent-color: var(--ink);
   }
 
   .ikasue-root .code-block {
@@ -652,9 +657,13 @@
     background: var(--ink);
     color: #fff;
     font-size: 0.68rem;
-    white-space: nowrap;
+    max-width: min(20rem, calc(100vw - 24px));
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: left;
     opacity: 0;
     pointer-events: none;
+    z-index: 3;
     transition:
       opacity var(--motion-fast),
       transform var(--motion-fast);
@@ -664,6 +673,19 @@
   .ikasue-root .icon-button:focus-visible .tooltip {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+  }
+
+  .ikasue-root .top-actions .tooltip {
+    top: calc(100% + 6px);
+    right: 0;
+    bottom: auto;
+    left: auto;
+    transform: translateY(-4px);
+  }
+
+  .ikasue-root .top-actions .icon-button:hover .tooltip,
+  .ikasue-root .top-actions .icon-button:focus-visible .tooltip {
+    transform: translateY(0);
   }
 }
 
@@ -1321,8 +1343,11 @@
     .ikasue-root .brand span {
       display: none;
     }
-    .ikasue-root .top-actions .icon-button:not(:last-child) {
+    .ikasue-root .top-actions .icon-button:not([data-search-toggle]) {
       display: none;
+    }
+    .ikasue-root .search-panel input {
+      width: min(12rem, calc(100vw - 7rem));
     }
     .ikasue-root .demo-stage {
       min-height: 300px;
