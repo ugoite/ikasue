@@ -21,6 +21,12 @@ componentをZ軸へ重ねる代わりに、planeの中で順序と面積を調�
 
 `vertical`と`horizontal`は子の順序を公開する小さなprimitiveです。収まる間は順序を保ち、必要になったときだけ`elastic`、`wrap`、`scroll`の契約へ適応します。layout ownerは子の内容やfocusを勝手に所有しません。
 
+### fitは実演でも明示する
+
+component pageのfit tabsでは`elastic`、`wrap`、`scroll`を明示的に選びます。`elastic`はresolverが返したsizeで一行に縮み、`wrap`はsizeを保ったまま、verticalなら横方向、horizontalなら下方向へlineを増やします。`scroll`だけがaxis方向のscrollを許可します。実演の各要素には縮小後の`size`、`offset`、`line`と、全体のresolved resultを表示し、items、basis、available、gapを変えた結果を読めるようにします。
+
+つまり、scrollは「収まらなかったから暗黙に埋め込む」ためのfallbackではありません。必要な場合に開発者または利用者がfit tabsで選ぶ、plane contractの一部です。
+
 ### 情報が先、編集が後
 
 `Text`は読む状態が標準です。editable capabilityを追加したときだけeditorを出し、確定値とdraftを区別します。`FormList`ではvaluesとstatusをFormListが所有し、childのfocus/draftは元データをrecolorしません。

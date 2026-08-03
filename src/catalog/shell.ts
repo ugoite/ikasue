@@ -20,14 +20,29 @@ import {
   parseComponentQuery,
   serializeComponentQuery,
 } from "./state";
-import type { CatalogPageId, CatalogPageMetadata } from "./types";
+import type {
+  CatalogLocale,
+  CatalogPageId,
+  CatalogPageMetadata,
+  CatalogPropertyValue,
+} from "./types";
 
 const DEFAULT_MOUNT_LABEL = "ikasue workspace";
+
+export interface CatalogSiteNavItem {
+  readonly key: "philosophy" | "contracts" | "components" | "examples";
+  readonly label: string;
+  readonly description: string;
+  readonly href: string;
+}
 
 export interface CatalogMountOptions {
   readonly label?: string;
   readonly component?: CatalogPageId;
   readonly search?: string;
+  readonly locale?: CatalogLocale;
+  /** Astro's BASE_URL, including the trailing slash when provided. */
+  readonly basePath?: string;
 }
 
 export interface CatalogMount {
@@ -41,12 +56,107 @@ export function getCatalogMountLabel(label?: string): string {
   return normalized || DEFAULT_MOUNT_LABEL;
 }
 
+function normalizeBasePath(basePath?: string): string {
+  const value = basePath?.trim() || "/";
+  const withLeadingSlash = value.startsWith("/") ? value : `/${value}`;
+  return `${withLeadingSlash.replace(/\/+$/, "")}/`;
+}
+
+function sitePath(
+  path: string,
+  locale: CatalogLocale,
+  basePath: string,
+): string {
+  const localePrefix = locale === "en" ? "en/" : "";
+  const normalizedPath = path.replace(/^\/+/, "");
+  return `${basePath}${localePrefix}${normalizedPath}`;
+}
+
+function localizedGroupLabel(
+  category: CatalogPageMetadata["cat"],
+  locale: CatalogLocale,
+): string {
+  const labels: Record<CatalogPageMetadata["cat"], string> =
+    locale === "en"
+      ? {
+          philosophy: "Philosophy & contracts",
+          foundation: "Foundation",
+          layout: "Layout",
+          action: "Actions",
+          input: "Information & input",
+          data: "Data",
+          feedback: "Feedback",
+        }
+      : {
+          philosophy: "思想と契約",
+          foundation: "基盤",
+          layout: "配置",
+          action: "アクション",
+          input: "情報と入力",
+          data: "データ",
+          feedback: "フィードバック",
+        };
+  return labels[category];
+}
+
+export function getCatalogSiteNavItems(
+  locale: CatalogLocale = "ja",
+  basePath?: string,
+): readonly CatalogSiteNavItem[] {
+  const normalizedBase = normalizeBasePath(basePath);
+  const labels: Record<
+    "philosophy" | "contracts" | "components" | "examples",
+    readonly [string, string]
+  > =
+    locale === "en"
+      ? {
+          philosophy: ["Philosophy", "Overview and design principles"],
+          contracts: ["Contracts", "Behavioral and integration rules"],
+          components: ["Components", "Catalog and component matrix"],
+          examples: ["Examples", "Plane-based site shapes"],
+        }
+      : {
+          philosophy: ["思想", "概要と設計思想"],
+          contracts: ["契約", "振る舞いと統合のルール"],
+          components: ["コンポーネント", "カタログと一覧"],
+          examples: ["例", "平面モデルを使った構成例"],
+        };
+  return [
+    {
+      key: "philosophy",
+      label: labels.philosophy[0],
+      description: labels.philosophy[1],
+      href: sitePath("philosophy/", locale, normalizedBase),
+    },
+    {
+      key: "contracts",
+      label: labels.contracts[0],
+      description: labels.contracts[1],
+      href: sitePath("guides/behavioral-contracts/", locale, normalizedBase),
+    },
+    {
+      key: "components",
+      label: labels.components[0],
+      description: labels.components[1],
+      href: sitePath("catalog/", locale, normalizedBase),
+    },
+    {
+      key: "examples",
+      label: labels.examples[0],
+      description: labels.examples[1],
+      href: sitePath("examples/", locale, normalizedBase),
+    },
+  ];
+}
+
 export function mountCatalog(
   target: HTMLElement,
   options: CatalogMountOptions = {},
 ): CatalogMount {
   const document = target.ownerDocument;
   const window = document.defaultView;
+  const locale = options.locale ?? "ja";
+  const basePath = normalizeBasePath(options.basePath);
   const root = element(document, "section", "ikasue-root");
   root.setAttribute("aria-label", getCatalogMountLabel(options.label));
   root.dataset.nav = (window?.innerWidth ?? 1024) < 901 ? "closed" : "open";
@@ -64,13 +174,17 @@ export function mountCatalog(
   const shell = element(document, "div", "app-shell");
   const appPlane = element(document, "div", "app-plane");
   const nav = element(document, "aside", "nav-plane");
-  nav.setAttribute("aria-label", "ikasue component navigation");
+  nav.setAttribute(
+    "aria-label",
+    locale === "en" ? "ikasue navigation" : "ikasueナビゲーション",
+  );
   const rail = element(document, "div", "nav-rail");
   const navToggle = element(document, "button", "rail-button");
   navToggle.type = "button";
   navToggle.append(svgIcon(document, "navigation"));
   rail.append(navToggle);
   const navCopy = element(document, "div", "nav-copy");
+  navCopy.id = "catalogNavigationPanel";
   const navHead = element(document, "div", "nav-head");
   const navBrand = element(document, "strong");
   navBrand.textContent = "ikasue";
@@ -79,6 +193,12 @@ export function mountCatalog(
   navHead.append(navBrand, navSubtitle);
   const navList = element(document, "nav", "nav-list");
   navList.id = "navList";
+  navList.setAttribute(
+    "aria-label",
+    locale === "en"
+      ? "ikasue site and component navigation"
+      : "ikasueサイトとcomponentのナビゲーション",
+  );
   navCopy.append(navHead, navList);
   nav.append(rail, navCopy);
 
@@ -94,20 +214,20 @@ export function mountCatalog(
   const copyButton = createIconButton(
     document,
     "copy",
-    "現在のspecをコピー",
-    "specをコピー",
+    locale === "en" ? "Copy current spec" : "現在のspecをコピー",
+    locale === "en" ? "Copy spec" : "specをコピー",
   );
   const resetButton = createIconButton(
     document,
     "reset",
-    "プロパティを初期値へ戻す",
-    "初期値へ戻す",
+    locale === "en" ? "Reset properties" : "プロパティを初期値へ戻す",
+    locale === "en" ? "Reset" : "初期値へ戻す",
   );
   const searchButton = createIconButton(
     document,
     "search",
-    "コンポーネントを検索",
-    "検索",
+    locale === "en" ? "Search components" : "コンポーネントを検索",
+    locale === "en" ? "Search" : "検索",
   );
   searchButton.dataset.searchToggle = "true";
   searchButton.setAttribute("aria-expanded", "false");
@@ -118,8 +238,12 @@ export function mountCatalog(
   const searchInput = element(document, "input");
   searchInput.id = "catalogSearch";
   searchInput.type = "search";
-  searchInput.setAttribute("aria-label", "コンポーネントを検索");
-  searchInput.placeholder = "componentを検索";
+  searchInput.setAttribute(
+    "aria-label",
+    locale === "en" ? "Search components" : "コンポーネントを検索",
+  );
+  searchInput.placeholder =
+    locale === "en" ? "Search components" : "componentを検索";
   searchPanel.append(searchInput);
   searchButton.setAttribute("aria-controls", searchPanel.id);
   topActions.append(copyButton, resetButton, searchButton, searchPanel);
@@ -182,6 +306,14 @@ export function mountCatalog(
     document,
     root,
     window,
+    locale,
+    updateProperty: (key, value) => {
+      if (currentProps[key] === value) return;
+      currentProps[key] = value;
+      syncPropertyControl(key, value);
+      const spec = content.querySelector<HTMLElement>("#specCode");
+      if (spec) spec.textContent = contractText(findPage(currentId));
+    },
     track: (item) => pageCleanup.push(item),
     listen: (targetElement, type, handler) =>
       pageCleanup.push(listen(targetElement, type, handler)),
@@ -196,6 +328,7 @@ export function mountCatalog(
     document,
     root,
     window,
+    locale,
     track: (item) => propertyCleanup.push(item),
     listen: (targetElement, type, handler) =>
       propertyCleanup.push(listen(targetElement, type, handler)),
@@ -211,17 +344,70 @@ export function mountCatalog(
     navToggle.setAttribute("aria-expanded", String(open));
     navToggle.setAttribute(
       "aria-label",
-      open ? "ナビゲーションを収納" : "ナビゲーションを展開",
+      open
+        ? locale === "en"
+          ? "Collapse navigation"
+          : "ナビゲーションを収納"
+        : locale === "en"
+          ? "Expand navigation"
+          : "ナビゲーションを展開",
     );
+    navToggle.setAttribute("aria-controls", navCopy.id);
+  };
+
+  const createSiteNav = (): HTMLElement => {
+    const section = element(document, "section", "site-nav-section");
+    section.setAttribute("aria-labelledby", "catalogSiteNavHeading");
+    const heading = element(document, "h2", "nav-section-heading");
+    heading.id = "catalogSiteNavHeading";
+    heading.textContent =
+      locale === "en" ? "Site navigation" : "サイトナビゲーション";
+    section.append(heading);
+    const list = element(document, "ul", "site-nav-list");
+    for (const item of getCatalogSiteNavItems(locale, basePath)) {
+      const listItem = element(document, "li");
+      const link = element(document, "a", "site-nav-item");
+      link.href = item.href;
+      link.dataset.siteNav = item.key;
+      link.setAttribute(
+        "aria-current",
+        item.key === "components" ? "page" : "false",
+      );
+      const label = element(document, "span");
+      label.textContent = item.label;
+      const description = element(document, "small");
+      description.textContent = item.description;
+      link.append(label, description);
+      listItem.append(link);
+      list.append(listItem);
+    }
+    section.append(list);
+    return section;
   };
 
   const renderNav = (): void => {
     for (const item of navCleanup) item();
     navCleanup = [];
     navList.replaceChildren();
+    navList.append(createSiteNav());
+    const componentsSection = element(
+      document,
+      "section",
+      "component-nav-section",
+    );
+    componentsSection.setAttribute(
+      "aria-labelledby",
+      "catalogComponentNavHeading",
+    );
+    const componentsHeading = element(document, "h2", "nav-section-heading");
+    componentsHeading.id = "catalogComponentNavHeading";
+    componentsHeading.textContent =
+      locale === "en" ? "Components" : "コンポーネント";
+    componentsSection.append(componentsHeading);
+    const componentList = element(document, "div", "component-nav-list");
     const query = navQuery.trim().toLocaleLowerCase();
     let matchCount = 0;
-    for (const [label, category] of CATALOG_GROUPS) {
+    for (const [, category] of CATALOG_GROUPS) {
       const groupItems = CATALOG_PAGES.filter(
         (component) =>
           component.cat === category && matchesNavQuery(component, query),
@@ -229,22 +415,30 @@ export function mountCatalog(
       if (!groupItems.length) continue;
       matchCount += groupItems.length;
       const groupLabel = element(document, "div", "nav-group");
-      groupLabel.textContent = label;
-      navList.append(groupLabel);
+      groupLabel.textContent = localizedGroupLabel(category, locale);
+      componentList.append(groupLabel);
       for (const component of groupItems)
-        navList.append(createNavItem(component));
+        componentList.append(createNavItem(component));
     }
     if (query && !matchCount) {
       const empty = element(document, "p", "nav-empty");
       empty.setAttribute("role", "status");
-      empty.textContent = `「${navQuery.trim()}」に一致するcomponentはありません。`;
-      navList.append(empty);
+      empty.textContent =
+        locale === "en"
+          ? `No components match “${navQuery.trim()}”.`
+          : `「${navQuery.trim()}」に一致するcomponentはありません。`;
+      componentList.append(empty);
     } else if (query) {
       const status = element(document, "p", "nav-filter-status");
       status.setAttribute("role", "status");
-      status.textContent = `${String(matchCount)}件のcomponentを表示中`;
-      navList.prepend(status);
+      status.textContent =
+        locale === "en"
+          ? `${String(matchCount)} components shown`
+          : `${String(matchCount)}件のcomponentを表示中`;
+      componentList.prepend(status);
     }
+    componentsSection.append(componentList);
+    navList.append(componentsSection);
   };
 
   const createNavItem = (component: CatalogPageMetadata): HTMLButtonElement => {
@@ -259,7 +453,7 @@ export function mountCatalog(
     const copy = element(document, "span");
     copy.textContent = component.name;
     const japanese = element(document, "small");
-    japanese.textContent = component.ja;
+    japanese.textContent = locale === "en" ? "" : component.ja;
     copy.append(japanese);
     item.append(copy);
     navCleanup.push(
@@ -288,6 +482,7 @@ export function mountCatalog(
   ): void => {
     if (currentProps[key] === value) return;
     currentProps[key] = value;
+    syncPropertyControl(key, value);
     const stage = content.querySelector<HTMLElement>("#demoStage");
     if (stage) {
       for (const item of pageCleanup) item();
@@ -297,6 +492,14 @@ export function mountCatalog(
     const spec = content.querySelector<HTMLElement>("#specCode");
     if (spec) spec.textContent = contractText(component);
   };
+
+  function syncPropertyControl(key: string, value: CatalogPropertyValue): void {
+    const control = Array.from(
+      content.querySelectorAll<HTMLElement>(".info-text[data-prop]"),
+    ).find((item) => item.dataset.prop === key);
+    const read = control?.querySelector<HTMLElement>(".read-value");
+    if (read) read.textContent = String(value);
+  }
 
   const renderProperties = (component: CatalogPageMetadata): HTMLDivElement => {
     const list = element(document, "div", "property-list");
