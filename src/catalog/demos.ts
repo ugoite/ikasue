@@ -747,14 +747,14 @@ function renderPlane(
   const requestedBasis = Number.isFinite(requestedBasisValue)
     ? Math.max(0.5, requestedBasisValue)
     : 2;
-  const availableValue = Number(props.available ?? 10);
+  const availableValue = Number(props.available ?? 6);
   const available = Number.isFinite(availableValue)
     ? Math.max(1, availableValue)
-    : 10;
-  const countValue = Number(props.items ?? 4);
+    : 6;
+  const countValue = Number(props.items ?? 3);
   const count = Number.isFinite(countValue)
     ? Math.max(0, Math.floor(countValue))
-    : 4;
+    : 3;
   let focusId: string | undefined = count > 0 ? "item-1" : undefined;
   const stageId = `plane-${componentId}-stage`;
   const stageMount = element(context.document, "div", "plane-demo-mount");

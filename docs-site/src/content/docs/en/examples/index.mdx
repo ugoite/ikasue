@@ -1,16 +1,14 @@
 ---
 title: Examples
-description: Five radically different site shapes built from the same plane model.
+description: Small arrangements that make the shared plane model visible.
 ---
 
-The same component system can produce very different information shapes. These five construction examples are individually navigable, and each page includes the actual rendered surface, copyable JavaScript and Rust tabs that explain the same page, and the ikasue components used.
+Examples are not a separate site for complex product shapes. This start-here page keeps the arrangement small so you can see how axis, available space, fit, and focus are resolved when a few elements share one plane.
 
-## Five site shapes
+## Start with these arrangements
 
-- [Dense operations dashboard](./operations-dashboard/) — judge filters, a queue, detail, and status in one workspace.
-- [Editor + preview](./editor-preview/) — read editing and preview side by side while separating confirmed values from draft state.
-- [Planning / calendar](./planning-calendar/) — compare days horizontally and read each day’s events vertically.
-- [Field / mobile service](./field-mobile-service/) — keep job context and evidence available on an unreliable network.
-- [Observability / incident console](./observability-incident-console/) — investigate timeline, service state, and incident detail together.
+- [Vertical](../components/vertical/) — place `one → two → three` from top to bottom. See how `elastic`, focus, and navigation respond when height is tight.
+- [Horizontal](../components/horizontal/) — place `one → two → three` from left to right. When width is tight, read the constrained plane with arrows and region selection instead of page-first scrolling.
+- [Usage](../guides/usage/) — read the smallest contract for composing a plane in an existing app.
 
-The shared construction rules are explained in [Usage](../guides/usage/) and [Behavioral contracts](../guides/behavioral-contracts/). On each page, compare the plane axis, the layout component that owns space, and the information component that owns values and status.
+Both component pages use the same registry-backed native renderer inside the Starlight embedded demo. Change fit, then inspect focus and navigation in the constrained plane.

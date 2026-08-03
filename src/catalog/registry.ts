@@ -168,9 +168,9 @@ const BASE_CATALOG_COMPONENTS = [
     props: [
       p("fit", "適応", "select", "elastic", ["elastic", "wrap"]),
       p("gap", "間隔", "select", "md", ["none", "sm", "md", "lg"]),
-      p("items", "項目数", "select", "4", ["3", "4", "6"]),
+      p("items", "項目数", "select", "3", ["3", "4", "6"]),
       p("basis", "要素サイズ", "select", "2", ["1", "2", "3"]),
-      p("available", "利用可能範囲", "select", "10", ["6", "8", "10"]),
+      p("available", "利用可能範囲", "select", "6", ["6", "8", "10"]),
     ],
   },
   {
@@ -184,9 +184,9 @@ const BASE_CATALOG_COMPONENTS = [
     props: [
       p("fit", "適応", "select", "elastic", ["elastic", "wrap"]),
       p("gap", "間隔", "select", "sm", ["none", "sm", "md", "lg"]),
-      p("items", "項目数", "select", "4", ["3", "4", "6"]),
+      p("items", "項目数", "select", "3", ["3", "4", "6"]),
       p("basis", "要素サイズ", "select", "2", ["1", "2", "3"]),
-      p("available", "利用可能範囲", "select", "10", ["6", "8", "10"]),
+      p("available", "利用可能範囲", "select", "6", ["6", "8", "10"]),
     ],
   },
   {
@@ -1182,25 +1182,25 @@ export const COMPONENT_SOURCE_RECIPES: Record<
   vertical: {
     axis: "vertical",
     children:
-      '[{ id: "summary", basis: 2, min: 1 }, { id: "table", basis: 6, min: 3 }]',
+      '[{ id: "one", basis: 2, min: 1 }, { id: "two", basis: 2, min: 1 }, { id: "three", basis: 2, min: 1 }]',
     planeOptions:
-      '{ fit: "elastic", gap: 2, available: 10, focus: "summary", navigation: true }',
+      '{ fit: "elastic", gap: 2, available: 6, focus: "two", navigation: true }',
     componentProps:
-      '{ fit: "elastic", gap: "md", items: "4", basis: "2", available: "10" }',
+      '{ fit: "elastic", gap: "md", items: "3", basis: "2", available: "6" }',
     ownership: "Vertical owns order and fit resolution, not child semantics.",
     rustState: "axis: Axis::Vertical, fit: Fit::Elastic",
   },
   horizontal: {
     axis: "horizontal",
     children:
-      '[{ id: "save", basis: 1 }, { id: "history", basis: 2 }, { id: "refresh", basis: 1 }]',
+      '[{ id: "one", basis: 2, min: 1 }, { id: "two", basis: 2, min: 1 }, { id: "three", basis: 2, min: 1 }]',
     planeOptions:
-      '{ fit: "wrap", gap: 1, available: 10, focus: "history", navigation: true }',
+      '{ fit: "elastic", gap: 1, available: 6, focus: "two", navigation: true }',
     componentProps:
-      '{ fit: "wrap", gap: "sm", items: "4", basis: "2", available: "10" }',
+      '{ fit: "elastic", gap: "sm", items: "3", basis: "2", available: "6" }',
     ownership:
       "Horizontal owns order and fit resolution, not child keyboard behavior.",
-    rustState: "axis: Axis::Horizontal, fit: Fit::Wrap",
+    rustState: "axis: Axis::Horizontal, fit: Fit::Elastic",
   },
   "icon-action": {
     axis: "horizontal",

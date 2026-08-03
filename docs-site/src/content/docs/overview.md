@@ -25,7 +25,7 @@ ikasueは、情報密度の高いworkspaceのためのframework-neutralなcompon
 2. [component inventory](../components/)から現在の17 componentの責務を選ぶ。
 3. [使い方](../guides/usage/)と[統合](../guides/integration/)でpackageを既存のappへ組み込む。
 4. [振る舞いの契約](../guides/behavioral-contracts/)と[アクセシビリティ](../guides/accessibility/)を実装前に確認する。
-5. [例](../examples/)で、異なるsite shapeへの組み合わせを見る。
+5. [例](../examples/)で、少数の要素をplaneへ組み合わせる様子を見る。
 
 ## package、component page、公開境界
 

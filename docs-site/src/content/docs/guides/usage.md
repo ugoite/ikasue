@@ -65,4 +65,4 @@ const workspaceLayout = resolvePlane(workspace);
 
 ## compositionの確認
 
-component pageのproperty table、JavaScript implementation / usage、Rust implementation sketchと、ページ内のinteractive demoを同じcomponent contractとして確認してください。さらに[例](../examples/)で異なるsite shapeに組み合わせたときのplaneの動きを比べられます。
+component pageのproperty table、JavaScript implementation / usage、Rust implementation sketchと、ページ内のinteractive demoを同じcomponent contractとして確認してください。さらに[例](../examples/)で少数の要素を組み合わせたときのplaneの動きを確認できます。
