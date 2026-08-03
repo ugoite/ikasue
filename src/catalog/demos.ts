@@ -104,6 +104,13 @@ function clear(container: HTMLElement): void {
   container.replaceChildren();
 }
 
+function localized<T>(
+  context: DemoContext,
+  values: Readonly<Record<CatalogLocale, T>>,
+): T {
+  return values[context.locale ?? "ja"];
+}
+
 export function renderDemo(
   container: HTMLElement,
   component: CatalogComponentRegistryEntry,
@@ -158,7 +165,14 @@ export function renderDemo(
       renderDialog(container, props, context);
       break;
     default:
-      paragraph(context, "このcomponentのdemoは準備中です。", "summary");
+      paragraph(
+        context,
+        localized(context, {
+          ja: "このcomponentのdemoは準備中です。",
+          en: "The demo for this component is not ready yet.",
+        }),
+        "summary",
+      );
       break;
   }
 }
@@ -196,17 +210,27 @@ function renderTheme(
 
   const stack = element(context.document, "div", "stack");
   stack.append(
-    heading(context, "h2", "OSの文字資産を使う"),
+    heading(
+      context,
+      "h2",
+      localized(context, {
+        ja: "OSの文字資産を使う",
+        en: "Use the operating system font",
+      }),
+    ),
     paragraph(
       context,
-      "日本語とEnglishが同じbaselineで並びます。選択された行だけが静かに面積を受け取ります。",
+      localized(context, {
+        ja: "日本語とEnglishが同じbaselineで並びます。選択された行だけが静かに面積を受け取ります。",
+        en: "Japanese and English share the same baseline. Only the selected row quietly receives more area.",
+      }),
     ),
   );
   const cluster = element(context.document, "div", "cluster");
   for (const [label, active] of [
-    ["通常", false],
-    ["選択中", true],
-    ["補助", false],
+    [localized(context, { ja: "通常", en: "Normal" }), false],
+    [localized(context, { ja: "選択中", en: "Selected" }), true],
+    [localized(context, { ja: "補助", en: "Supporting" }), false],
   ] as const) {
     const item = element(context.document, "span", "plain-item");
     item.dataset.active = String(active);
@@ -223,10 +247,14 @@ function renderText(
   context: DemoContext,
 ): void {
   const stack = element(context.document, "div", "stack");
-  stack.append(paragraph(context, "部署"));
+  const departmentLabel = localized(context, { ja: "部署", en: "Department" });
+  stack.append(paragraph(context, departmentLabel));
   const host = element(context.document, "span", "info-text");
   host.id = "demoText";
-  let value = String(props.value ?? "東京オフィス");
+  let value = String(
+    props.value ??
+      localized(context, { ja: "東京オフィス", en: "Tokyo office" }),
+  );
   const draw = (): void => {
     createInfoText(
       host,
@@ -235,7 +263,7 @@ function renderText(
         editable: props.editable === true,
         editor: String(props.editor ?? "text"),
         state: String(props.state ?? "clean") as FormFieldStatus,
-        label: "部署",
+        label: departmentLabel,
         onCommit: (nextValue) => {
           value = nextValue;
           draw();
@@ -249,7 +277,10 @@ function renderText(
   stack.append(
     paragraph(
       context,
-      "ダブルクリック、Enter、F2で編集。編集中は破線が消え、黒線は一本だけ。",
+      localized(context, {
+        ja: "ダブルクリック、Enter、F2で編集。編集中は破線が消え、黒線は一本だけ。",
+        en: "Double-click, press Enter, or press F2 to edit. The dashed line disappears while editing, leaving one black line.",
+      }),
     ),
   );
   container.append(stack);
@@ -264,19 +295,38 @@ function renderRule(
   const weight = props.weight === "standard" ? "standard" : "hairline";
   if (axis === "horizontal") {
     const wrapper = element(context.document, "div");
-    wrapper.append(paragraph(context, "上の情報"));
+    wrapper.append(
+      paragraph(
+        context,
+        localized(context, { ja: "上の情報", en: "Information above" }),
+      ),
+    );
     const section = element(context.document, "div", "rule-section");
     section.dataset.weight = weight;
-    section.append(paragraph(context, "境界線の後の情報"));
+    section.append(
+      paragraph(
+        context,
+        localized(context, {
+          ja: "境界線の後の情報",
+          en: "Information after the boundary",
+        }),
+      ),
+    );
     wrapper.append(section);
     container.append(wrapper);
     return;
   }
   const wrapper = element(context.document, "div", "rule-demo-vertical");
   const left = element(context.document, "div");
-  left.textContent = "左の情報";
+  left.textContent = localized(context, {
+    ja: "左の情報",
+    en: "Information left",
+  });
   const right = element(context.document, "div");
-  right.textContent = "右の情報";
+  right.textContent = localized(context, {
+    ja: "右の情報",
+    en: "Information right",
+  });
   right.dataset.weight = weight;
   wrapper.append(left, right);
   container.append(wrapper);
@@ -308,11 +358,20 @@ function renderStatus(
   const action = iconButton(
     context,
     icon,
-    String(props.label ?? "同期済み"),
-    String(props.label ?? "同期済み"),
+    String(props.label ?? localized(context, { ja: "同期済み", en: "Synced" })),
+    String(props.label ?? localized(context, { ja: "同期済み", en: "Synced" })),
   );
   action.style.color = color;
-  cluster.append(action, paragraph(context, "hoverまたはfocusで説明"));
+  cluster.append(
+    action,
+    paragraph(
+      context,
+      localized(context, {
+        ja: "hoverまたはfocusで説明",
+        en: "The explanation appears on hover or focus",
+      }),
+    ),
+  );
   container.append(cluster);
 }
 
@@ -621,7 +680,15 @@ function renderIconAction(
   result.style.color = "var(--muted)";
   result.textContent = state;
   addListener(context, button, "click", () => {
-    setText(result, state === "busy" ? "処理中…" : `${action} を実行`);
+    setText(
+      result,
+      state === "busy"
+        ? localized(context, { ja: "処理中…", en: "Processing…" })
+        : localized(context, {
+            ja: `${action} を実行`,
+            en: `Run ${action}`,
+          }),
+    );
   });
   container.append(button, result);
 }
@@ -662,7 +729,13 @@ function renderBoolean(
   let checked = props.checked === true;
   const check = element(context.document, "span", "check-slot");
   const label = element(context.document, "span");
-  label.textContent = String(props.label ?? "自動保存を有効にする");
+  label.textContent = String(
+    props.label ??
+      localized(context, {
+        ja: "自動保存を有効にする",
+        en: "Enable automatic save",
+      }),
+  );
   const update = (): void => {
     button.setAttribute("aria-checked", String(checked));
     check.replaceChildren();
@@ -735,11 +808,21 @@ function renderForm(
         : ["clean", "clean", "clean"];
   const form = element(context.document, "div", "form-list");
   form.dataset.marker = String(props.marker ?? "bullet");
-  const labels = ["名称", "拠点", "説明"] as const;
+  const labels = [
+    localized(context, { ja: "名称", en: "Name" }),
+    localized(context, { ja: "拠点", en: "Location" }),
+    localized(context, { ja: "説明", en: "Description" }),
+  ] as const;
   const values: readonly [string, string][] = [
-    ["プロジェクト藍", "text"],
-    ["東京オフィス", "select"],
-    ["顧客データの整理", "textarea"],
+    [localized(context, { ja: "プロジェクト藍", en: "Project Aoi" }), "text"],
+    [localized(context, { ja: "東京オフィス", en: "Tokyo office" }), "select"],
+    [
+      localized(context, {
+        ja: "顧客データの整理",
+        en: "Organize customer data",
+      }),
+      "textarea",
+    ],
   ];
   const definitions = labels.map((label, index) => {
     const [value, editor] = values[index] ?? ["", "text"];
@@ -761,12 +844,24 @@ function renderForm(
   );
   let drafts: Readonly<Record<string, string>> = {};
   const actions = element(context.document, "div", "form-list-actions");
-  const send = textAction(context, "FormListへ送信");
+  const send = textAction(
+    context,
+    localized(context, { ja: "FormListへ送信", en: "Send to FormList" }),
+  );
   send.dataset.action = "form-list-send";
-  send.setAttribute("aria-label", "未送信のdraftをFormListへ送信");
+  send.setAttribute(
+    "aria-label",
+    localized(context, {
+      ja: "未送信のdraftをFormListへ送信",
+      en: "Send unsent drafts to FormList",
+    }),
+  );
   const sendStatus = paragraph(
     context,
-    "未送信のdraftはありません。",
+    localized(context, {
+      ja: "未送信のdraftはありません。",
+      en: "There are no unsent drafts.",
+    }),
     "form-list-status",
   );
   sendStatus.setAttribute("role", "status");
@@ -780,8 +875,14 @@ function renderForm(
     }
     const count = Object.keys(drafts).length;
     sendStatus.textContent = count
-      ? `${String(count)}件のdraftが未送信です。`
-      : "未送信のdraftはありません。";
+      ? localized(context, {
+          ja: `${String(count)}件のdraftが未送信です。`,
+          en: `${String(count)} draft${count === 1 ? " is" : "s are"} unsent.`,
+        })
+      : localized(context, {
+          ja: "未送信のdraftはありません。",
+          en: "There are no unsent drafts.",
+        });
   };
   const fieldRenderers: Array<() => void> = [];
   for (const definition of definitions) {
@@ -819,13 +920,23 @@ function renderForm(
   addListener(context, send, "click", () => {
     const count = Object.keys(drafts).length;
     if (!count) {
-      updateSendStatus("送信するdraftはありません。");
+      updateSendStatus(
+        localized(context, {
+          ja: "送信するdraftはありません。",
+          en: "There are no drafts to send.",
+        }),
+      );
       return;
     }
     formState = commitFormListFields(formState, drafts);
     drafts = {};
     for (const renderField of fieldRenderers) renderField();
-    updateSendStatus(`${String(count)}件のdraftをFormListへ送信しました。`);
+    updateSendStatus(
+      localized(context, {
+        ja: `${String(count)}件のdraftをFormListへ送信しました。`,
+        en: `Sent ${String(count)} draft${count === 1 ? "" : "s"} to FormList.`,
+      }),
+    );
   });
   container.append(actions, form);
 }
@@ -879,9 +990,9 @@ function startInfoEdit(
     const select = element(context.document, "select");
     const selectControl = element(context.document, "span", "select-control");
     const values = options.values ?? [
-      "東京オフィス",
-      "大阪オフィス",
-      "福岡オフィス",
+      localized(context, { ja: "東京オフィス", en: "Tokyo office" }),
+      localized(context, { ja: "大阪オフィス", en: "Osaka office" }),
+      localized(context, { ja: "福岡オフィス", en: "Fukuoka office" }),
     ];
     for (const value of values) {
       const option = element(context.document, "option");
@@ -953,7 +1064,11 @@ function renderTable(
 ): void {
   const wrap = element(context.document, "div", "data-table-wrap");
   const table = element(context.document, "table", "data-table");
-  const headers = ["名前", "部門", "拠点"];
+  const headers = [
+    localized(context, { ja: "名前", en: "Name" }),
+    localized(context, { ja: "部門", en: "Department" }),
+    localized(context, { ja: "拠点", en: "Location" }),
+  ];
   const head = element(context.document, "thead");
   const headerRow = element(context.document, "tr");
   for (const label of headers) {
@@ -965,9 +1080,21 @@ function renderTable(
   head.append(headerRow);
   const body = element(context.document, "tbody");
   const rows = [
-    ["Alpha", "営業", "東京"],
-    ["Beta", "開発", "大阪"],
-    ["Gamma", "運用", "福岡"],
+    [
+      "Alpha",
+      localized(context, { ja: "営業", en: "Sales" }),
+      localized(context, { ja: "東京", en: "Tokyo" }),
+    ],
+    [
+      "Beta",
+      localized(context, { ja: "開発", en: "Engineering" }),
+      localized(context, { ja: "大阪", en: "Osaka" }),
+    ],
+    [
+      "Gamma",
+      localized(context, { ja: "運用", en: "Operations" }),
+      localized(context, { ja: "福岡", en: "Fukuoka" }),
+    ],
   ] as const;
   const tableState = createTableState(
     rows.flatMap((row, rowIndex) =>
@@ -1217,9 +1344,21 @@ function renderHistory(
   const gutter = element(context.document, "div", "history-gutter");
   gutter.dataset.compact = String(props.compact === true);
   const values: readonly [string, string][] = [
-    ["current", "現在・説明を編集"],
-    ["previous", "1時間前・担当を変更"],
-    ["initial", "作成時"],
+    [
+      "current",
+      localized(context, {
+        ja: "現在・説明を編集",
+        en: "Current · edit description",
+      }),
+    ],
+    [
+      "previous",
+      localized(context, {
+        ja: "1時間前・担当を変更",
+        en: "1 hour ago · change owner",
+      }),
+    ],
+    ["initial", localized(context, { ja: "作成時", en: "At creation" })],
   ];
   for (const [value, label] of values) {
     const entry = textAction(context, label);
@@ -1246,17 +1385,30 @@ function renderProgress(
   progress.setAttribute("role", "status");
   progress.setAttribute("aria-busy", String(props.loading === true));
   progress.append(
-    heading(context, "h2", "顧客一覧"),
+    heading(
+      context,
+      "h2",
+      localized(context, { ja: "顧客一覧", en: "Customer list" }),
+    ),
     paragraph(
       context,
-      "以前の内容を読みながら、対象領域の更新だけを確認できます。",
+      localized(context, {
+        ja: "以前の内容を読みながら、対象領域の更新だけを確認できます。",
+        en: "Review only the updated region while keeping previous content visible.",
+      }),
     ),
   );
   const item = element(context.document, "div", "plain-item");
-  item.textContent = "北関東支店 / 更新 14:32";
+  item.textContent = localized(context, {
+    ja: "北関東支店 / 更新 14:32",
+    en: "North Kanto branch / updated 14:32",
+  });
   progress.append(item);
   const status = element(context.document, "span", "progress-status");
-  status.textContent = props.loading === true ? "読み込み中" : "完了";
+  status.textContent =
+    props.loading === true
+      ? localized(context, { ja: "読み込み中", en: "Loading" })
+      : localized(context, { ja: "完了", en: "Complete" });
   status.setAttribute("aria-hidden", "true");
   progress.append(status);
   container.append(progress);
@@ -1277,11 +1429,27 @@ function renderMessage(
     }[kind] ?? "var(--info)";
   const messageText =
     {
-      info: "詳細領域に新しい情報があります。",
-      success: "対象領域の変更を保存しました。",
-      warning: "対象領域に確認事項があります。",
-      error: "対象領域の入力にエラーがあります。",
-    }[kind] ?? "対象領域に情報があります。";
+      info: localized(context, {
+        ja: "詳細領域に新しい情報があります。",
+        en: "New information is available in the detail region.",
+      }),
+      success: localized(context, {
+        ja: "対象領域の変更を保存しました。",
+        en: "Changes to the target region were saved.",
+      }),
+      warning: localized(context, {
+        ja: "対象領域に確認事項があります。",
+        en: "The target region needs your attention.",
+      }),
+      error: localized(context, {
+        ja: "対象領域の入力にエラーがあります。",
+        en: "The target region contains an input error.",
+      }),
+    }[kind] ??
+    localized(context, {
+      ja: "対象領域に情報があります。",
+      en: "The target region has information.",
+    });
   const link = element(context.document, "button", "linked-message");
   link.type = "button";
   link.style.setProperty("--message-color", color);
@@ -1301,7 +1469,13 @@ function renderMessage(
     region.tabIndex = 0;
     region.append(
       heading(context, "h2", regionLabel),
-      paragraph(context, "対象領域の内容を残したまま注意を移します。"),
+      paragraph(
+        context,
+        localized(context, {
+          ja: "対象領域の内容を残したまま注意を移します。",
+          en: "Move attention without removing the target region's content.",
+        }),
+      ),
     );
     regions.set(regionId, region);
     plane.append(region);
@@ -1326,16 +1500,36 @@ function renderDialog(
   context: DemoContext,
 ): void {
   const stack = element(context.document, "div", "stack");
-  stack.append(paragraph(context, "dialogはこの面の上へ重なりません。"));
-  const open = textAction(context, "下端から開く");
+  stack.append(
+    paragraph(
+      context,
+      localized(context, {
+        ja: "dialogはこの面の上へ重なりません。",
+        en: "The dialog does not overlay this plane.",
+      }),
+    ),
+  );
+  const open = textAction(
+    context,
+    localized(context, { ja: "下端から開く", en: "Open from bottom edge" }),
+  );
   open.setAttribute("aria-pressed", "true");
   addListener(context, open, "click", () => {
     const intent = String(props.intent ?? "confirm");
     const message =
       intent === "danger"
-        ? "この操作は取り消せません。上の対象情報を確認してから確定してください。"
-        : "上の情報を残したまま判断できます。";
-    context.openDialog(`${intent} dialog`, message);
+        ? localized(context, {
+            ja: "この操作は取り消せません。上の対象情報を確認してから確定してください。",
+            en: "This action cannot be undone. Review the target information before confirming.",
+          })
+        : localized(context, {
+            ja: "上の情報を残したまま判断できます。",
+            en: "You can decide while keeping the information above visible.",
+          });
+    context.openDialog(
+      `${intent} ${localized(context, { ja: "dialog", en: "dialog" })}`,
+      message,
+    );
   });
   stack.append(open);
   container.append(stack);
@@ -1365,7 +1559,15 @@ export function renderDeveloperDemo(
   const draw = (): void => {
     createInfoText(
       host,
-      { value: "同じText component", editable, editor: "text", state: "clean" },
+      {
+        value: localized(context, {
+          ja: "同じText component",
+          en: "The same Text component",
+        }),
+        editable,
+        editor: "text",
+        state: "clean",
+      },
       context,
     );
   };

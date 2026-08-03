@@ -20,21 +20,18 @@ const ui = COMPONENT_UI_COPY[locale];
 const source = componentSource(id);
 const sourceRecipe = entry.source;
 const localePrefix = locale === "en" ? "en/" : "";
-const englishPropertyDefaults: Partial<Record<string, string>> = {
-  ...(id === "text" ? { value: "Tokyo office" } : {}),
-  ...(id === "boolean-text" ? { label: "Enable automatic save" } : {}),
-  ...(id === "status-icon" ? { label: "Synced" } : {}),
-};
-const displayDefault = (key: string, value: unknown) =>
-  locale === "en" ? (englishPropertyDefaults[key] ?? value) : value;
+const displayDefault = (property: (typeof entry.properties)[number]) =>
+  locale === "en" ? property.defaultEn : property.defaultJa;
 const contract = JSON.stringify(
   {
     component: entry.displayName,
     id: entry.id,
-    props: Object.fromEntries(entry.properties.map((property) => [
-      property.key,
-      displayDefault(property.key, property.default),
-    ])),
+    props: Object.fromEntries(
+      entry.properties.map((property) => [
+        property.key,
+        displayDefault(property),
+      ]),
+    ),
     plane: {
       axis: sourceRecipe.axis,
       options: sourceRecipe.planeOptions,
@@ -55,7 +52,11 @@ const contract = JSON.stringify(
 
 <div class="component-doc">
   <p class="eyebrow">
-    {locale === "ja" ? `${entry.displayNameJa} · ${copy.category}` : copy.category}
+    {
+      locale === "ja"
+        ? `${entry.displayNameJa} · ${copy.category}`
+        : copy.category
+    }
   </p>
   <p class="lede">{copy.summary}</p>
 
@@ -69,7 +70,11 @@ const contract = JSON.stringify(
 
   <h2>{ui.contract}</h2>
   <p>{copy.philosophy}</p>
-  <Code code={contract} lang="json" title={`${entry.page[locale].title} ${ui.contract}`} />
+  <Code
+    code={contract}
+    lang="json"
+    title={`${entry.page[locale].title} ${ui.contract}`}
+  />
 
   <div class="guidance-grid">
     <section>
@@ -97,21 +102,42 @@ const contract = JSON.stringify(
   <h2>{ui.properties}</h2>
   <div class="property-table">
     <table>
-              <caption>{ui.propertiesCaption(entry.displayName)}</caption>
+      <caption>{ui.propertiesCaption(entry.displayName)}</caption>
       <thead>
-        <tr><th scope="col">{ui.key}</th><th scope="col">{ui.type}</th><th scope="col">{ui.defaultValue}</th><th scope="col">{ui.values}</th></tr>
+        <tr
+          ><th scope="col">{ui.key}</th><th scope="col">{ui.type}</th><th
+            scope="col">{ui.defaultValue}</th
+          ><th scope="col">{ui.values}</th></tr
+        >
       </thead>
       <tbody>
         {
-          entry.properties.length ? entry.properties.map((property) => (
+          entry.properties.length ? (
+            entry.properties.map((property) => (
+              <tr>
+                <th scope="row">
+                  <>
+                    <code>{property.key}</code>
+                    <small>
+                      {locale === "ja" ? property.labelJa : property.labelEn}
+                    </small>
+                  </>
+                </th>
+                <td>
+                  <code>{property.type}</code>
+                </td>
+                <td>
+                  <code>{String(displayDefault(property))}</code>
+                </td>
+                <td>
+                  {property.values.length ? property.values.join(" · ") : "—"}
+                </td>
+              </tr>
+            ))
+          ) : (
             <tr>
-              <th scope="row"><code>{property.key}</code><small>{locale === "ja" ? property.labelJa : property.labelEn}</small></th>
-              <td><code>{property.type}</code></td>
-              <td><code>{String(displayDefault(property.key, property.default))}</code></td>
-              <td>{property.values.length ? property.values.join(" · ") : "—"}</td>
+              <td colspan="4">{ui.noProps}</td>
             </tr>
-          )) : (
-            <tr><td colspan="4">{ui.noProps}</td></tr>
           )
         }
       </tbody>

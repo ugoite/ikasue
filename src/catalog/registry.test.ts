@@ -105,6 +105,9 @@ describe("component registry completeness", () => {
         expect(property.labelJa.length).toBeGreaterThan(0);
         expect(property.labelEn.length).toBeGreaterThan(0);
         expect(property.label).toBe(property.labelJa);
+        expect(property.defaultJa).toBeDefined();
+        expect(property.defaultEn).toBeDefined();
+        expect(property.default).toBe(property.defaultJa);
         expect(property.labelJa).toBe(copyJa.propertyLabels[property.key]);
         expect(property.labelEn).toBe(copyEn.propertyLabels[property.key]);
       }
