@@ -38,6 +38,7 @@ import type {
   CatalogProperty,
   CatalogPropertyType,
   CatalogPropertyValue,
+  CatalogLocale,
 } from "./catalog/types";
 import type {
   PlaneAxis,
@@ -68,6 +69,7 @@ export type {
   CatalogProperty,
   CatalogPropertyType,
   CatalogPropertyValue,
+  CatalogLocale,
   PlaneAxis,
   PlaneChild,
   PlaneChildInput,
