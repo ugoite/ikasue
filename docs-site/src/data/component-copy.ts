@@ -169,7 +169,7 @@ export const COMPONENT_COPY = {
       useWhen: "form、説明、作業列など、DOM順が縦の読み順になるとき。",
       avoidWhen: "横方向の比較や、意味のないwrapperを増やすためには使わない。",
       implementation:
-        "`vertical(children, { fit, gap, available })`で`PlaneSpec`を作り、`resolvePlane`のoffset、size、overflowを描画へ反映する。",
+        "`vertical(children, { fit, gap, available })`で`PlaneSpec`を作り、各childの`basis`とboundedな`available`を指定する。`resolvePlane`のoffset、size、line、overflowを描画へ反映する。",
       keyboard:
         "Tabは縦のDOM順に進める。矢印キーを子へ勝手に割り当てず、子componentのwidget契約を保つ。",
       accessibility:
@@ -177,7 +177,13 @@ export const COMPONENT_COPY = {
       goodFor: "縦並びのform、説明、作業列",
       avoidFor: "横方向の関連項目、個別componentの選択状態の所有",
       interaction: "子の順序を保ち、狭い高さでは指定された方針で適応する。",
-      propertyLabels: { fit: "適応", gap: "間隔", items: "項目数" },
+      propertyLabels: {
+        fit: "適応",
+        gap: "間隔",
+        items: "項目数",
+        basis: "要素サイズ",
+        available: "利用可能範囲",
+      },
     },
     horizontal: {
       category: "配置",
@@ -188,7 +194,7 @@ export const COMPONENT_COPY = {
       useWhen: "toolbar、関連action、短い比較項目を横方向に並べるとき。",
       avoidWhen: "縦の読み順を無理に横へ押し込むとき。",
       implementation:
-        "`horizontal(children, { fit, gap, available })`を作り、`resolvePlane`が返すline、offset、overflowを使って配置する。",
+        "`horizontal(children, { fit, gap, available })`を作り、各childの`basis`とboundedな`available`を指定する。`resolvePlane`が返すline、offset、size、overflowを使って配置する。",
       keyboard:
         "Tab順は意味のあるDOM順を保つ。矢印キーはChoiceGroupやDataTableなど、所有するwidgetだけが使う。",
       accessibility:
@@ -196,7 +202,13 @@ export const COMPONENT_COPY = {
       goodFor: "toolbar、関連action、短い比較項目",
       avoidFor: "長い文章、縦のform、overflowを隠すための横配置",
       interaction: "子の順序を保ち、幅が足りないときは契約した方針で適応する。",
-      propertyLabels: { fit: "適応", gap: "間隔", items: "項目数" },
+      propertyLabels: {
+        fit: "適応",
+        gap: "間隔",
+        items: "項目数",
+        basis: "要素サイズ",
+        available: "利用可能範囲",
+      },
     },
     "icon-action": {
       category: "アクション",
@@ -304,7 +316,7 @@ export const COMPONENT_COPY = {
       useWhen: "業務データの比較、copy/paste、inline editが必要なとき。",
       avoidWhen: "単純な二列の説明や、layout目的で表を使いたいとき。",
       implementation:
-        "行と列を`horizontal` planeの子として扱い、選択cell、行列peer、変更状態を別々の状態として描画する。clipboard失敗時も選択を残す。",
+        "行と列を`horizontal` planeの子として扱い、DataTableがcellの初期値、現在値、statusを所有する。選択やfocusはstatusを変えず、commitされた差分だけを描画する。clipboard失敗時も選択を残す。",
       keyboard:
         "矢印キーでcellを移動し、Home/Endでaxisの端へ移る。Ctrl/Cmd+C/V、Enter、F2はtable contractに従う。",
       accessibility:
@@ -527,7 +539,7 @@ export const COMPONENT_COPY = {
       avoidWhen:
         "Horizontal comparison or another decorative wrapper is the real need.",
       implementation:
-        "Create `PlaneSpec` with `vertical(children, { fit, gap, available })`, then render the `offset`, `size`, and `overflow` returned by `resolvePlane`.",
+        "Create `PlaneSpec` with `vertical(children, { fit, gap, available })`, declare each child `basis` and bounded `available` extent, then render `offset`, `size`, `line`, and `overflow` from `resolvePlane`.",
       keyboard:
         "Tab follows vertical DOM order. Do not assign arrow keys to children unless their own widget contract owns them.",
       accessibility:
@@ -536,7 +548,13 @@ export const COMPONENT_COPY = {
       avoidFor: "Horizontal relationships and owning child selection state",
       interaction:
         "Preserve child order and adapt a tight height according to the declared policy.",
-      propertyLabels: { fit: "Fit", gap: "Gap", items: "Items" },
+      propertyLabels: {
+        fit: "Fit",
+        gap: "Gap",
+        items: "Items",
+        basis: "Item basis",
+        available: "Available extent",
+      },
     },
     horizontal: {
       category: "Layout",
@@ -548,7 +566,7 @@ export const COMPONENT_COPY = {
         "A toolbar, related action set, or short comparison belongs on one horizontal axis.",
       avoidWhen: "Vertical reading order is being forced into a row.",
       implementation:
-        "Create `horizontal(children, { fit, gap, available })` and use `resolvePlane` output for line, offset, and overflow.",
+        "Create `horizontal(children, { fit, gap, available })`, declare each child `basis` and bounded `available` extent, and use `resolvePlane` output for line, offset, size, and overflow.",
       keyboard:
         "Keep meaningful DOM order. Arrow keys belong to widgets such as ChoiceGroup or DataTable, not to layout by default.",
       accessibility:
@@ -557,7 +575,13 @@ export const COMPONENT_COPY = {
       avoidFor: "Long prose, vertical forms, and hiding overflow behind a row",
       interaction:
         "Preserve order and adapt a tight width according to the declared policy.",
-      propertyLabels: { fit: "Fit", gap: "Gap", items: "Items" },
+      propertyLabels: {
+        fit: "Fit",
+        gap: "Gap",
+        items: "Items",
+        basis: "Item basis",
+        available: "Available extent",
+      },
     },
     "icon-action": {
       category: "Actions",
@@ -679,7 +703,7 @@ export const COMPONENT_COPY = {
       avoidWhen:
         "A simple two-column explanation or a decorative layout table is enough.",
       implementation:
-        "Treat rows and columns as horizontal plane children and render selected cell, row/column peers, and change state separately. Keep selection usable when clipboard permission fails.",
+        "Treat rows and columns as horizontal plane children. DataTable owns each cell's initial value, current value, and status; focus and selection do not change status, and only committed differences render as modified. Keep selection usable when clipboard permission fails.",
       keyboard:
         "Arrow keys move by cell; Home/End reach axis extremes. Ctrl/Cmd+C/V, Enter, and F2 follow the table contract.",
       accessibility:

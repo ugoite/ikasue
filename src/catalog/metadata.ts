@@ -143,12 +143,14 @@ export const CATALOG_COMPONENTS = [
     name: "Vertical",
     ja: "縦平面",
     summary:
-      "順序付きの子要素を縦方向の一枚の平面へ置く。収まらないときはelastic、wrap、scrollから選んで適応する。",
+      "順序付きの子要素を縦方向のboundedな平面へ置く。要素サイズと高さを変え、elastic、wrap、scrollの差を確かめられる。",
     demo: "plane",
     props: [
       p("fit", "適応", "select", "elastic", ["elastic", "wrap", "scroll"]),
       p("gap", "間隔", "select", "md", ["none", "sm", "md", "lg"]),
       p("items", "項目数", "select", "4", ["3", "4", "6"]),
+      p("basis", "要素サイズ", "select", "2", ["1", "2", "3"]),
+      p("available", "利用可能範囲", "select", "10", ["6", "8", "10"]),
     ],
   },
   {
@@ -157,12 +159,14 @@ export const CATALOG_COMPONENTS = [
     name: "Horizontal",
     ja: "横平面",
     summary:
-      "順序付きの子要素を横方向の一枚の平面へ置く。収まらないときは同じ適応方針で縮小、折返し、scrollを選べる。",
+      "順序付きの子要素を横方向のboundedな平面へ置く。要素サイズと幅を変え、elastic、wrap、scrollの差を確かめられる。",
     demo: "plane",
     props: [
       p("fit", "適応", "select", "elastic", ["elastic", "wrap", "scroll"]),
       p("gap", "間隔", "select", "sm", ["none", "sm", "md", "lg"]),
       p("items", "項目数", "select", "4", ["3", "4", "6"]),
+      p("basis", "要素サイズ", "select", "2", ["1", "2", "3"]),
+      p("available", "利用可能範囲", "select", "10", ["6", "8", "10"]),
     ],
   },
   {

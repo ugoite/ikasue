@@ -711,38 +711,42 @@
 
   .ikasue-root .plane-demo {
     display: flex;
-    gap: 10px;
-    min-height: 220px;
-    padding: 16px 0;
+    --plane-unit: 28px;
+    box-sizing: border-box;
+    gap: calc(var(--plane-gap, 0) * var(--plane-unit));
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
     border-top: var(--rule) solid var(--line);
     border-bottom: var(--rule) solid var(--line);
     overflow: auto;
+    align-content: flex-start;
   }
 
   .ikasue-root .plane-demo[data-axis="vertical"] {
     flex-direction: column;
+    height: calc(var(--plane-available, 10) * var(--plane-unit));
+    width: 100%;
   }
 
   .ikasue-root .plane-demo[data-axis="horizontal"] {
     flex-direction: row;
+    height: auto;
+    width: min(calc(var(--plane-available, 10) * var(--plane-unit)), 100%);
   }
 
   .ikasue-root .plane-demo[data-fit="wrap"] {
     flex-wrap: wrap;
-    align-content: flex-start;
   }
 
+  .ikasue-root .plane-demo[data-fit="elastic"],
   .ikasue-root .plane-demo[data-fit="scroll"] {
     flex-wrap: nowrap;
   }
 
-  .ikasue-root .plane-demo[data-fit="wrap"] .plane-item,
-  .ikasue-root .plane-demo[data-fit="scroll"] .plane-item {
-    flex: 0 0 120px;
-  }
-
   .ikasue-root .plane-item {
-    flex: var(--plane-size, 1) 1 0;
+    box-sizing: border-box;
+    flex: 0 0 calc(var(--plane-size, 1) * var(--plane-unit));
     min-width: 0;
     min-height: 42px;
     display: grid;
@@ -755,7 +759,16 @@
   }
 
   .ikasue-root .plane-demo[data-axis="vertical"] .plane-item {
+    width: 100%;
     min-height: 0;
+  }
+
+  .ikasue-root .plane-demo[data-axis="vertical"][data-fit="wrap"] .plane-item {
+    width: 136px;
+  }
+
+  .ikasue-root .plane-demo[data-axis="horizontal"] .plane-item {
+    min-height: 42px;
   }
 
   .ikasue-root .plane-note {
@@ -1084,6 +1097,26 @@
   }
   .ikasue-root .data-table td[data-state="error"] {
     background: var(--error-fill);
+  }
+  .ikasue-root .data-table td:focus-within {
+    outline: 2px solid var(--ink);
+    outline-offset: -3px;
+  }
+  .ikasue-root .data-table td input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+  }
+  .ikasue-root .data-table td input:focus,
+  .ikasue-root .data-table td input:focus-visible {
+    outline: 0;
   }
 
   .ikasue-root .progress-region {
