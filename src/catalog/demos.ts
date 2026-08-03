@@ -386,9 +386,9 @@ function renderPlane(
   const fitProperty = component.properties.find(
     (property) => property.key === "fit",
   );
-  const fitOptions = ["elastic", "wrap", "scroll"].filter((value) =>
+  const fitOptions = ["elastic", "wrap"].filter((value) =>
     fitProperty?.values.includes(value),
-  ) as Array<"elastic" | "wrap" | "scroll">;
+  ) as Array<"elastic" | "wrap">;
   const fitValue = props.fit;
   let activeFit = isPlaneFit(fitValue) ? fitValue : "elastic";
   if (fitOptions.length && !fitOptions.includes(activeFit))
@@ -406,6 +406,7 @@ function renderPlane(
   const count = Number.isFinite(countValue)
     ? Math.max(0, Math.floor(countValue))
     : 4;
+  let focusId: string | undefined = count > 0 ? "item-1" : undefined;
   const stage = element(context.document, "div", "plane-demo");
   stage.id = `plane-${componentId}-stage`;
   stage.setAttribute("role", "region");
@@ -480,7 +481,7 @@ function renderPlane(
     stage.setAttribute("aria-describedby", description.id);
 
     const fitHelp = element(context.document, "dl", "plane-fit-help");
-    for (const option of ["elastic", "wrap", "scroll"] as const) {
+    for (const option of ["elastic", "wrap"] as const) {
       const term = element(context.document, "dt");
       term.textContent = option;
       const detail = element(context.document, "dd");
@@ -496,6 +497,14 @@ function renderPlane(
   result.id = `${stage.id}-result`;
   controls.append(result);
 
+  const viewport = element(context.document, "div", "plane-viewport");
+  const navigation = element(context.document, "nav", "plane-navigation");
+  navigation.setAttribute(
+    "aria-label",
+    context.locale === "en" ? "Plane region navigation" : "plane領域navigation",
+  );
+  stage.append(viewport, navigation);
+
   const draw = (): void => {
     const children = Array.from({ length: count }, (_, index) => ({
       id: `item-${String(index + 1)}`,
@@ -508,13 +517,18 @@ function renderPlane(
             fit: activeFit,
             gap: gapValues[String(props.gap ?? "md")] ?? 2,
             available,
+            ...(focusId === undefined ? {} : { focus: focusId }),
+            navigation: true,
           })
         : vertical(children, {
             fit: activeFit,
             gap: gapValues[String(props.gap ?? "md")] ?? 2,
             available,
+            ...(focusId === undefined ? {} : { focus: focusId }),
+            navigation: true,
           });
     const resolved = resolvePlane(plane);
+    focusId = resolved.focus;
     stage.dataset.axis = resolved.axis;
     stage.dataset.fit = resolved.fit;
     stage.dataset.overflow = String(resolved.overflow);
@@ -527,16 +541,20 @@ function renderPlane(
     );
     stage.style.setProperty("--plane-gap", String(resolved.gap));
     stage.style.setProperty("--plane-lines", String(resolved.lines));
-    stage.replaceChildren();
+    viewport.replaceChildren();
+    navigation.replaceChildren();
     const lines = Array.from({ length: resolved.lines }, (_, lineIndex) => {
       const line = element(context.document, "div", "plane-line");
       line.dataset.line = String(lineIndex);
       return line;
     });
     for (const child of resolved.children) {
+      if (!child.visible) continue;
       const item = element(context.document, "div", "plane-item");
       item.dataset.line = String(child.line);
       item.dataset.offset = String(child.offset);
+      item.dataset.state = child.state;
+      item.dataset.focused = String(child.focused);
       item.style.setProperty("--plane-size", String(child.size));
       item.style.setProperty("--plane-offset", String(child.offset));
       item.style.setProperty("--plane-line", String(child.line));
@@ -548,6 +566,7 @@ function renderPlane(
           child.size,
           child.offset,
           child.line,
+          child.state,
           context.locale === "en",
         ),
       );
@@ -559,12 +578,90 @@ function renderPlane(
         child.size,
         child.offset,
         child.line,
+        child.state,
         context.locale === "en",
       );
       item.append(label, details);
       lines[child.line]?.append(item);
     }
-    stage.append(...lines);
+    viewport.append(...lines);
+
+    const previous = iconButton(
+      context,
+      axis === "horizontal" ? "left" : "up",
+      context.locale === "en" ? "Previous region" : "前の領域",
+    );
+    previous.classList.add("plane-navigation-arrow");
+    previous.disabled = !resolved.canPrevious;
+    addListener(context, previous, "click", () => {
+      if (!resolved.previous) return;
+      focusId = resolved.previous;
+      draw();
+      navigation
+        .querySelector<HTMLButtonElement>(
+          `[data-focus-id="${resolved.previous}"]`,
+        )
+        ?.focus();
+    });
+
+    const selections = element(
+      context.document,
+      "div",
+      "plane-navigation-items",
+    );
+    selections.setAttribute("role", "group");
+    selections.setAttribute(
+      "aria-label",
+      context.locale === "en" ? "Plane regions" : "plane領域選択",
+    );
+    for (const child of resolved.children) {
+      const selection = textAction(
+        context,
+        `${planeItemNumber(child.index, context.locale === "en")}${
+          child.collapsed
+            ? context.locale === "en"
+              ? " · collapsed"
+              : " ・collapsed"
+            : ""
+        }`,
+      );
+      selection.classList.add("plane-navigation-item");
+      selection.dataset.focusId = child.id;
+      selection.dataset.state = child.state;
+      selection.setAttribute("aria-pressed", String(child.focused));
+      selection.setAttribute(
+        "aria-label",
+        context.locale === "en"
+          ? `${planeItemNumber(child.index, true)}${child.collapsed ? " (collapsed)" : ""}`
+          : `${planeItemNumber(child.index, false)}${child.collapsed ? "（collapsed）" : ""}`,
+      );
+      addListener(context, selection, "click", () => {
+        focusId = child.id;
+        draw();
+        navigation
+          .querySelector<HTMLButtonElement>(`[data-focus-id="${child.id}"]`)
+          ?.focus();
+      });
+      selections.append(selection);
+    }
+
+    const next = iconButton(
+      context,
+      axis === "horizontal" ? "right" : "down",
+      context.locale === "en" ? "Next region" : "次の領域",
+    );
+    next.classList.add("plane-navigation-arrow");
+    next.disabled = !resolved.canNext;
+    addListener(context, next, "click", () => {
+      if (!resolved.next) return;
+      focusId = resolved.next;
+      draw();
+      navigation
+        .querySelector<HTMLButtonElement>(`[data-focus-id="${resolved.next}"]`)
+        ?.focus();
+    });
+    navigation.append(previous, selections, next);
+
     if (fitOptions.length) {
       const description = controls.querySelector<HTMLElement>(
         ".plane-fit-description",
@@ -590,34 +687,30 @@ function renderPlane(
 
 function isPlaneFit(
   value: CatalogPropertyValue | undefined,
-): value is "elastic" | "wrap" | "scroll" {
-  return value === "elastic" || value === "wrap" || value === "scroll";
+): value is "elastic" | "wrap" {
+  return value === "elastic" || value === "wrap";
 }
 
 function planeFitDescriptions(
   english: boolean,
-): Record<"elastic" | "wrap" | "scroll", string> {
+): Record<"elastic" | "wrap", string> {
   return english
     ? {
         elastic:
-          "Elastic shrinks resolved sizes onto one line without choosing a scroll container.",
+          "Elastic keeps one plane and gives the focused region priority; constrained siblings collapse for navigation.",
         wrap: "Wrap keeps resolved sizes and adds lines: vertical adds columns; horizontal adds rows.",
-        scroll:
-          "Scroll keeps resolved sizes and scrolls only along the selected axis.",
       }
     : {
         elastic:
-          "elasticはresolverのsizeで一行に縮み、scrollを暗黙には選びません。",
+          "elasticは一枚のplaneを保ち、focus中の領域へ面積を譲ります。狭いときは他の領域をnavigation用にcollapseします。",
         wrap: "wrapはresolverのsizeを保ち、verticalは横へ、horizontalは下へlineを増やします。",
-        scroll:
-          "scrollはresolverのsizeを保ち、選択したaxis方向だけを明示的にscrollします。",
       };
 }
 
 function syncFitTabs(
   tablist: HTMLElement | null,
-  fit: "elastic" | "wrap" | "scroll",
-  options: readonly ("elastic" | "wrap" | "scroll")[],
+  fit: "elastic" | "wrap",
+  options: readonly ("elastic" | "wrap")[],
 ): void {
   if (!tablist) return;
   for (const tab of tablist.querySelectorAll<HTMLButtonElement>("[role=tab]")) {
@@ -643,11 +736,12 @@ function planeItemLabel(
   size: number,
   offset: number,
   line: number,
+  state: "focused" | "visible" | "collapsed",
   english: boolean,
 ): string {
   return english
-    ? `${planeItemNumber(index, true)}; size ${formatPlaneNumber(size)}; offset ${formatPlaneNumber(offset)}; line ${String(line + 1)}`
-    : `${planeItemNumber(index, false)}、縮小後size ${formatPlaneNumber(size)}、offset ${formatPlaneNumber(offset)}、line ${String(line + 1)}`;
+    ? `${planeItemNumber(index, true)}; state ${state}; size ${formatPlaneNumber(size)}; offset ${formatPlaneNumber(offset)}; line ${String(line + 1)}`
+    : `${planeItemNumber(index, false)}、state=${state}、縮小後size ${formatPlaneNumber(size)}、offset ${formatPlaneNumber(offset)}、line ${String(line + 1)}`;
 }
 
 function planeResultText(
@@ -656,9 +750,12 @@ function planeResultText(
   count: number,
   english: boolean,
 ): string {
+  const states = resolved.children
+    .map((child) => `${child.id}:${child.state}`)
+    .join(", ");
   return english
-    ? `Resolved: axis ${resolved.axis}; fit ${resolved.fit}; ${String(count)} items; requested basis ${formatPlaneNumber(requestedBasis)}; available ${formatPlaneNumber(resolved.available ?? 0)}; lines ${String(resolved.lines)}; extent ${formatPlaneNumber(resolved.extent)}; overflow ${String(resolved.overflow)}.`
-    : `resolved: axis=${resolved.axis} / fit=${resolved.fit} / items=${String(count)} / requested basis=${formatPlaneNumber(requestedBasis)} / available=${formatPlaneNumber(resolved.available ?? 0)} / lines=${String(resolved.lines)} / extent=${formatPlaneNumber(resolved.extent)} / overflow=${String(resolved.overflow)}`;
+    ? `Resolved: axis ${resolved.axis}; fit ${resolved.fit}; focus ${resolved.focus ?? "none"}; navigation ${String(resolved.navigation)}; ${String(count)} items; requested basis ${formatPlaneNumber(requestedBasis)}; available ${formatPlaneNumber(resolved.available ?? 0)}; lines ${String(resolved.lines)}; extent ${formatPlaneNumber(resolved.extent)}; overflow ${String(resolved.overflow)}; states ${states}.`
+    : `resolved: axis=${resolved.axis} / fit=${resolved.fit} / focus=${resolved.focus ?? "none"} / navigation=${String(resolved.navigation)} / items=${String(count)} / requested basis=${formatPlaneNumber(requestedBasis)} / available=${formatPlaneNumber(resolved.available ?? 0)} / lines=${String(resolved.lines)} / extent=${formatPlaneNumber(resolved.extent)} / overflow=${String(resolved.overflow)} / states=${states}`;
 }
 function renderIconAction(
   container: HTMLElement,

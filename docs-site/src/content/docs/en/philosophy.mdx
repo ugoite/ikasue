@@ -13,17 +13,15 @@ This is not an anti-decoration rule. It preserves the relationship between an ac
 
 ### The plane is a shared work surface
 
-Instead of stacking components on a Z-axis, adjust order and area inside one plane. Developers declare axis, fit, gap, and children in a `PlaneSpec`; `resolvePlane` returns each child’s offset, size, line, and overflow.
+Instead of stacking components on a Z-axis, adjust order and area inside one plane. Developers declare axis, fit, gap, focus, navigation, and children in a `PlaneSpec`; `resolvePlane` returns each child’s offset, size, line, state, and navigation bounds.
 
 ### One axis at a time
 
-`vertical` and `horizontal` are small primitives for declaring child order. Preserve that order while content fits, then adapt only through the declared `elastic`, `wrap`, or `scroll` policy. A layout owner does not silently take ownership of child content or focus.
+`vertical` and `horizontal` are small primitives for declaring child order. Preserve that order while content fits, then adapt through the declared `elastic`, `wrap`, focus, and navigation contract. When a plane is tight, keep the focused child readable and expose the remaining children as collapsed state in the owning rail. A layout owner resolves plane focus/navigation without taking ownership of child content.
 
 ### Make fit explicit in the demo
 
-The component-page fit tabs explicitly choose `elastic`, `wrap`, or `scroll`. `elastic` keeps one line using the sizes returned by the resolver; `wrap` preserves those sizes and adds lines—horizontal lines for a vertical plane and downward lines for a horizontal plane. Only `scroll` enables scrolling along the selected axis. Each item exposes its resolved `size`, `offset`, and `line`, while the resolved result shows the effect of changing items, basis, available extent, and gap.
-
-Scroll is therefore not a hidden fallback for content that happened not to fit. It is an explicit part of the plane contract selected by the developer or user through the fit tabs.
+The component-page fit tabs explicitly choose `elastic` or `wrap`. `elastic` gives the focused child priority and, when the request is too large, collapses siblings while keeping one plane; `wrap` preserves child bases and adds lines—columns for a vertical plane and rows for a horizontal plane. The owning rail provides bounded previous/next buttons and region selection, and each item exposes its resolved `size`, `offset`, `line`, and state. The resolved result shows the effect of changing items, basis, available extent, gap, and focus.
 
 ### Information first, editing second
 

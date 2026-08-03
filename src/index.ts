@@ -74,6 +74,7 @@ import type {
   PlaneSpec,
   ResolvedPlane,
   ResolvedPlaneChild,
+  ResolvedPlaneChildState,
 } from "./plane";
 
 export const PACKAGE_NAME = "@ugoite/ikasue";
@@ -113,6 +114,7 @@ export type {
   PlaneSpec,
   ResolvedPlane,
   ResolvedPlaneChild,
+  ResolvedPlaneChildState,
 };
 
 export {

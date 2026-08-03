@@ -58,14 +58,66 @@ describe("plane model", () => {
     expect(resolved.lines).toBe(2);
   });
 
-  it("keeps intrinsic scroll children and reports overflow", () => {
+  it("keeps a focused child readable and collapses the rest when constrained", () => {
     const resolved = resolvePlane(
-      vertical(["a", "b", "c"], { fit: "scroll", available: 2 }),
+      vertical(["one", "two", "three", "four", "five"], {
+        available: 2,
+        focus: "three",
+        navigation: true,
+      }),
     );
 
-    expect(resolved.children.map((child) => child.size)).toEqual([1, 1, 1]);
-    expect(resolved.extent).toBe(3);
-    expect(resolved.overflow).toBe(true);
+    expect(resolved.focus).toBe("three");
+    expect(resolved.focusIndex).toBe(2);
+    expect(resolved.children.map((child) => child.id)).toEqual([
+      "one",
+      "two",
+      "three",
+      "four",
+      "five",
+    ]);
+    expect(resolved.children.map((child) => child.state)).toEqual([
+      "collapsed",
+      "collapsed",
+      "focused",
+      "collapsed",
+      "collapsed",
+    ]);
+    expect(resolved.children[2]).toMatchObject({
+      size: 2,
+      offset: 0,
+      focused: true,
+      visible: true,
+      collapsed: false,
+    });
+    expect(resolved.children.filter((child) => child.collapsed)).toHaveLength(
+      4,
+    );
+    expect(resolved.overflow).toBe(false);
+    expect(resolved.canPrevious).toBe(true);
+    expect(resolved.canNext).toBe(true);
+    expect(resolved.previous).toBe("two");
+    expect(resolved.next).toBe("four");
+
+    const first = resolvePlane(
+      vertical(["one", "two", "three"], {
+        available: 2,
+        focus: "one",
+        navigation: true,
+      }),
+    );
+    expect(first.canPrevious).toBe(false);
+    expect(first.canNext).toBe(true);
+
+    const last = resolvePlane(
+      vertical(["one", "two", "three"], {
+        available: 2,
+        focus: "three",
+        navigation: true,
+      }),
+    );
+    expect(last.canPrevious).toBe(true);
+    expect(last.canNext).toBe(false);
   });
 
   it("uses safe defaults and drops invalid child entries", () => {
@@ -74,6 +126,8 @@ describe("plane model", () => {
         axis: "diagonal" as "vertical",
         fit: "focus" as "elastic",
         gap: Number.NaN,
+        focus: "missing",
+        navigation: "yes" as never,
         children: [
           "",
           " ok ",
@@ -85,6 +139,7 @@ describe("plane model", () => {
       axis: "vertical",
       fit: "elastic",
       gap: 0,
+      navigation: false,
       children: [{ id: "ok" }, { id: "bounded", basis: 2, min: 2 }],
     });
   });
