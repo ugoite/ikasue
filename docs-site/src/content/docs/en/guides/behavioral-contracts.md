@@ -15,7 +15,7 @@ These are component API contracts, not visual suggestions. A screen that looks s
 
 ## Plane and placement
 
-`vertical` and `horizontal` turn ordered children into a `PlaneSpec`; `resolvePlane` returns offsets, sizes, lines, child state, and navigation bounds for the available extent. `elastic` gives the focused child priority and collapses siblings when the request is too large; `wrap` preserves child sizes and adds lines.
+`vertical` and `horizontal` turn ordered children into a `PlaneSpec`; `resolvePlane` returns offsets, sizes, lines, child state, and navigation bounds for the available extent. `elastic` gives the focused child priority and collapses siblings when the request is too large; `wrap` preserves child sizes and adds lines, but a constrained `navigation: true` plane keeps only the focused child and switches movement to its owning rail arrows and region selection. The plane itself never becomes a scroll container.
 
 The layout owner does not own child content or widget state. `Rule` names a boundary, `ProgressRegion` retains target information, and `BottomDialog` adds a row from the bottom edge.
 

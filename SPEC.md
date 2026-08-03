@@ -37,7 +37,7 @@ The package exposes a small framework-neutral plane model:
 - `resolvePlane(input, available?)` normalizes a plane and returns deterministic child positions.
 - `PlaneChild` contains an `id`, optional preferred `basis`, and optional elastic `min`.
 - `PlaneSpec` contains `axis`, `fit`, `gap`, optional `available` and `focus`, a `navigation` flag, and ordered `children`.
-- `fit` is `elastic` or `wrap`. Resolved output reports `offset`, `size`, `line`, child `state` (`focused`, `visible`, or `collapsed`), navigation bounds, `extent`, and `overflow`.
+- `fit` is `elastic` or `wrap`. Resolved output reports `offset`, `size`, `line`, child `state` (`focused`, `visible`, or `collapsed`), navigation bounds, `extent`, and `overflow`. When a navigable plane cannot fit its requested extent, both policies keep the focused child readable and collapse the rest; the owning rail provides previous/next and direct region selection instead of plane scrolling.
 
 The developer declares order, axis, and adaptation policy. The plane owner resolves available space. Child components do not need a parent reference or a public layout event to participate.
 

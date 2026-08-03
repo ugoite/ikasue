@@ -15,7 +15,7 @@ description: The cross-component rules that define the ikasue runtime.
 
 ## Planeと配置
 
-`vertical`と`horizontal`はordered childrenを`PlaneSpec`にし、`resolvePlane`がavailable extentに対するoffset、size、line、state、navigation boundsを返します。`elastic`はfocus中のchildへ面積を優先し、狭いときは他のchildをcollapsedにします。`wrap`はchildのsizeを保ってlineを増やします。
+`vertical`と`horizontal`はordered childrenを`PlaneSpec`にし、`resolvePlane`がavailable extentに対するoffset、size、line、state、navigation boundsを返します。`elastic`はfocus中のchildへ面積を優先し、狭いときは他のchildをcollapsedにします。`wrap`はchildのsizeを保ってlineを増やしますが、`navigation: true`で収まらない場合はfocus中のchildだけを残し、owning railの矢印とregion selectionへ切り替えます。plane自身をscrollさせません。
 
 layout ownerは子の内容やwidget stateを所有しません。`Rule`は境界を示し、`ProgressRegion`は対象情報を残し、`BottomDialog`は下端からrowを追加します。
 
