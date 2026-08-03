@@ -11,13 +11,22 @@ import {
   getTableCell,
   type TableState,
 } from "./table-state";
+import { findComponent } from "./metadata";
 import { horizontal, resolvePlane, vertical } from "../plane";
-import type { CatalogPageMetadata, CatalogProps } from "./types";
+import type {
+  CatalogLocale,
+  CatalogPageMetadata,
+  CatalogProps,
+  CatalogPropertyValue,
+} from "./types";
 
 export interface DemoContext {
   readonly document: Document;
   readonly root: HTMLElement;
   readonly window: Window | null;
+  readonly locale?: CatalogLocale;
+  /** Updates the owning catalog property without taking over demo rendering. */
+  readonly updateProperty?: (key: string, value: CatalogPropertyValue) => void;
   readonly track: (cleanup: Cleanup) => void;
   readonly listen: (
     target: EventTarget,
@@ -116,7 +125,7 @@ export function renderDemo(
       renderStatus(container, props, context);
       break;
     case "plane":
-      renderPlane(container, component.id, props, context);
+      renderPlane(container, component, props, context);
       break;
     case "icon-action":
       renderIconAction(container, props, context);
@@ -309,12 +318,22 @@ function renderStatus(
 
 function renderPlane(
   container: HTMLElement,
-  componentId: string,
+  component: CatalogPageMetadata,
   props: CatalogProps,
   context: DemoContext,
 ): void {
+  const componentId = component.id;
   const axis = componentId === "horizontal" ? "horizontal" : "vertical";
-  const fit = String(props.fit ?? "elastic");
+  const fitProperty = component.props.find(
+    (property) => property.key === "fit",
+  );
+  const fitOptions = ["elastic", "wrap", "scroll"].filter((value) =>
+    fitProperty?.values.includes(value),
+  ) as Array<"elastic" | "wrap" | "scroll">;
+  const fitValue = props.fit;
+  let activeFit = isPlaneFit(fitValue) ? fitValue : "elastic";
+  if (fitOptions.length && !fitOptions.includes(activeFit))
+    activeFit = fitOptions[0] ?? "elastic";
   const gapValues: Record<string, number> = { none: 0, sm: 1, md: 2, lg: 3 };
   const requestedBasisValue = Number(props.basis ?? 2);
   const requestedBasis = Number.isFinite(requestedBasisValue)
@@ -328,62 +347,259 @@ function renderPlane(
   const count = Number.isFinite(countValue)
     ? Math.max(0, Math.floor(countValue))
     : 4;
-  const children = Array.from({ length: count }, (_, index) => ({
-    id: `item-${String(index + 1)}`,
-    basis: requestedBasis,
-    min: fit === "elastic" ? requestedBasis * 0.5 : requestedBasis,
-  }));
-  const plane =
-    axis === "horizontal"
-      ? horizontal(children, {
-          fit: fit as "elastic" | "wrap" | "scroll",
-          gap: gapValues[String(props.gap ?? "md")] ?? 2,
-          available,
-        })
-      : vertical(children, {
-          fit: fit as "elastic" | "wrap" | "scroll",
-          gap: gapValues[String(props.gap ?? "md")] ?? 2,
-          available,
-        });
-  const resolved = resolvePlane(plane);
   const stage = element(context.document, "div", "plane-demo");
-  stage.dataset.axis = resolved.axis;
-  stage.dataset.fit = resolved.fit;
-  stage.dataset.overflow = String(resolved.overflow);
-  stage.dataset.available = String(resolved.available ?? available);
-  stage.dataset.extent = String(resolved.extent);
-  stage.dataset.lines = String(resolved.lines);
-  stage.style.setProperty(
-    "--plane-available",
-    String(resolved.available ?? available),
+  stage.id = `plane-${componentId}-stage`;
+  stage.setAttribute("role", "region");
+  stage.setAttribute(
+    "aria-label",
+    context.locale === "en"
+      ? `${component.name} resolved plane`
+      : `${component.ja}のresolved plane`,
   );
-  stage.style.setProperty("--plane-gap", String(resolved.gap));
-  stage.style.setProperty("--plane-lines", String(resolved.lines));
-  for (const child of resolved.children) {
-    const item = element(context.document, "div", "plane-item");
-    item.dataset.line = String(child.line);
-    item.dataset.offset = String(child.offset);
-    item.style.setProperty("--plane-size", String(child.size));
-    item.style.setProperty("--plane-offset", String(child.offset));
-    item.style.setProperty("--plane-line", String(child.line));
-    item.textContent = child.id.replace("item-", "要素 ");
-    stage.append(item);
+
+  const fitDescriptions = planeFitDescriptions(context.locale === "en");
+  const controls = element(context.document, "div", "plane-controls");
+  if (fitOptions.length) {
+    const tablist = element(context.document, "div", "plane-fit-tabs");
+    tablist.setAttribute("role", "tablist");
+    tablist.setAttribute(
+      "aria-label",
+      context.locale === "en" ? "Plane fit policy" : "planeの適応方針",
+    );
+    const description = paragraph(context, "", "plane-fit-description");
+    description.id = `${stage.id}-description`;
+    const activate = (nextFit: (typeof fitOptions)[number]): void => {
+      activeFit = nextFit;
+      context.updateProperty?.("fit", nextFit);
+      stage.dataset.transition = "fit";
+      syncFitTabs(tablist, activeFit, fitOptions);
+      draw();
+      if (context.window) {
+        const settle = context.window.setTimeout(() => {
+          stage.dataset.transition = "settled";
+        }, 0);
+        context.track(() => context.window?.clearTimeout(settle));
+      }
+    };
+    for (const option of fitOptions) {
+      const tab = element(context.document, "button", "plane-fit-tab");
+      tab.type = "button";
+      tab.id = `${stage.id}-tab-${option}`;
+      tab.setAttribute("role", "tab");
+      tab.setAttribute("aria-controls", stage.id);
+      tab.textContent = option;
+      tab.dataset.fit = option;
+      addListener(context, tab, "click", () => {
+        activate(option);
+      });
+      tablist.append(tab);
+    }
+    addListener(context, tablist, "keydown", (event) => {
+      const keyboard = event as KeyboardEvent;
+      const target = keyboard.target;
+      if (!(target instanceof HTMLButtonElement)) return;
+      const index = fitOptions.indexOf(
+        target.dataset.fit as (typeof fitOptions)[number],
+      );
+      if (index < 0) return;
+      let next = index;
+      if (keyboard.key === "ArrowRight") next = (index + 1) % fitOptions.length;
+      if (keyboard.key === "ArrowLeft")
+        next = (index - 1 + fitOptions.length) % fitOptions.length;
+      if (keyboard.key === "Home") next = 0;
+      if (keyboard.key === "End") next = fitOptions.length - 1;
+      if (next === index) return;
+      keyboard.preventDefault();
+      const nextFit = fitOptions[next];
+      if (!nextFit) return;
+      activate(nextFit);
+      tablist
+        .querySelector<HTMLButtonElement>(`[data-fit="${nextFit}"]`)
+        ?.focus();
+    });
+    controls.append(tablist, description);
+    stage.setAttribute("aria-describedby", description.id);
+
+    const fitHelp = element(context.document, "dl", "plane-fit-help");
+    for (const option of ["elastic", "wrap", "scroll"] as const) {
+      const term = element(context.document, "dt");
+      term.textContent = option;
+      const detail = element(context.document, "dd");
+      detail.textContent = fitDescriptions[option];
+      fitHelp.append(term, detail);
+    }
+    controls.append(fitHelp);
   }
-  const note = paragraph(
-    context,
-    [
-      `axis=${resolved.axis}`,
-      `fit=${resolved.fit}`,
-      `items=${String(children.length)}`,
-      `requested basis=${String(requestedBasis)} units`,
-      `available extent=${String(available)} units`,
-      `resolved lines=${String(resolved.lines)}`,
-      `resolved extent=${resolved.extent.toFixed(2)} units`,
-      `overflow=${String(resolved.overflow)}`,
-    ].join(" / "),
-    "plane-note",
-  );
-  container.append(stage, note);
+
+  const result = paragraph(context, "", "plane-result");
+  result.setAttribute("role", "status");
+  result.setAttribute("aria-live", "polite");
+  result.id = `${stage.id}-result`;
+  controls.append(result);
+
+  const draw = (): void => {
+    const children = Array.from({ length: count }, (_, index) => ({
+      id: `item-${String(index + 1)}`,
+      basis: requestedBasis,
+      min: activeFit === "elastic" ? requestedBasis * 0.5 : requestedBasis,
+    }));
+    const plane =
+      axis === "horizontal"
+        ? horizontal(children, {
+            fit: activeFit,
+            gap: gapValues[String(props.gap ?? "md")] ?? 2,
+            available,
+          })
+        : vertical(children, {
+            fit: activeFit,
+            gap: gapValues[String(props.gap ?? "md")] ?? 2,
+            available,
+          });
+    const resolved = resolvePlane(plane);
+    stage.dataset.axis = resolved.axis;
+    stage.dataset.fit = resolved.fit;
+    stage.dataset.overflow = String(resolved.overflow);
+    stage.dataset.available = String(resolved.available ?? available);
+    stage.dataset.extent = String(resolved.extent);
+    stage.dataset.lines = String(resolved.lines);
+    stage.style.setProperty(
+      "--plane-available",
+      String(resolved.available ?? available),
+    );
+    stage.style.setProperty("--plane-gap", String(resolved.gap));
+    stage.style.setProperty("--plane-lines", String(resolved.lines));
+    stage.replaceChildren();
+    const lines = Array.from({ length: resolved.lines }, (_, lineIndex) => {
+      const line = element(context.document, "div", "plane-line");
+      line.dataset.line = String(lineIndex);
+      return line;
+    });
+    for (const child of resolved.children) {
+      const item = element(context.document, "div", "plane-item");
+      item.dataset.line = String(child.line);
+      item.dataset.offset = String(child.offset);
+      item.style.setProperty("--plane-size", String(child.size));
+      item.style.setProperty("--plane-offset", String(child.offset));
+      item.style.setProperty("--plane-line", String(child.line));
+      item.setAttribute("role", "group");
+      item.setAttribute(
+        "aria-label",
+        planeItemLabel(
+          child.index,
+          child.size,
+          child.offset,
+          child.line,
+          context.locale === "en",
+        ),
+      );
+      const label = element(context.document, "strong");
+      label.textContent = planeItemNumber(child.index, context.locale === "en");
+      const details = element(context.document, "small");
+      details.textContent = planeItemLabel(
+        child.index,
+        child.size,
+        child.offset,
+        child.line,
+        context.locale === "en",
+      );
+      item.append(label, details);
+      lines[child.line]?.append(item);
+    }
+    stage.append(...lines);
+    if (fitOptions.length) {
+      const description = controls.querySelector<HTMLElement>(
+        ".plane-fit-description",
+      );
+      if (description) description.textContent = fitDescriptions[resolved.fit];
+      syncFitTabs(
+        controls.querySelector<HTMLElement>("[role=tablist]"),
+        resolved.fit,
+        fitOptions,
+      );
+    }
+    result.textContent = planeResultText(
+      resolved,
+      requestedBasis,
+      children.length,
+      context.locale === "en",
+    );
+  };
+
+  container.append(controls, stage);
+  draw();
+}
+
+function isPlaneFit(
+  value: CatalogPropertyValue | undefined,
+): value is "elastic" | "wrap" | "scroll" {
+  return value === "elastic" || value === "wrap" || value === "scroll";
+}
+
+function planeFitDescriptions(
+  english: boolean,
+): Record<"elastic" | "wrap" | "scroll", string> {
+  return english
+    ? {
+        elastic:
+          "Elastic shrinks resolved sizes onto one line without choosing a scroll container.",
+        wrap: "Wrap keeps resolved sizes and adds lines: vertical adds columns; horizontal adds rows.",
+        scroll:
+          "Scroll keeps resolved sizes and scrolls only along the selected axis.",
+      }
+    : {
+        elastic:
+          "elasticはresolverのsizeで一行に縮み、scrollを暗黙には選びません。",
+        wrap: "wrapはresolverのsizeを保ち、verticalは横へ、horizontalは下へlineを増やします。",
+        scroll:
+          "scrollはresolverのsizeを保ち、選択したaxis方向だけを明示的にscrollします。",
+      };
+}
+
+function syncFitTabs(
+  tablist: HTMLElement | null,
+  fit: "elastic" | "wrap" | "scroll",
+  options: readonly ("elastic" | "wrap" | "scroll")[],
+): void {
+  if (!tablist) return;
+  for (const tab of tablist.querySelectorAll<HTMLButtonElement>("[role=tab]")) {
+    const active = tab.dataset.fit === fit;
+    tab.setAttribute("aria-selected", String(active));
+    tab.tabIndex = active ? 0 : -1;
+  }
+  if (!options.includes(fit)) return;
+}
+
+function formatPlaneNumber(value: number): string {
+  return Number.isInteger(value)
+    ? String(value)
+    : value.toFixed(2).replace(/0+$/, "");
+}
+
+function planeItemNumber(index: number, english: boolean): string {
+  return english ? `Item ${String(index + 1)}` : `要素 ${String(index + 1)}`;
+}
+
+function planeItemLabel(
+  index: number,
+  size: number,
+  offset: number,
+  line: number,
+  english: boolean,
+): string {
+  return english
+    ? `${planeItemNumber(index, true)}; size ${formatPlaneNumber(size)}; offset ${formatPlaneNumber(offset)}; line ${String(line + 1)}`
+    : `${planeItemNumber(index, false)}、縮小後size ${formatPlaneNumber(size)}、offset ${formatPlaneNumber(offset)}、line ${String(line + 1)}`;
+}
+
+function planeResultText(
+  resolved: ReturnType<typeof resolvePlane>,
+  requestedBasis: number,
+  count: number,
+  english: boolean,
+): string {
+  return english
+    ? `Resolved: axis ${resolved.axis}; fit ${resolved.fit}; ${String(count)} items; requested basis ${formatPlaneNumber(requestedBasis)}; available ${formatPlaneNumber(resolved.available ?? 0)}; lines ${String(resolved.lines)}; extent ${formatPlaneNumber(resolved.extent)}; overflow ${String(resolved.overflow)}.`
+    : `resolved: axis=${resolved.axis} / fit=${resolved.fit} / items=${String(count)} / requested basis=${formatPlaneNumber(requestedBasis)} / available=${formatPlaneNumber(resolved.available ?? 0)} / lines=${String(resolved.lines)} / extent=${formatPlaneNumber(resolved.extent)} / overflow=${String(resolved.overflow)}`;
 }
 function renderIconAction(
   container: HTMLElement,
@@ -1132,7 +1348,7 @@ export function renderPhilosophyDemo(
   clear(container);
   renderPlane(
     container,
-    "horizontal",
+    findComponent("horizontal"),
     { fit: "elastic", gap: "md", items: "4" },
     context,
   );
