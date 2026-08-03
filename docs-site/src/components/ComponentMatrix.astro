@@ -1,9 +1,8 @@
 ---
-import { CATALOG_COMPONENTS } from "../../../src/catalog/metadata";
 import {
-  COMPONENT_UI_COPY,
-  componentCopy,
-} from "../data/component-copy";
+  COMPONENT_REGISTRY,
+} from "../../../src/catalog/registry";
+import { COMPONENT_UI_COPY } from "../data/component-copy";
 import { catalogPath, sitePath } from "../data/site-path";
 
 const locale = Astro.currentLocale === "en" ? "en" : "ja";
@@ -27,14 +26,14 @@ const localePrefix = locale === "en" ? "en/" : "";
       </thead>
       <tbody>
         {
-          CATALOG_COMPONENTS.map((component) => (
+          COMPONENT_REGISTRY.map((component) => (
             <tr>
               <th scope="row">
-                <a href={sitePath(`${localePrefix}components/${component.id}/`)}>{component.name}</a>
-                {locale === "ja" && <small>{component.ja}</small>}
+                <a href={sitePath(`${localePrefix}components/${component.id}/`)}>{component.displayName}</a>
+                {locale === "ja" && <small>{component.displayNameJa}</small>}
               </th>
-              <td>{componentCopy(locale, component.id).category}</td>
-              <td>{componentCopy(locale, component.id).summary}</td>
+              <td>{component.documentation[locale].category}</td>
+              <td>{component.summary[locale]}</td>
               <td>
                 <a
                   href={catalogPath(component.id, locale)}

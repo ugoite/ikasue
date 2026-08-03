@@ -35,9 +35,63 @@ export type CatalogPageId = CatalogConceptId | CatalogComponentId;
 export type CatalogPropertyType = "select" | "boolean" | "text";
 export type CatalogPropertyValue = string | boolean;
 
+export interface CatalogLocalizedText {
+  readonly ja: string;
+  readonly en: string;
+}
+
+export interface CatalogDocumentationCopy {
+  readonly category: string;
+  readonly summary: string;
+  readonly philosophy: string;
+  readonly useWhen: string;
+  readonly avoidWhen: string;
+  readonly implementation: string;
+  readonly keyboard: string;
+  readonly accessibility: string;
+  readonly goodFor: string;
+  readonly avoidFor: string;
+  readonly interaction: string;
+  readonly propertyLabels: Readonly<Record<string, string>>;
+}
+
+export interface CatalogPageCopy {
+  readonly title: string;
+  readonly description: string;
+}
+
+export interface CatalogSourceRecipe {
+  readonly axis: "vertical" | "horizontal";
+  readonly children: string;
+  readonly planeOptions: string;
+  readonly componentProps: string;
+  readonly ownership: string;
+  readonly rustState: string;
+}
+
+export interface CatalogRegistryEntry {
+  readonly id: CatalogComponentId;
+  readonly kind: "component" | "concept";
+  readonly category: CatalogCategoryId;
+  readonly displayName: string;
+  readonly displayNameJa: string;
+  /** The Japanese summary used by the legacy interactive catalog. */
+  readonly catalogSummaryJa: string;
+  readonly summary: CatalogLocalizedText;
+  readonly properties: readonly CatalogProperty[];
+  readonly documentation: Readonly<
+    Record<CatalogLocale, CatalogDocumentationCopy>
+  >;
+  readonly source: CatalogSourceRecipe;
+  readonly page: Readonly<Record<CatalogLocale, CatalogPageCopy>>;
+  readonly demo: string;
+}
+
 export interface CatalogProperty {
   readonly key: string;
   readonly label: string;
+  readonly labelJa: string;
+  readonly labelEn: string;
   readonly type: CatalogPropertyType;
   readonly default: CatalogPropertyValue;
   readonly values: readonly string[];

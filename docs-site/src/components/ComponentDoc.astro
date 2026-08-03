@@ -1,12 +1,11 @@
 ---
 import { Code, TabItem, Tabs } from "@astrojs/starlight/components";
-import { findComponent } from "../../../src/catalog/metadata";
-import type { CatalogComponentId } from "../../../src/catalog/types";
 import {
-  COMPONENT_UI_COPY,
-  componentCopy,
-} from "../data/component-copy";
-import { componentSource } from "../data/component-source";
+  componentSource,
+  findRegistryEntry,
+} from "../../../src/catalog/registry";
+import type { CatalogComponentId } from "../../../src/catalog/types";
+import { COMPONENT_UI_COPY } from "../data/component-copy";
 import { catalogPath, sitePath } from "../data/site-path";
 
 interface Props {
@@ -15,10 +14,11 @@ interface Props {
 
 const { id } = Astro.props;
 const locale = Astro.currentLocale === "en" ? "en" : "ja";
-const metadata = findComponent(id);
-const copy = componentCopy(locale, id);
+const entry = findRegistryEntry(id);
+const copy = entry.documentation[locale];
 const ui = COMPONENT_UI_COPY[locale];
 const source = componentSource(id);
+const sourceRecipe = entry.source;
 const localePrefix = locale === "en" ? "en/" : "";
 const englishPropertyDefaults: Partial<Record<string, string>> = {
   ...(id === "text" ? { value: "Tokyo office" } : {}),
@@ -29,21 +29,19 @@ const displayDefault = (key: string, value: unknown) =>
   locale === "en" ? (englishPropertyDefaults[key] ?? value) : value;
 const contract = JSON.stringify(
   {
-    component: metadata.name,
-    id: metadata.id,
-    props: Object.fromEntries(metadata.props.map((property) => [
+    component: entry.displayName,
+    id: entry.id,
+    props: Object.fromEntries(entry.properties.map((property) => [
       property.key,
       displayDefault(property.key, property.default),
     ])),
     plane: {
-      axis: id === "horizontal" || id === "rule" || id === "choice-group" || id === "data-table" || id === "action-strip" || id === "icon-action" || id === "status-icon" ? "horizontal" : "vertical",
-      fit: id === "horizontal" ? "wrap" : "elastic",
-      children: ["primary", "secondary"],
+      axis: sourceRecipe.axis,
+      options: sourceRecipe.planeOptions,
+      children: sourceRecipe.children,
     },
-    ownership:
-      id === "form-list"
-        ? "FormList owns values and status; child focus and draft remain local and do not recolor source data."
-        : "The component owns only the state named by its contract; its plane owner resolves shared space.",
+    ownership: sourceRecipe.ownership,
+    rustState: sourceRecipe.rustState,
     contract: [
       "new information enters from its semantic edge",
       "content is reallocated on one plane; no overlay is required",
@@ -57,21 +55,21 @@ const contract = JSON.stringify(
 
 <div class="component-doc">
   <p class="eyebrow">
-    {locale === "ja" ? `${metadata.ja} · ${copy.category}` : copy.category}
+    {locale === "ja" ? `${entry.displayNameJa} · ${copy.category}` : copy.category}
   </p>
   <p class="lede">{copy.summary}</p>
 
   <div class="doc-links">
-    <a href={catalogPath(metadata.id, locale)} target="_blank" rel="noreferrer">
+    <a href={catalogPath(entry.id, locale)} target="_blank" rel="noreferrer">
       {ui.catalogLink}
     </a>
-    <span>{ui.demoId} <code>{metadata.demo}</code></span>
+    <span>{ui.demoId} <code>{entry.demo}</code></span>
     <a href={sitePath(`${localePrefix}components/`)}>{ui.matrixLink}</a>
   </div>
 
   <h2>{ui.contract}</h2>
   <p>{copy.philosophy}</p>
-  <Code code={contract} lang="json" title={`${metadata.name} ${ui.contract}`} />
+  <Code code={contract} lang="json" title={`${entry.displayName} ${ui.contract}`} />
 
   <div class="guidance-grid">
     <section>
@@ -99,15 +97,15 @@ const contract = JSON.stringify(
   <h2>{ui.properties}</h2>
   <div class="property-table">
     <table>
-      <caption>{ui.propertiesCaption(metadata.name)}</caption>
+              <caption>{ui.propertiesCaption(entry.displayName)}</caption>
       <thead>
         <tr><th scope="col">{ui.key}</th><th scope="col">{ui.type}</th><th scope="col">{ui.defaultValue}</th><th scope="col">{ui.values}</th></tr>
       </thead>
       <tbody>
         {
-          metadata.props.length ? metadata.props.map((property) => (
+          entry.properties.length ? entry.properties.map((property) => (
             <tr>
-              <th scope="row"><code>{property.key}</code><small>{copy.propertyLabels[property.key] ?? property.key}</small></th>
+              <th scope="row"><code>{property.key}</code><small>{locale === "ja" ? property.labelJa : property.labelEn}</small></th>
               <td><code>{property.type}</code></td>
               <td><code>{String(displayDefault(property.key, property.default))}</code></td>
               <td>{property.values.length ? property.values.join(" · ") : "—"}</td>
