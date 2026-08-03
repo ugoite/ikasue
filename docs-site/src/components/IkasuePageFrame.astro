@@ -5,24 +5,45 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 ---
 
 <div class="page sl-flex" data-ikasue-frame>
-  <header class="header"><slot name="header" /></header>
+  <header class="header" data-ikasue-header><slot name="header" /></header>
   {
     hasSidebar && (
       <nav
         class="sidebar print:hidden"
+        data-ikasue-sidebar
         aria-label={Astro.locals.t("sidebarNav.accessibleLabel")}
       >
         <MobileMenuToggle />
-        <div id="starlight__sidebar" class="sidebar-pane">
-          <div class="sidebar-content sl-flex">
+        <div
+          id="starlight__sidebar"
+          class="sidebar-pane"
+          data-ikasue-sidebar-pane
+        >
+          <div class="sidebar-content sl-flex" data-ikasue-sidebar-content>
             <slot name="sidebar" />
           </div>
         </div>
       </nav>
     )
   }
-  <div class="main-frame"><slot /></div>
+  <div class="main-frame" data-ikasue-content-plane><slot /></div>
 </div>
+
+<script is:inline>
+  const frame = document.querySelector("[data-ikasue-frame]");
+
+  frame
+    ?.querySelectorAll(
+      ".right-sidebar-container, mobile-starlight-toc, starlight-toc",
+    )
+    .forEach((element) => {
+      element.setAttribute("data-ikasue-toc", "");
+    });
+
+  frame?.querySelectorAll("footer").forEach((element) => {
+    element.setAttribute("data-ikasue-footer", "");
+  });
+</script>
 
 <style>
   @layer starlight.core {
