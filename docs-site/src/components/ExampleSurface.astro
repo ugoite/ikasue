@@ -1,0 +1,1805 @@
+---
+type Locale = "ja" | "en";
+type SurfaceKind =
+  "operations" | "editor" | "planning" | "field" | "observability";
+
+interface Props {
+  kind: SurfaceKind;
+  locale: Locale;
+}
+
+interface QueueRow {
+  id: string;
+  title: string;
+  meta: string;
+  state: string;
+}
+
+type DetailRow = readonly [string, string];
+
+const { kind, locale } = Astro.props as Props;
+const surfaceId = `example-surface-${kind}`;
+
+const COPY = {
+  ja: {
+    operations: {
+      kicker: "OPS / QUEUE",
+      title: "処理キュー",
+      status: "稼働中 · 18件",
+      axis: "横: filter / 縦: queue → detail",
+      controls: {
+        scope: "環境",
+        production: "本番",
+        status: "状態",
+        active: "対応中",
+        owner: "担当",
+        allOwners: "全員",
+        search: "IDまたはタイトル",
+        refresh: "更新",
+      },
+      queue: "待機キュー",
+      queueCount: "4 / 18",
+      queueHeaders: ["ID", "項目", "状態"],
+      rows: [
+        {
+          id: "INC-204",
+          title: "請求書同期",
+          meta: "高 · 2分前",
+          state: "要確認",
+        },
+        {
+          id: "JOB-881",
+          title: "在庫差分の再計算",
+          meta: "中 · 8分前",
+          state: "対応中",
+        },
+        {
+          id: "REQ-447",
+          title: "取引先アクセス",
+          meta: "低 · 12分前",
+          state: "待機",
+        },
+        {
+          id: "OPS-120",
+          title: "月次エクスポート",
+          meta: "中 · 19分前",
+          state: "待機",
+        },
+      ],
+      selection: "選択中",
+      detail: "選択アイテム",
+      detailTitle: "請求書同期",
+      detailRows: [
+        ["担当", "M. Sato"],
+        ["開始", "14:02 JST"],
+        ["SLA", "残り 18分"],
+        ["原因", "外部キーの不一致"],
+      ],
+      message: "同じ顧客の3件が保留中",
+      assign: "担当を割り当て",
+    },
+    en: {
+      kicker: "OPS / QUEUE",
+      title: "Processing queue",
+      status: "LIVE · 18 items",
+      axis: "horizontal: filters / vertical: queue → detail",
+      controls: {
+        scope: "Environment",
+        production: "Production",
+        status: "Status",
+        active: "In progress",
+        owner: "Owner",
+        allOwners: "Everyone",
+        search: "ID or title",
+        refresh: "Refresh",
+      },
+      queue: "Waiting queue",
+      queueCount: "4 / 18",
+      queueHeaders: ["ID", "Item", "State"],
+      rows: [
+        {
+          id: "INC-204",
+          title: "Invoice sync",
+          meta: "high · 2m ago",
+          state: "Review",
+        },
+        {
+          id: "JOB-881",
+          title: "Recalculate inventory",
+          meta: "medium · 8m ago",
+          state: "Active",
+        },
+        {
+          id: "REQ-447",
+          title: "Partner access",
+          meta: "low · 12m ago",
+          state: "Queued",
+        },
+        {
+          id: "OPS-120",
+          title: "Monthly export",
+          meta: "medium · 19m ago",
+          state: "Queued",
+        },
+      ],
+      selection: "Selected",
+      detail: "Selected item",
+      detailTitle: "Invoice sync",
+      detailRows: [
+        ["Owner", "M. Sato"],
+        ["Started", "14:02 JST"],
+        ["SLA", "18m remaining"],
+        ["Cause", "External key mismatch"],
+      ],
+      message: "3 records for the same customer are pending",
+      assign: "Assign owner",
+    },
+  },
+  editor: {
+    ja: {
+      kicker: "EDITOR / PREVIEW",
+      title: "リリースノート",
+      status: "DRAFT · 未公開",
+      axis: "横: editor ↔ preview / 縦: fields",
+      editor: "編集",
+      preview: "プレビュー",
+      fields: {
+        title: "タイトル",
+        slug: "スラッグ",
+        body: "本文",
+        status: "状態",
+      },
+      titleValue: "平面を読むためのリリースノート",
+      slugValue: "release-notes/plane-reading",
+      bodyValue: "新しい情報は、既存の情報が所有するedgeへ入ります。",
+      draft: "下書き",
+      saved: "保存済み",
+      save: "保存",
+      open: "公開前の確認",
+      previewTitle: "平面を読むためのリリースノート",
+      previewIntro:
+        "情報密度の高いworkspaceで、次の判断を迷わせないための小さな更新です。",
+      previewItems: [
+        "selectionは状態を伝える",
+        "ruleは所属edgeを示す",
+        "axisは読み順を守る",
+      ],
+      lastSaved: "最終保存 13:48 JST",
+    },
+    en: {
+      kicker: "EDITOR / PREVIEW",
+      title: "Release notes",
+      status: "DRAFT · UNPUBLISHED",
+      axis: "horizontal: editor ↔ preview / vertical: fields",
+      editor: "Editor",
+      preview: "Preview",
+      fields: { title: "Title", slug: "Slug", body: "Body", status: "Status" },
+      titleValue: "Release notes for reading a plane",
+      slugValue: "release-notes/plane-reading",
+      bodyValue:
+        "New information enters the edge owned by existing information.",
+      draft: "Draft",
+      saved: "Saved",
+      save: "Save",
+      open: "Review before publish",
+      previewTitle: "Release notes for reading a plane",
+      previewIntro:
+        "A small update for making the next decision clear in an information-dense workspace.",
+      previewItems: [
+        "selection carries state",
+        "rules show ownership",
+        "axes preserve reading order",
+      ],
+      lastSaved: "Last saved 13:48 JST",
+    },
+  },
+  planning: {
+    ja: {
+      kicker: "PLANNING / WEEK",
+      title: "現場スケジュール",
+      status: "今週 · 4リソース",
+      axis: "横: days / 縦: time",
+      mode: "表示",
+      week: "週",
+      resources: "リソース",
+      add: "予定を追加",
+      calendarLabel: "2026年8月3日の週の予定",
+      days: ["月 03", "火 04", "水 05", "木 06"],
+      times: ["09:00", "11:00", "13:00", "15:00"],
+      events: [
+        ["キックオフ", "planning", ""],
+        ["レビュー", "focus", ""],
+        ["顧客訪問", "", "field"],
+        ["引き継ぎ", "", ""],
+        ["設計確認", "", "focus"],
+        ["休憩", "", ""],
+        ["リリース準備", "planning", ""],
+        ["振り返り", "", "focus"],
+      ],
+      legend: ["確定", "選択中", "現場"],
+    },
+    en: {
+      kicker: "PLANNING / WEEK",
+      title: "Field schedule",
+      status: "THIS WEEK · 4 RESOURCES",
+      axis: "horizontal: days / vertical: time",
+      mode: "View",
+      week: "Week",
+      resources: "Resources",
+      add: "Add schedule",
+      calendarLabel: "Schedule for the week of August 3, 2026",
+      days: ["MON 03", "TUE 04", "WED 05", "THU 06"],
+      times: ["09:00", "11:00", "13:00", "15:00"],
+      events: [
+        ["Kickoff", "planning", ""],
+        ["Review", "focus", ""],
+        ["Customer visit", "", "field"],
+        ["Handoff", "", ""],
+        ["Design check", "", "focus"],
+        ["Break", "", ""],
+        ["Release prep", "planning", ""],
+        ["Retrospective", "", "focus"],
+      ],
+      legend: ["Confirmed", "Selected", "Field"],
+    },
+  },
+  field: {
+    ja: {
+      kicker: "FIELD / MOBILE",
+      title: "設備点検ジョブ",
+      status: "同期済み · 10:42",
+      axis: "縦: context → checklist → evidence",
+      job: "JOB-381",
+      route: "渋谷区 · 2 / 5 stops",
+      connection: "4G · オフライン準備済み",
+      location: "青葉ビル 4F / 空調室",
+      address: "東京都渋谷区神南 1-2-3",
+      arrive: "到着を記録",
+      photo: "写真",
+      call: "連絡",
+      checklist: "チェックリスト",
+      checks: ["電源ランプを確認", "フィルターを交換", "異音がないことを確認"],
+      evidence: "証跡",
+      reading: "測定値",
+      value: "23.4 °C",
+      upload: "写真 3枚 · 送信待ち",
+      note: "備考を追加",
+      finish: "作業を完了",
+    },
+    en: {
+      kicker: "FIELD / MOBILE",
+      title: "Equipment inspection job",
+      status: "SYNCED · 10:42",
+      axis: "vertical: context → checklist → evidence",
+      job: "JOB-381",
+      route: "Shibuya · stop 2 / 5",
+      connection: "4G · offline-ready",
+      location: "Aoba Building 4F / HVAC room",
+      address: "1-2-3 Jinnan, Shibuya, Tokyo",
+      arrive: "Record arrival",
+      photo: "Photo",
+      call: "Call",
+      checklist: "Checklist",
+      checks: [
+        "Power indicator checked",
+        "Filter replaced",
+        "No abnormal noise",
+      ],
+      evidence: "Evidence",
+      reading: "Reading",
+      value: "23.4 °C",
+      upload: "3 photos · waiting to send",
+      note: "Add note",
+      finish: "Complete job",
+    },
+  },
+  observability: {
+    ja: {
+      kicker: "OBS / INCIDENT",
+      title: "信頼性コンソール",
+      status: "SEV-2 · 対応中",
+      axis: "横: timeline / services / incident",
+      timeline: "タイムライン",
+      services: "サービス状態",
+      incident: "INC-204 · 請求書同期",
+      alert: "外部キーの不一致が再試行を止めています",
+      timelineItems: [
+        ["14:02", "デプロイ完了", "deploy"],
+        ["14:07", "エラー率上昇", "alert"],
+        ["14:11", "調査を開始", "focus"],
+      ],
+      serviceRows: [
+        ["billing-api", "正常", "42 ms"],
+        ["invoice-worker", "劣化", "1.8 s"],
+        ["ledger-db", "正常", "18 ms"],
+      ],
+      metricLabels: ["再試行", "影響中", "経過"],
+      metricValues: ["128", "3 customers", "09 min"],
+      acknowledge: "引き受ける",
+      retain: "前回のmetricsを保持中",
+    },
+    en: {
+      kicker: "OBS / INCIDENT",
+      title: "Reliability console",
+      status: "SEV-2 · ACTIVE",
+      axis: "horizontal: timeline / services / incident",
+      timeline: "Timeline",
+      services: "Service state",
+      incident: "INC-204 · Invoice sync",
+      alert: "An external key mismatch is stopping retries",
+      timelineItems: [
+        ["14:02", "Deploy complete", "deploy"],
+        ["14:07", "Error rate rising", "alert"],
+        ["14:11", "Investigation started", "focus"],
+      ],
+      serviceRows: [
+        ["billing-api", "Healthy", "42 ms"],
+        ["invoice-worker", "Degraded", "1.8 s"],
+        ["ledger-db", "Healthy", "18 ms"],
+      ],
+      metricLabels: ["Retries", "Affected", "Elapsed"],
+      metricValues: ["128", "3 customers", "09 min"],
+      acknowledge: "Acknowledge",
+      retain: "Retaining previous metrics",
+    },
+  },
+} as const;
+
+const COPY_BY_KIND = {
+  operations: {
+    ja: COPY.ja.operations,
+    en: COPY.ja.en,
+  },
+  editor: COPY.editor,
+  planning: COPY.planning,
+  field: COPY.field,
+  observability: COPY.observability,
+} as const;
+---
+
+<section
+  class={`example-surface example-surface--${kind}`}
+  data-ikasue-surface={kind}
+  aria-labelledby={`${surfaceId}-title`}
+>
+  {
+    kind === "operations" &&
+      (() => {
+        const surface = COPY_BY_KIND.operations[locale];
+        return (
+          <>
+            <header class="surface__header">
+              <div>
+                <span class="surface__kicker">{surface.kicker}</span>
+                <h3 id={`${surfaceId}-title`}>{surface.title}</h3>
+              </div>
+              <span class="surface__status">
+                <i aria-hidden="true" />
+                {surface.status}
+              </span>
+              <span class="surface__axis">{surface.axis}</span>
+            </header>
+            <form
+              class="surface__toolbar"
+              data-ikasue-region="filters"
+              aria-label={surface.title}
+            >
+              <label class="surface__field">
+                <span>{surface.controls.scope}</span>
+                <select aria-label={surface.controls.scope}>
+                  <option>{surface.controls.production}</option>
+                </select>
+              </label>
+              <label class="surface__field">
+                <span>{surface.controls.status}</span>
+                <select aria-label={surface.controls.status}>
+                  <option>{surface.controls.active}</option>
+                </select>
+              </label>
+              <label class="surface__field">
+                <span>{surface.controls.owner}</span>
+                <select aria-label={surface.controls.owner}>
+                  <option>{surface.controls.allOwners}</option>
+                </select>
+              </label>
+              <label class="surface__field surface__field--search">
+                <span>{surface.controls.search}</span>
+                <input
+                  type="search"
+                  placeholder={surface.controls.search}
+                  aria-label={surface.controls.search}
+                />
+              </label>
+              <button class="surface__button" type="button">
+                {surface.controls.refresh}
+              </button>
+            </form>
+            <div class="surface-operations__body" data-ikasue-axis="vertical">
+              <section
+                class="surface__region surface-operations__queue"
+                data-ikasue-region="queue"
+                aria-labelledby={`${surfaceId}-queue`}
+              >
+                <div class="surface__region-header">
+                  <h4 id={`${surfaceId}-queue`}>{surface.queue}</h4>
+                  <span class="surface__count">{surface.queueCount}</span>
+                </div>
+                <table class="surface__table">
+                  <caption class="surface__visually-hidden">
+                    {surface.queue}
+                  </caption>
+                  <thead>
+                    <tr>
+                      {surface.queueHeaders.map((header: string) => (
+                        <th scope="col">{header}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {surface.rows.map((row: QueueRow, index: number) => (
+                      <tr
+                        class={index === 0 ? "is-selected" : undefined}
+                        data-ikasue-selected={index === 0 ? "true" : "false"}
+                      >
+                        <td>
+                          <button
+                            class="surface__row-button"
+                            type="button"
+                            aria-label={`${surface.selection}: ${row.id} ${row.title}`}
+                          >
+                            <span class="surface__mono">{row.id}</span>
+                            <strong>{row.title}</strong>
+                            <small>{row.meta}</small>
+                          </button>
+                        </td>
+                        <td class="surface__row-title">{row.title}</td>
+                        <td>
+                          <span class="surface__state">{row.state}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
+              <section
+                class="surface__region surface-operations__summary"
+                data-ikasue-region="summary"
+                aria-labelledby={`${surfaceId}-summary`}
+              >
+                <div class="surface__region-header">
+                  <h4 id={`${surfaceId}-summary`}>{surface.selection}</h4>
+                </div>
+                <div class="surface__stat">
+                  <>
+                    <span class="surface__mono">QUEUE POSITION</span>
+                    <strong>01 / 18</strong>
+                  </>
+                </div>
+                <div class="surface__stat">
+                  <>
+                    <span class="surface__mono">ATTENTION</span>
+                    <strong>HIGH</strong>
+                  </>
+                </div>
+                <p class="surface__message">{surface.message}</p>
+              </section>
+              <section
+                class="surface__region surface-operations__detail"
+                data-ikasue-region="detail"
+                data-ikasue-owns="selection"
+                aria-labelledby={`${surfaceId}-detail`}
+              >
+                <div class="surface__region-header">
+                  <>
+                    <div>
+                      <>
+                        <span class="surface__kicker">{surface.detail}</span>
+                        <h4 id={`${surfaceId}-detail`}>
+                          {surface.detailTitle}
+                        </h4>
+                      </>
+                    </div>
+                    <span class="surface__state">{surface.rows[0].state}</span>
+                  </>
+                </div>
+                <dl class="surface__definition-list">
+                  {surface.detailRows.map(([label, value]: DetailRow) => (
+                    <div>
+                      <dt>{label}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <div class="surface__region-actions">
+                  <button
+                    class="surface__button surface__button--primary"
+                    type="button"
+                  >
+                    {surface.assign}
+                  </button>
+                </div>
+              </section>
+            </div>
+          </>
+        );
+      })()
+  }
+
+  {
+    kind === "editor" &&
+      (() => {
+        const surface = COPY_BY_KIND.editor[locale];
+        return (
+          <>
+            <header class="surface__header">
+              <div>
+                <>
+                  <span class="surface__kicker">{surface.kicker}</span>
+                  <h3 id={`${surfaceId}-title`}>{surface.title}</h3>
+                </>
+              </div>
+              <span class="surface__status">
+                <i aria-hidden="true" />
+                {surface.status}
+              </span>
+              <span class="surface__axis">{surface.axis}</span>
+            </header>
+            <div class="surface-editor__body" data-ikasue-axis="horizontal">
+              <form
+                class="surface__region surface-editor__form"
+                data-ikasue-region="editor"
+                data-ikasue-owns="values status"
+                aria-labelledby={`${surfaceId}-editor`}
+              >
+                <div class="surface__region-header">
+                  <>
+                    <h4 id={`${surfaceId}-editor`}>{surface.editor}</h4>
+                    <span class="surface__state">{surface.draft}</span>
+                  </>
+                </div>
+                <div class="surface-editor__fields">
+                  <label class="surface__field">
+                    <>
+                      <span>{surface.fields.title}</span>
+                      <input
+                        type="text"
+                        value={surface.titleValue}
+                        aria-label={surface.fields.title}
+                      />
+                    </>
+                  </label>
+                  <label class="surface__field">
+                    <>
+                      <span>{surface.fields.slug}</span>
+                      <input
+                        class="surface__mono"
+                        type="text"
+                        value={surface.slugValue}
+                        aria-label={surface.fields.slug}
+                      />
+                    </>
+                  </label>
+                  <label class="surface__field">
+                    <>
+                      <span>{surface.fields.body}</span>
+                      <textarea rows="4" aria-label={surface.fields.body}>
+                        {surface.bodyValue}
+                      </textarea>
+                    </>
+                  </label>
+                  <label class="surface__field">
+                    <>
+                      <span>{surface.fields.status}</span>
+                      <select aria-label={surface.fields.status}>
+                        <>
+                          <option>{surface.draft}</option>
+                          <option>{surface.saved}</option>
+                        </>
+                      </select>
+                    </>
+                  </label>
+                </div>
+                <div class="surface-editor__actions">
+                  <>
+                    <button
+                      class="surface__button surface__button--primary"
+                      type="button"
+                    >
+                      {surface.save}
+                    </button>
+                    <button class="surface__button" type="button">
+                      {surface.open}
+                    </button>
+                    <span class="surface__mono">{surface.lastSaved}</span>
+                  </>
+                </div>
+              </form>
+              <article
+                class="surface__region surface-editor__preview"
+                data-ikasue-region="preview"
+                aria-labelledby={`${surfaceId}-preview`}
+              >
+                <div class="surface__region-header">
+                  <>
+                    <h4 id={`${surfaceId}-preview`}>{surface.preview}</h4>
+                    <span class="surface__state">{surface.saved}</span>
+                  </>
+                </div>
+                <div class="surface-editor__document">
+                  <span class="surface__kicker">IKASUE / NOTES</span>
+                  <h4>{surface.previewTitle}</h4>
+                  <p>{surface.previewIntro}</p>
+                  <ul>
+                    {surface.previewItems.map((item) => (
+                      <li>{item}</li>
+                    ))}
+                  </ul>
+                  <p class="surface__message">{surface.lastSaved}</p>
+                </div>
+              </article>
+            </div>
+          </>
+        );
+      })()
+  }
+
+  {
+    kind === "planning" &&
+      (() => {
+        const surface = COPY_BY_KIND.planning[locale];
+        return (
+          <>
+            <header class="surface__header">
+              <div>
+                <>
+                  <span class="surface__kicker">{surface.kicker}</span>
+                  <h3 id={`${surfaceId}-title`}>{surface.title}</h3>
+                </>
+              </div>
+              <span class="surface__status">
+                <i aria-hidden="true" />
+                {surface.status}
+              </span>
+              <span class="surface__axis">{surface.axis}</span>
+            </header>
+            <div
+              class="surface__toolbar surface-planning__toolbar"
+              data-ikasue-region="controls"
+              aria-label={surface.title}
+            >
+              <span class="surface__field-label">{surface.mode}</span>
+              <button
+                class="surface__button surface__button--selected"
+                type="button"
+                aria-pressed="true"
+              >
+                {surface.week}
+              </button>
+              <button class="surface__button" type="button">
+                {surface.resources}
+              </button>
+              <span class="surface__toolbar-spacer" />
+              <button
+                class="surface__button surface__button--primary"
+                type="button"
+              >
+                {surface.add}
+              </button>
+            </div>
+            <div class="surface-planning__body" data-ikasue-axis="horizontal">
+              <div
+                class="surface-planning__calendar"
+                data-ikasue-region="calendar"
+              >
+                <table class="surface__table surface-calendar">
+                  <caption class="surface__visually-hidden">
+                    {surface.calendarLabel}
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" class="surface-calendar__time" />
+                      {surface.days.map((day, index) => (
+                        <th
+                          scope="col"
+                          class={index === 0 ? "is-selected" : undefined}
+                        >
+                          {day}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {surface.times.map((time, timeIndex) => (
+                      <tr>
+                        <th scope="row" class="surface-calendar__time">
+                          {time}
+                        </th>
+                        {surface.days.map((_, dayIndex) => {
+                          const event =
+                            surface.events[timeIndex * 2 + (dayIndex % 2)];
+                          return (
+                            <td>
+                              {event &&
+                                (dayIndex === timeIndex % 4 ||
+                                (timeIndex === 1 && dayIndex === 2) ? (
+                                  <button
+                                    class={`surface-event ${event[1] ? `surface-event--${event[1]}` : ""} ${event[2] ? `surface-event--${event[2]}` : ""}`}
+                                    type="button"
+                                    aria-label={`${time} ${event[0]}`}
+                                  >
+                                    {event[0]}
+                                  </button>
+                                ) : (
+                                  <span
+                                    class="surface-calendar__empty"
+                                    aria-hidden="true"
+                                  >
+                                    —
+                                  </span>
+                                ))}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div
+                class="surface-planning__legend"
+                data-ikasue-region="legend"
+                aria-label={surface.mode}
+              >
+                {surface.legend.map((item, index) => (
+                  <span>
+                    <i
+                      class={`surface-legend__mark surface-legend__mark--${index}`}
+                      aria-hidden="true"
+                    />
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </>
+        );
+      })()
+  }
+
+  {
+    kind === "field" &&
+      (() => {
+        const surface = COPY_BY_KIND.field[locale];
+        return (
+          <>
+            <header class="surface__header">
+              <div>
+                <>
+                  <span class="surface__kicker">{surface.kicker}</span>
+                  <h3 id={`${surfaceId}-title`}>{surface.title}</h3>
+                </>
+              </div>
+              <span class="surface__status">
+                <i aria-hidden="true" />
+                {surface.status}
+              </span>
+              <span class="surface__axis">{surface.axis}</span>
+            </header>
+            <div class="surface-field__body" data-ikasue-axis="vertical">
+              <section
+                class="surface-field__device"
+                data-ikasue-region="job"
+                aria-labelledby={`${surfaceId}-job`}
+              >
+                <div class="surface-field__mobile-bar">
+                  <>
+                    <span class="surface__mono">10:42</span>
+                    <span>{surface.connection}</span>
+                  </>
+                </div>
+                <div class="surface-field__job-head">
+                  <>
+                    <div>
+                      <>
+                        <span class="surface__kicker">{surface.job}</span>
+                        <h4 id={`${surfaceId}-job`}>{surface.title}</h4>
+                      </>
+                    </div>
+                    <span class="surface__state">{surface.route}</span>
+                  </>
+                </div>
+                <div class="surface-field__location">
+                  <>
+                    <strong>{surface.location}</strong>
+                    <span>{surface.address}</span>
+                  </>
+                </div>
+                <div class="surface-field__actions">
+                  <>
+                    <button
+                      class="surface__button surface__button--primary"
+                      type="button"
+                    >
+                      {surface.arrive}
+                    </button>
+                    <button class="surface__button" type="button">
+                      {surface.photo}
+                    </button>
+                    <button class="surface__button" type="button">
+                      {surface.call}
+                    </button>
+                  </>
+                </div>
+                <div class="surface-field__checklist">
+                  <div class="surface__region-header">
+                    <>
+                      <h4>{surface.checklist}</h4>
+                      <span class="surface__mono">2 / 3</span>
+                    </>
+                  </div>
+                  <ul>
+                    {surface.checks.map((check, index) => (
+                      <li>
+                        <label>
+                          <input type="checkbox" checked={index < 2} />{" "}
+                          <span>{check}</span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
+              <section
+                class="surface__region surface-field__evidence"
+                data-ikasue-region="evidence"
+                data-ikasue-owns="job evidence"
+                aria-labelledby={`${surfaceId}-evidence`}
+              >
+                <div class="surface__region-header">
+                  <>
+                    <h4 id={`${surfaceId}-evidence`}>{surface.evidence}</h4>
+                    <span class="surface__state">LOCAL</span>
+                  </>
+                </div>
+                <dl class="surface__definition-list">
+                  <div>
+                    <>
+                      <dt>{surface.reading}</dt>
+                      <dd class="surface__value">{surface.value}</dd>
+                    </>
+                  </div>
+                  <div>
+                    <>
+                      <dt>{surface.upload}</dt>
+                      <dd>
+                        <span class="surface__progress">
+                          <i style="width: 66%" />
+                        </span>
+                      </dd>
+                    </>
+                  </div>
+                </dl>
+                <label class="surface__field surface-field__note">
+                  <>
+                    <span>{surface.note}</span>
+                    <textarea
+                      rows="3"
+                      placeholder={surface.note}
+                      aria-label={surface.note}
+                    />
+                  </>
+                </label>
+                <div class="surface__region-actions">
+                  <button
+                    class="surface__button surface__button--primary"
+                    type="button"
+                  >
+                    {surface.finish}
+                  </button>
+                </div>
+              </section>
+            </div>
+          </>
+        );
+      })()
+  }
+
+  {
+    kind === "observability" &&
+      (() => {
+        const surface = COPY_BY_KIND.observability[locale];
+        return (
+          <>
+            <header class="surface__header">
+              <div>
+                <>
+                  <span class="surface__kicker">{surface.kicker}</span>
+                  <h3 id={`${surfaceId}-title`}>{surface.title}</h3>
+                </>
+              </div>
+              <span class="surface__status">
+                <i aria-hidden="true" />
+                {surface.status}
+              </span>
+              <span class="surface__axis">{surface.axis}</span>
+            </header>
+            <div
+              class="surface-observability__body"
+              data-ikasue-axis="horizontal"
+            >
+              <section
+                class="surface__region surface-observability__timeline"
+                data-ikasue-region="timeline"
+                aria-labelledby={`${surfaceId}-timeline`}
+              >
+                <div class="surface__region-header">
+                  <>
+                    <h4 id={`${surfaceId}-timeline`}>{surface.timeline}</h4>
+                    <span class="surface__mono">LIVE</span>
+                  </>
+                </div>
+                <ol class="surface-timeline">
+                  {surface.timelineItems.map(([time, label, state]) => (
+                    <li
+                      class={`surface-timeline__item surface-timeline__item--${state}`}
+                    >
+                      <time>{time}</time>
+                      <span>{label}</span>
+                    </li>
+                  ))}
+                </ol>
+                <p class="surface__message">{surface.retain}</p>
+              </section>
+              <section
+                class="surface__region surface-observability__services"
+                data-ikasue-region="services"
+                aria-labelledby={`${surfaceId}-services`}
+              >
+                <div class="surface__region-header">
+                  <>
+                    <h4 id={`${surfaceId}-services`}>{surface.services}</h4>
+                    <span class="surface__state">3 / 3</span>
+                  </>
+                </div>
+                <table class="surface__table">
+                  <caption class="surface__visually-hidden">
+                    {surface.services}
+                  </caption>
+                  <thead>
+                    <tr>
+                      <>
+                        <th scope="col">SERVICE</th>
+                        <th scope="col">STATE</th>
+                        <th scope="col">P95</th>
+                      </>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {surface.serviceRows.map(([name, state, latency]) => (
+                      <tr>
+                        <th scope="row" class="surface__mono">
+                          {name}
+                        </th>
+                        <td>
+                          <span
+                            class={`surface-service-state ${state === (locale === "ja" ? "劣化" : "Degraded") ? "is-alert" : ""}`}
+                          >
+                            {state}
+                          </span>
+                        </td>
+                        <td class="surface__mono">{latency}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
+              <section
+                class="surface__region surface-observability__incident"
+                data-ikasue-region="incident"
+                data-ikasue-owns="message progress"
+                aria-labelledby={`${surfaceId}-incident`}
+              >
+                <div class="surface__region-header">
+                  <>
+                    <div>
+                      <>
+                        <span class="surface__kicker">{surface.kicker}</span>
+                        <h4 id={`${surfaceId}-incident`}>{surface.incident}</h4>
+                      </>
+                    </div>
+                    <span class="surface__state surface__state--alert">
+                      SEV-2
+                    </span>
+                  </>
+                </div>
+                <p class="surface__alert">
+                  <span class="surface__mono">MESSAGE</span>
+                  {surface.alert}
+                </p>
+                <div class="surface-metrics">
+                  {surface.metricLabels.map((label, index) => (
+                    <div>
+                      <span class="surface__mono">{label}</span>
+                      <strong>{surface.metricValues[index]}</strong>
+                    </div>
+                  ))}
+                </div>
+                <div class="surface__region-actions">
+                  <button
+                    class="surface__button surface__button--primary"
+                    type="button"
+                  >
+                    {surface.acknowledge}
+                  </button>
+                </div>
+              </section>
+            </div>
+          </>
+        );
+      })()
+  }
+</section>
+
+<style>
+  .example-surface {
+    --surface-pad: clamp(0.7rem, 2vw, 1rem);
+    box-sizing: border-box;
+    inline-size: 100%;
+    margin-block: 1.75rem 2.25rem;
+    overflow: hidden;
+    border: 1px solid var(--line-strong);
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-en), var(--font-ja), sans-serif;
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+
+  .example-surface :where(*, *::before, *::after) {
+    box-sizing: border-box;
+  }
+
+  .example-surface :where(button, input, select, textarea) {
+    border-radius: 0;
+    box-shadow: none;
+    font: inherit;
+  }
+
+  .surface__header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem 1rem;
+    align-items: start;
+    padding: var(--surface-pad);
+    border-block-end: 1px solid var(--line);
+  }
+
+  .surface__header h3,
+  .surface__region-header h4,
+  .surface-editor__document h4,
+  .surface-field__job-head h4 {
+    margin: 0;
+    color: var(--ink);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .surface__header h3 {
+    font-size: 1.1rem;
+  }
+
+  .surface__kicker,
+  .surface__mono,
+  .surface__axis,
+  .surface__status,
+  .surface__count,
+  .surface__field-label {
+    color: var(--faint);
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .surface__kicker {
+    display: block;
+    margin-block-end: 0.2rem;
+  }
+
+  .surface__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .surface__status i {
+    inline-size: 0.45rem;
+    block-size: 0.45rem;
+    background: var(--ink);
+  }
+
+  .surface__axis {
+    grid-column: 1 / -1;
+    padding-block-start: 0.45rem;
+    border-block-start: 1px solid var(--line);
+  }
+
+  .surface__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 0.55rem;
+    padding: var(--surface-pad);
+    border-block-end: 1px solid var(--line);
+    background: var(--selection);
+  }
+
+  .surface__field {
+    display: grid;
+    min-inline-size: 7rem;
+    gap: 0.25rem;
+    color: var(--muted);
+  }
+
+  .surface__field > span,
+  .surface__field-label {
+    color: var(--faint);
+    font-size: 0.68rem;
+  }
+
+  .surface__field input,
+  .surface__field select,
+  .surface__field textarea {
+    min-inline-size: 0;
+    border: 1px solid var(--line-strong);
+    padding: 0.42rem 0.5rem;
+    background: var(--canvas);
+    color: var(--ink);
+  }
+
+  .surface__field textarea {
+    resize: vertical;
+  }
+
+  .surface__field input::placeholder,
+  .surface__field textarea::placeholder {
+    color: var(--faint);
+    opacity: 1;
+  }
+
+  .surface__button {
+    min-block-size: 2rem;
+    border: 1px solid var(--line-strong);
+    padding: 0.42rem 0.65rem;
+    background: var(--canvas);
+    color: var(--ink);
+    cursor: pointer;
+    text-align: start;
+  }
+
+  .surface__button:hover,
+  .surface__button:focus-visible {
+    border-color: var(--ink);
+    background: var(--selection);
+  }
+
+  .surface__button--primary {
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--canvas);
+  }
+
+  .surface__button--primary:hover,
+  .surface__button--primary:focus-visible {
+    background: var(--ink);
+    color: var(--canvas);
+  }
+
+  .surface__button--selected {
+    border-color: var(--ink);
+    background: var(--selection-strong);
+  }
+
+  .surface__region {
+    min-inline-size: 0;
+    background: var(--canvas);
+  }
+
+  .surface__region-header {
+    display: flex;
+    min-block-size: 3rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.7rem var(--surface-pad);
+    border-block-end: 1px solid var(--line);
+    background: var(--selection);
+  }
+
+  .surface__region-header h4 {
+    font-size: 0.88rem;
+  }
+
+  .surface__region-header .surface__kicker + h4 {
+    font-size: 0.95rem;
+  }
+
+  .surface__state {
+    display: inline-block;
+    border-inline-start: 2px solid var(--line-strong);
+    padding-inline-start: 0.45rem;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    white-space: nowrap;
+  }
+
+  .surface__state--alert {
+    border-inline-start-color: var(--ink);
+    color: var(--ink);
+  }
+
+  .surface__table {
+    inline-size: 100%;
+    border-collapse: collapse;
+  }
+
+  .surface__table :is(th, td) {
+    padding: 0.55rem var(--surface-pad);
+    border-block-end: 1px solid var(--line);
+    color: var(--muted);
+    text-align: start;
+    vertical-align: top;
+  }
+
+  .surface__table thead th {
+    color: var(--faint);
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+  }
+
+  .surface__table tbody tr.is-selected {
+    background: var(--selection);
+  }
+
+  .surface__row-button {
+    display: none;
+  }
+
+  .surface__row-title {
+    color: var(--ink) !important;
+  }
+
+  .surface__state,
+  .surface-service-state {
+    color: var(--ink);
+  }
+
+  .surface__stat {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.8rem var(--surface-pad);
+    border-block-end: 1px solid var(--line);
+  }
+
+  .surface__stat strong {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  .surface__message {
+    margin: 0;
+    padding: 0.8rem var(--surface-pad);
+    color: var(--muted);
+  }
+
+  .surface__definition-list {
+    margin: 0;
+  }
+
+  .surface__definition-list > div {
+    display: grid;
+    grid-template-columns: minmax(5rem, 0.65fr) minmax(0, 1.35fr);
+    gap: 0.75rem;
+    padding: 0.7rem var(--surface-pad);
+    border-block-end: 1px solid var(--line);
+  }
+
+  .surface__definition-list dt {
+    color: var(--faint);
+  }
+
+  .surface__definition-list dd {
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .surface__region-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    padding: var(--surface-pad);
+    border-block-start: 1px solid var(--line);
+  }
+
+  .surface__visually-hidden {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .surface-operations__body {
+    display: grid;
+    grid-template-columns: minmax(13rem, 1.2fr) minmax(9rem, 0.75fr) minmax(
+        15rem,
+        1.35fr
+      );
+  }
+
+  .surface-operations__queue,
+  .surface-operations__summary {
+    border-inline-end: 1px solid var(--line);
+  }
+
+  .surface-operations__queue .surface__table th:first-child,
+  .surface-operations__queue .surface__table td:first-child {
+    display: none;
+  }
+
+  .surface-operations__queue .surface__table tbody tr.is-selected td {
+    border-block-end-color: var(--line-strong);
+  }
+
+  .surface-editor__body {
+    display: grid;
+    grid-template-columns: minmax(16rem, 0.82fr) minmax(0, 1.18fr);
+  }
+
+  .surface-editor__form {
+    border-inline-end: 1px solid var(--line);
+  }
+
+  .surface-editor__fields {
+    display: grid;
+    gap: 0.7rem;
+    padding: var(--surface-pad);
+  }
+
+  .surface-editor__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem;
+    padding: var(--surface-pad);
+    border-block-start: 1px solid var(--line);
+  }
+
+  .surface-editor__actions .surface__mono {
+    inline-size: 100%;
+  }
+
+  .surface-editor__document {
+    max-inline-size: 38rem;
+    padding: clamp(1rem, 3vw, 2rem);
+  }
+
+  .surface-editor__document h4 {
+    margin-block: 0 1rem;
+    font-family: var(--font-en), var(--font-ja), sans-serif;
+    font-size: clamp(1.35rem, 3vw, 2.1rem);
+    line-height: 1.1;
+  }
+
+  .surface-editor__document p {
+    max-inline-size: 48ch;
+    color: var(--muted);
+  }
+
+  .surface-editor__document ul {
+    display: grid;
+    gap: 0.5rem;
+    margin: 1.5rem 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .surface-editor__document li {
+    padding: 0.5rem 0.65rem;
+    border-inline-start: 2px solid var(--line-strong);
+    background: var(--selection);
+    color: var(--ink);
+  }
+
+  .surface-planning__body {
+    min-inline-size: 0;
+  }
+
+  .surface-planning__calendar {
+    overflow-x: auto;
+  }
+
+  .surface-calendar {
+    min-inline-size: 42rem;
+  }
+
+  .surface-calendar :is(th, td) {
+    min-inline-size: 7.5rem;
+    block-size: 3.25rem;
+    padding: 0.45rem;
+  }
+
+  .surface-calendar thead th {
+    background: var(--selection);
+    color: var(--ink);
+  }
+
+  .surface-calendar thead th.is-selected {
+    border-block-end: 2px solid var(--ink);
+  }
+
+  .surface-calendar__time {
+    inline-size: 4.5rem;
+    min-inline-size: 4.5rem !important;
+    color: var(--faint) !important;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    white-space: nowrap;
+  }
+
+  .surface-calendar tbody td {
+    background: var(--canvas);
+  }
+
+  .surface-calendar__empty {
+    color: var(--line-strong);
+  }
+
+  .surface-event {
+    display: block;
+    inline-size: 100%;
+    min-block-size: 2.25rem;
+    border: 1px solid var(--line-strong);
+    border-inline-start: 3px solid var(--line-strong);
+    padding: 0.35rem 0.45rem;
+    background: var(--selection);
+    color: var(--ink);
+    cursor: pointer;
+    text-align: start;
+  }
+
+  .surface-event:hover,
+  .surface-event:focus-visible {
+    border-color: var(--ink);
+  }
+
+  .surface-event--focus {
+    border-inline-start-color: var(--ink);
+    background: var(--selection-strong);
+  }
+
+  .surface-event--field {
+    border-style: dashed;
+  }
+
+  .surface-planning__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    padding: 0.7rem var(--surface-pad);
+    border-block-start: 1px solid var(--line);
+    color: var(--muted);
+  }
+
+  .surface-planning__legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .surface-legend__mark {
+    display: inline-block;
+    inline-size: 0.65rem;
+    block-size: 0.65rem;
+    border: 1px solid var(--line-strong);
+    background: var(--selection);
+  }
+
+  .surface-legend__mark--1 {
+    border-color: var(--ink);
+    background: var(--selection-strong);
+  }
+
+  .surface-legend__mark--2 {
+    border-style: dashed;
+  }
+
+  .surface-field__body {
+    display: grid;
+    grid-template-columns: minmax(16rem, 0.8fr) minmax(0, 1.2fr);
+  }
+
+  .surface-field__device {
+    min-inline-size: 0;
+    border-inline-end: 1px solid var(--line);
+  }
+
+  .surface-field__mobile-bar,
+  .surface-field__job-head,
+  .surface-field__location {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.7rem var(--surface-pad);
+    border-block-end: 1px solid var(--line);
+  }
+
+  .surface-field__mobile-bar {
+    color: var(--muted);
+    background: var(--selection);
+  }
+
+  .surface-field__job-head {
+    align-items: start;
+  }
+
+  .surface-field__job-head h4 {
+    font-size: 0.95rem;
+  }
+
+  .surface-field__location {
+    display: grid;
+    justify-content: stretch;
+    gap: 0.2rem;
+  }
+
+  .surface-field__location span {
+    color: var(--muted);
+  }
+
+  .surface-field__actions {
+    display: grid;
+    grid-template-columns: 1.4fr 0.8fr 0.8fr;
+    gap: 0.45rem;
+    padding: var(--surface-pad);
+    border-block-end: 1px solid var(--line);
+  }
+
+  .surface-field__actions .surface__button {
+    min-inline-size: 0;
+  }
+
+  .surface-field__checklist .surface__region-header {
+    border-block-start: 1px solid var(--line);
+  }
+
+  .surface-field__checklist ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .surface-field__checklist li {
+    padding: 0.65rem var(--surface-pad);
+    border-block-end: 1px solid var(--line);
+  }
+
+  .surface-field__checklist label {
+    display: flex;
+    align-items: start;
+    gap: 0.5rem;
+    color: var(--ink);
+  }
+
+  .surface-field__checklist input {
+    accent-color: var(--ink);
+    margin-block-start: 0.18rem;
+  }
+
+  .surface-field__note {
+    margin: var(--surface-pad);
+  }
+
+  .surface__value {
+    font-size: 1.2rem;
+  }
+
+  .surface__progress {
+    display: block;
+    inline-size: 100%;
+    block-size: 0.4rem;
+    border: 1px solid var(--line-strong);
+    background: var(--canvas);
+  }
+
+  .surface__progress i {
+    display: block;
+    block-size: 100%;
+    background: var(--ink);
+  }
+
+  .surface-observability__body {
+    display: grid;
+    grid-template-columns: minmax(12rem, 0.82fr) minmax(14rem, 1fr) minmax(
+        16rem,
+        1.18fr
+      );
+  }
+
+  .surface-observability__timeline,
+  .surface-observability__services {
+    border-inline-end: 1px solid var(--line);
+  }
+
+  .surface-timeline {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .surface-timeline__item {
+    display: grid;
+    grid-template-columns: 3.3rem minmax(0, 1fr);
+    gap: 0.5rem;
+    padding: 0.8rem var(--surface-pad);
+    border-block-end: 1px solid var(--line);
+  }
+
+  .surface-timeline__item time {
+    color: var(--faint);
+    font-family: var(--mono);
+    font-size: 0.65rem;
+  }
+
+  .surface-timeline__item--alert {
+    background: var(--selection);
+    color: var(--ink);
+  }
+
+  .surface-timeline__item--focus {
+    border-inline-start: 3px solid var(--ink);
+    padding-inline-start: calc(var(--surface-pad) - 3px);
+  }
+
+  .surface-service-state.is-alert {
+    border-inline-start: 2px solid var(--ink);
+    padding-inline-start: 0.4rem;
+  }
+
+  .surface__alert {
+    display: grid;
+    gap: 0.45rem;
+    margin: 0;
+    padding: 0.8rem var(--surface-pad);
+    border-block-end: 1px solid var(--line);
+    background: var(--selection);
+    color: var(--ink);
+  }
+
+  .surface-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-block-end: 1px solid var(--line);
+  }
+
+  .surface-metrics > div {
+    display: grid;
+    gap: 0.3rem;
+    padding: 0.75rem var(--surface-pad);
+    border-inline-end: 1px solid var(--line);
+  }
+
+  .surface-metrics > div:last-child {
+    border-inline-end: 0;
+  }
+
+  .surface-metrics strong {
+    color: var(--ink);
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  @media (max-width: 48rem) {
+    .surface-operations__body,
+    .surface-editor__body,
+    .surface-field__body,
+    .surface-observability__body {
+      grid-template-columns: 1fr;
+    }
+
+    .surface-operations__queue,
+    .surface-operations__summary,
+    .surface-editor__form,
+    .surface-field__device,
+    .surface-observability__timeline,
+    .surface-observability__services {
+      border-inline-end: 0;
+      border-block-end: 1px solid var(--line);
+    }
+
+    .surface-operations__queue .surface__table th:first-child,
+    .surface-operations__queue .surface__table td:first-child {
+      display: table-cell;
+    }
+
+    .surface-operations__queue .surface__table th:nth-child(2),
+    .surface-operations__queue .surface__table td:nth-child(2) {
+      display: none;
+    }
+
+    .surface__row-button {
+      display: grid;
+      gap: 0.1rem;
+      inline-size: 100%;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      text-align: start;
+    }
+
+    .surface__row-button strong {
+      color: var(--ink);
+      font-weight: 500;
+    }
+
+    .surface__row-button small {
+      color: var(--muted);
+    }
+
+    .surface__row-button:focus-visible {
+      outline: 2px solid var(--ink);
+      outline-offset: 3px;
+    }
+  }
+
+  @media (max-width: 32rem) {
+    .surface__header {
+      grid-template-columns: 1fr;
+    }
+
+    .surface__status {
+      grid-row: 2;
+    }
+
+    .surface__toolbar {
+      align-items: stretch;
+    }
+
+    .surface__field,
+    .surface__field--search,
+    .surface__toolbar .surface__button {
+      inline-size: 100%;
+    }
+
+    .surface-planning__toolbar .surface__toolbar-spacer {
+      display: none;
+    }
+
+    .surface-field__actions {
+      grid-template-columns: 1fr;
+    }
+
+    .surface-metrics {
+      grid-template-columns: 1fr;
+    }
+
+    .surface-metrics > div {
+      border-block-end: 1px solid var(--line);
+      border-inline-end: 0;
+    }
+
+    .surface-metrics > div:last-child {
+      border-block-end: 0;
+    }
+  }
+</style>
