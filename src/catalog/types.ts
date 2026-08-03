@@ -7,6 +7,8 @@ export type CatalogCategoryId =
   | "data"
   | "feedback";
 
+export type CatalogLocale = "ja" | "en";
+
 export type CatalogConceptId = "philosophy";
 
 export type CatalogComponentId =

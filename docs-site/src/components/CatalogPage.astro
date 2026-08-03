@@ -26,7 +26,7 @@ const canonicalUrl = Astro.site
     <link rel="icon" href={sitePath("favicon.svg")} type="image/svg+xml" />
   </head>
   <body>
-    <main id="catalog"></main>
+    <main id="catalog" data-locale={lang} data-base-path={sitePath("")}></main>
     <script>
       import { mountCatalog } from "../../../src/index";
 
@@ -35,7 +35,15 @@ const canonicalUrl = Astro.site
         throw new Error("The integrated catalog requires a #catalog element.");
       }
 
-      mountCatalog(target, { label: "ikasue component catalog" });
+      const locale = target.dataset.locale === "en" ? "en" : "ja";
+      mountCatalog(target, {
+        label:
+          locale === "en"
+            ? "ikasue component catalog"
+            : "ikasueコンポーネントカタログ",
+        locale,
+        basePath: target.dataset.basePath,
+      });
     </script>
   </body>
 </html>
