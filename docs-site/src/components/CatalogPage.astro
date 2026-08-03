@@ -1,15 +1,15 @@
 ---
 import "../../../src/styles.css";
+import { COMPONENT_MATRIX_PAGE_COPY } from "../../../src/catalog/registry";
 import { sitePath } from "../data/site-path";
 
 interface Props {
   lang: "ja" | "en";
-  title: string;
-  description: string;
   canonicalPath: string;
 }
 
-const { lang, title, description, canonicalPath } = Astro.props;
+const { lang, canonicalPath } = Astro.props;
+const { title, description } = COMPONENT_MATRIX_PAGE_COPY[lang];
 const canonicalUrl = Astro.site
   ? new URL(sitePath(canonicalPath), Astro.site).href
   : undefined;
