@@ -8,12 +8,10 @@ import {
 import { element, listen, svgIcon, type Cleanup } from "./dom";
 import {
   CATALOG_GROUPS,
-  CATALOG_PAGES,
-  PRINCIPLES,
-  componentMeta,
-  componentPhilosophy,
-  findPage,
-} from "./metadata";
+  CATALOG_REGISTRY,
+  componentSource,
+  findRegistryEntry,
+} from "./registry";
 import {
   cloneProps,
   defaultProps,
@@ -21,9 +19,11 @@ import {
   serializeComponentQuery,
 } from "./state";
 import type {
+  CatalogCategoryId,
+  CatalogComponentRegistryEntry,
   CatalogLocale,
   CatalogPageId,
-  CatalogPageMetadata,
+  CatalogRegistryEntry,
   CatalogPropertyValue,
 } from "./types";
 
@@ -73,10 +73,10 @@ function sitePath(
 }
 
 function localizedGroupLabel(
-  category: CatalogPageMetadata["cat"],
+  category: CatalogCategoryId,
   locale: CatalogLocale,
 ): string {
-  const labels: Record<CatalogPageMetadata["cat"], string> =
+  const labels: Record<CatalogCategoryId, string> =
     locale === "en"
       ? {
           philosophy: "Philosophy & contracts",
@@ -312,7 +312,9 @@ export function mountCatalog(
       currentProps[key] = value;
       syncPropertyControl(key, value);
       const spec = content.querySelector<HTMLElement>("#specCode");
-      if (spec) spec.textContent = contractText(findPage(currentId));
+      const entry = findRegistryEntry(currentId);
+      if (spec && entry.kind === "component")
+        spec.textContent = contractText(entry);
     },
     track: (item) => pageCleanup.push(item),
     listen: (targetElement, type, handler) =>
@@ -408,17 +410,16 @@ export function mountCatalog(
     const query = navQuery.trim().toLocaleLowerCase();
     let matchCount = 0;
     for (const [, category] of CATALOG_GROUPS) {
-      const groupItems = CATALOG_PAGES.filter(
-        (component) =>
-          component.cat === category && matchesNavQuery(component, query),
+      const groupItems = CATALOG_REGISTRY.filter(
+        (entry) => entry.category === category && matchesNavQuery(entry, query),
       );
       if (!groupItems.length) continue;
       matchCount += groupItems.length;
       const groupLabel = element(document, "div", "nav-group");
       groupLabel.textContent = localizedGroupLabel(category, locale);
       componentList.append(groupLabel);
-      for (const component of groupItems)
-        componentList.append(createNavItem(component));
+      for (const entry of groupItems)
+        componentList.append(createNavItem(entry));
     }
     if (query && !matchCount) {
       const empty = element(document, "p", "nav-empty");
@@ -441,42 +442,44 @@ export function mountCatalog(
     navList.append(componentsSection);
   };
 
-  const createNavItem = (component: CatalogPageMetadata): HTMLButtonElement => {
+  const createNavItem = (entry: CatalogRegistryEntry): HTMLButtonElement => {
     const item = element(document, "button", "nav-item");
     item.type = "button";
-    item.dataset.id = component.id;
+    item.dataset.id = entry.id;
     item.setAttribute(
       "aria-current",
-      component.id === currentId ? "page" : "false",
+      entry.id === currentId ? "page" : "false",
     );
-    item.append(svgIcon(document, component.cat));
+    item.append(svgIcon(document, entry.category));
     const copy = element(document, "span");
-    copy.textContent = component.name;
+    copy.textContent = entry.page[locale].title;
     const japanese = element(document, "small");
-    japanese.textContent = locale === "en" ? "" : component.ja;
+    japanese.textContent = locale === "en" ? "" : entry.displayNameJa;
     copy.append(japanese);
     item.append(copy);
     navCleanup.push(
       listen(item, "click", () => {
-        selectComponent(component.id, true, true);
+        selectComponent(entry.id, true, true);
       }),
     );
     return item;
   };
 
-  const contractText = (component: CatalogPageMetadata): string => {
-    const rustName = component.name.replace(/[^A-Za-z0-9]/g, "");
-    const rustProps = Object.entries(currentProps)
-      .map(
-        ([key, value]) =>
-          `${key}: ${typeof value === "boolean" ? String(value) : `${JSON.stringify(value)}.into()`}`,
-      )
-      .join(", ");
-    return `// JavaScript / JSON\n${JSON.stringify({ component: component.name, ...currentProps }, null, 2)}\n\n// Rust\nUiNode::${rustName}({ ${rustProps} })`;
+  const contractText = (component: CatalogComponentRegistryEntry): string => {
+    return JSON.stringify(
+      {
+        contract: "current properties",
+        component: component.displayName,
+        id: component.id,
+        props: currentProps,
+      },
+      null,
+      2,
+    );
   };
 
   const updateProperty = (
-    component: CatalogPageMetadata,
+    component: CatalogComponentRegistryEntry,
     key: string,
     value: string | boolean,
   ): void => {
@@ -501,15 +504,17 @@ export function mountCatalog(
     if (read) read.textContent = String(value);
   }
 
-  const renderProperties = (component: CatalogPageMetadata): HTMLDivElement => {
+  const renderProperties = (
+    component: CatalogComponentRegistryEntry,
+  ): HTMLDivElement => {
     const list = element(document, "div", "property-list");
-    for (const property of component.props) {
+    for (const property of component.properties) {
       const row = element(document, "div", "property-row");
       const label = element(document, "label");
       const title = element(document, "span");
       const inputId = `catalog-${component.id}-${property.key}`;
       title.id = `${inputId}-label`;
-      title.textContent = property.label;
+      title.textContent = locale === "en" ? property.labelEn : property.labelJa;
       const detail = element(document, "small");
       detail.textContent = `${property.key} / default: ${String(property.default)}`;
       label.append(title, detail);
@@ -526,7 +531,7 @@ export function mountCatalog(
             editable: true,
             editor: "select",
             values: property.values,
-            label: property.label,
+            label: locale === "en" ? property.labelEn : property.labelJa,
             onCommit: (value) => {
               updateProperty(component, property.key, value);
             },
@@ -571,7 +576,7 @@ export function mountCatalog(
             value: String(currentProps[property.key] ?? ""),
             editable: true,
             editor: "text",
-            label: property.label,
+            label: locale === "en" ? property.labelEn : property.labelJa,
             onCommit: (value) => {
               updateProperty(component, property.key, value);
             },
@@ -586,11 +591,40 @@ export function mountCatalog(
     return list;
   };
 
-  const renderContract = (component: CatalogPageMetadata): HTMLPreElement => {
+  const renderContract = (
+    component: CatalogComponentRegistryEntry,
+  ): HTMLPreElement => {
     const pre = element(document, "pre", "code-block");
     pre.id = "specCode";
     pre.textContent = contractText(component);
     return pre;
+  };
+
+  const renderSharedSources = (
+    component: CatalogComponentRegistryEntry,
+  ): HTMLElement => {
+    const section = element(document, "section", "section");
+    const heading = element(document, "h2");
+    heading.textContent =
+      locale === "en" ? "Shared source recipe" : "共有source recipe";
+    const note = element(document, "p", "source-note");
+    note.textContent =
+      locale === "en"
+        ? "These JavaScript and Rust source strings come from the registry and are rendered identically by ComponentDoc."
+        : "このJavaScriptとRustのsource stringはregistryから取得し、ComponentDocと同じ内容を描画します。";
+    const source = componentSource(component.id);
+    const javascript = element(document, "pre", "code-block");
+    javascript.dataset.source = "javascript";
+    javascript.textContent = source.javascript;
+    const rust = element(document, "pre", "code-block");
+    rust.dataset.source = "rust";
+    rust.textContent = source.rust;
+    const javascriptLabel = element(document, "h3");
+    javascriptLabel.textContent = "JavaScript";
+    const rustLabel = element(document, "h3");
+    rustLabel.textContent = "Rust";
+    section.append(heading, note, javascriptLabel, javascript, rustLabel, rust);
+    return section;
   };
 
   const appendPageHeading = (
@@ -619,9 +653,16 @@ export function mountCatalog(
     return section;
   };
 
-  const renderStandardPage = (component: CatalogPageMetadata): void => {
+  const renderStandardPage = (
+    component: CatalogComponentRegistryEntry,
+  ): void => {
+    const copy = component.documentation[locale];
     content.append(
-      appendPageHeading("ikasue component", component.name, component.summary),
+      appendPageHeading(
+        copy.category,
+        component.page[locale].title,
+        copy.summary,
+      ),
     );
     const grid = element(document, "div", "doc-grid");
     const main = element(document, "div", "doc-main");
@@ -638,36 +679,62 @@ export function mountCatalog(
     demoSection.append(demoLabel, demoStage);
     main.append(demoSection);
 
-    const philosophySection = appendSection(main, "設計思想");
+    const philosophySection = appendSection(
+      main,
+      locale === "en" ? "Design philosophy" : "設計思想",
+    );
     const philosophyText = element(document, "p");
-    philosophyText.textContent = componentPhilosophy(component.id);
+    philosophyText.textContent = copy.philosophy;
     philosophySection.append(philosophyText);
-    const contractSection = appendSection(main, "Component contract");
+    const contractSection = appendSection(
+      main,
+      locale === "en"
+        ? "Current properties contract"
+        : "現在のproperties contract",
+    );
     contractSection.append(renderContract(component));
+    main.append(renderSharedSources(component));
 
-    const propertiesSection = appendSection(side, "Properties");
-    if (component.props.length)
+    const propertiesSection = appendSection(
+      side,
+      locale === "en" ? "Properties" : "プロパティ",
+    );
+    if (component.properties.length)
       propertiesSection.append(renderProperties(component));
     else {
       const noProperties = element(document, "p", "summary");
-      noProperties.textContent = "設定項目はありません。";
+      noProperties.textContent =
+        locale === "en"
+          ? "This component has no configurable properties."
+          : "設定項目はありません。";
       propertiesSection.append(noProperties);
     }
-    const criteriaSection = appendSection(side, "判断基準");
-    appendMeta(criteriaSection, component.id);
+    const criteriaSection = appendSection(
+      side,
+      locale === "en"
+        ? "Behavior and accessibility"
+        : "振る舞いとアクセシビリティ",
+    );
+    appendMeta(criteriaSection, copy);
     grid.append(main, side);
     content.append(grid);
-    topTitle.textContent = component.name;
+    topTitle.textContent = component.page[locale].title;
     renderDemo(demoStage, component, currentProps, context());
   };
 
-  const appendMeta = (section: HTMLElement, id: CatalogPageId): void => {
+  const appendMeta = (
+    section: HTMLElement,
+    copy: CatalogComponentRegistryEntry["documentation"][CatalogLocale],
+  ): void => {
     const list = element(document, "dl", "meta-list");
-    const values = componentMeta(id);
     for (const [term, value] of [
-      ["使う", values[0]],
-      ["避ける", values[1]],
-      ["keyboard", values[2]],
+      [locale === "en" ? "Use it when" : "使う", copy.useWhen],
+      [locale === "en" ? "Avoid it when" : "避ける", copy.avoidWhen],
+      [locale === "en" ? "Keyboard" : "keyboard", copy.keyboard],
+      [
+        locale === "en" ? "Accessibility" : "アクセシビリティ",
+        copy.accessibility,
+      ],
     ] as const) {
       const item = element(document, "div", "meta-item");
       const dt = element(document, "dt");
@@ -681,19 +748,26 @@ export function mountCatalog(
   };
 
   const renderPhilosophy = (): void => {
+    const concept = findRegistryEntry("philosophy");
+    const copy = concept.documentation[locale];
     content.append(
       appendPageHeading(
-        "ikasue design system",
-        "一枚の平面が、仕事に合わせて場所を譲る。",
-        "立体的な階層、浮遊するcard、上に重なるdrawerを使わない。情報と操作は同じ平面に存在し、必要になった領域が、その領域のある辺から現れて既存空間を再配分する。",
+        copy.category,
+        concept.page[locale].title,
+        copy.summary,
       ),
     );
     const grid = element(document, "div", "doc-grid");
     const main = element(document, "div", "doc-main");
     const side = element(document, "aside", "doc-side");
-    const principles = appendSection(main, "最上位原則");
+    const principles = appendSection(
+      main,
+      locale === "en" ? "Top-level principles" : "最上位原則",
+    );
     const list = element(document, "div", "principles");
-    for (const [index, [title, description]] of PRINCIPLES.entries()) {
+    for (const [index, [title, description]] of concept.principles[
+      locale
+    ].entries()) {
       const item = element(document, "div", "principle");
       const number = element(document, "div", "principle-num");
       number.textContent = String(index + 1).padStart(2, "0");
@@ -705,26 +779,42 @@ export function mountCatalog(
       list.append(item);
     }
     principles.append(list);
-    const prediction = appendSection(main, "2034年への予測");
+    const prediction = appendSection(
+      main,
+      locale === "en" ? "A prediction for 2034" : "2034年への予測",
+    );
     prediction.append(
       richParagraph(
         document,
-        "画面は「固定された12 columns」から、task・focus・内容量が空間配分を要求する",
-        "平面交渉モデル",
-        "へ移る。AIや自動処理により情報が双方向になるほど、read viewとedit viewを別componentにする意味は薄れ、情報そのものへ編集能力・履歴・検証状態が付く。",
+        locale === "en"
+          ? "Interfaces will move from fixed columns toward a "
+          : "画面は「固定された12 columns」から、task・focus・内容量が空間配分を要求する",
+        locale === "en" ? "negotiated plane model" : "平面交渉モデル",
+        locale === "en"
+          ? "where task, focus, and content ask for area. As information becomes more interactive, editing capability, history, and validation belong to the information itself."
+          : "へ移る。AIや自動処理により情報が双方向になるほど、read viewとedit viewを別componentにする意味は薄れ、情報そのものへ編集能力・履歴・検証状態が付く。",
       ),
       richParagraph(
         document,
-        "Material 3 Expressiveのsize変化、adaptive component、motion physicsを、色彩や装飾ではなく",
-        "面積の移譲と方向の一貫性",
-        "へ翻訳する。表現力は選択と焦点の瞬間だけに使う。",
+        locale === "en"
+          ? "Translate expressive sizing, adaptive components, and motion physics into "
+          : "Material 3 Expressiveのsize変化、adaptive component、motion physicsを、色彩や装飾ではなく",
+        locale === "en"
+          ? "area transfer and directional consistency"
+          : "面積の移譲と方向の一貫性",
+        locale === "en"
+          ? ". Expression belongs to moments of selection and focus."
+          : "へ翻訳する。表現力は選択と焦点の瞬間だけに使う。",
       ),
     );
     const demo = appendSection(main, "平面の実演");
     const stage = element(document, "div", "demo-stage");
     stage.id = "philosophyDemo";
     demo.append(stage);
-    const forbidden = appendSection(side, "禁止するもの");
+    const forbidden = appendSection(
+      side,
+      locale === "en" ? "What to avoid" : "禁止するもの",
+    );
     appendDefinitionList(forbidden, [
       ["Z軸", "shadow、floating card、overlay drawer、上に被せるmodal。"],
       [
@@ -737,30 +827,48 @@ export function mountCatalog(
       ],
       ["入力boxの常設", "情報を読む時間にもeditor chromeを表示し続けること。"],
     ]);
-    const emphasis = appendSection(side, "強調の順序");
+    const emphasis = appendSection(
+      side,
+      locale === "en" ? "Emphasis order" : "強調の順序",
+    );
     emphasis.append(
       paragraph(
         document,
-        "1. 面積を少し譲る\n2. 淡い無彩色面\n3. 位置を2px動かす\n4. status時だけ意味色\n5. 強いoutlineはkeyboard focusだけ",
+        locale === "en"
+          ? "1. Give up a little area\n2. Quiet achromatic surface\n3. Move by 2px\n4. Semantic color only for status\n5. Strong outline only for keyboard focus"
+          : "1. 面積を少し譲る\n2. 淡い無彩色面\n3. 位置を2px動かす\n4. status時だけ意味色\n5. 強いoutlineはkeyboard focusだけ",
       ),
     );
     grid.append(main, side);
     content.append(grid);
-    topTitle.textContent = "Design philosophy";
+    topTitle.textContent = concept.page[locale].title;
     renderPhilosophyDemo(stage, context());
   };
 
-  const renderDeveloper = (): void => {
+  const renderDeveloper = (component: CatalogComponentRegistryEntry): void => {
+    const copy = component.documentation[locale];
     content.append(
       appendPageHeading(
-        "Coding model",
-        "componentは見た目ではなく、能力と空間要求を宣言する。",
-        "ikasueはDOM、JavaScript、Rustから同じJSON互換contractを使用する。製品固有のlayout queryやeditor実装をcomponentへ埋め込まない。",
+        copy.category,
+        component.page[locale].title,
+        copy.summary,
       ),
     );
     const grid = element(document, "div", "doc-grid");
     const main = element(document, "div", "doc-main");
     const side = element(document, "aside", "doc-side");
+    const philosophySection = appendSection(
+      main,
+      locale === "en" ? "Design philosophy" : "設計思想",
+    );
+    philosophySection.append(paragraph(document, copy.philosophy));
+    const contractSection = appendSection(
+      main,
+      locale === "en"
+        ? "Current properties contract"
+        : "現在のproperties contract",
+    );
+    contractSection.append(renderContract(component));
     const model = appendSection(main, "統合された情報model");
     const textSpec = element(document, "pre", "code-block");
     textSpec.textContent = `TextSpec {
@@ -796,7 +904,28 @@ export function mountCatalog(
     const stage = element(document, "div", "demo-stage");
     stage.id = "developerDemo";
     output.append(stage);
-    const published = appendSection(side, "公開package");
+    main.append(renderSharedSources(component));
+    const propertiesSection = appendSection(
+      side,
+      locale === "en" ? "Properties" : "プロパティ",
+    );
+    const noProperties = element(document, "p", "summary");
+    noProperties.textContent =
+      locale === "en"
+        ? "This component has no configurable properties."
+        : "設定項目はありません。";
+    propertiesSection.append(noProperties);
+    const criteriaSection = appendSection(
+      side,
+      locale === "en"
+        ? "Behavior and accessibility"
+        : "振る舞いとアクセシビリティ",
+    );
+    appendMeta(criteriaSection, copy);
+    const published = appendSection(
+      side,
+      locale === "en" ? "Published packages" : "公開package",
+    );
     appendDefinitionList(published, [
       ["@ugoite/ikasue", "dependency-free DOM enhancerとCustom Elements。"],
       ["@ugoite/ikasue-solid", "ugoite用の薄いSolid adapter。"],
@@ -805,7 +934,7 @@ export function mountCatalog(
     ]);
     grid.append(main, side);
     content.append(grid);
-    topTitle.textContent = "Developer model";
+    topTitle.textContent = component.page[locale].title;
     renderDeveloperDemo(stage, context());
   };
 
@@ -815,10 +944,10 @@ export function mountCatalog(
     for (const item of propertyCleanup) item();
     propertyCleanup = [];
     content.replaceChildren();
-    const component = findPage(currentId);
-    if (component.demo === "philosophy") renderPhilosophy();
-    else if (component.demo === "developer") renderDeveloper();
-    else renderStandardPage(component);
+    const page = findRegistryEntry(currentId);
+    if (page.kind === "concept") renderPhilosophy();
+    else if (page.demo === "developer") renderDeveloper(page);
+    else renderStandardPage(page);
     contentScroll.scrollTop = 0;
     if (focusHeading) focusPageHeading(content);
   };
@@ -979,13 +1108,17 @@ function createIconButton(
 }
 
 function matchesNavQuery(
-  component: CatalogPageMetadata,
+  component: CatalogRegistryEntry,
   query: string,
 ): boolean {
   if (!query) return true;
-  return [component.id, component.name, component.ja].some((value) =>
-    value.toLocaleLowerCase().includes(query),
-  );
+  return [
+    component.id,
+    component.displayName,
+    component.displayNameJa,
+    component.page.ja.title,
+    component.page.en.title,
+  ].some((value) => value.toLocaleLowerCase().includes(query));
 }
 
 function richParagraph(

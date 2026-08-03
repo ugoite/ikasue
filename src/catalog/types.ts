@@ -60,6 +60,8 @@ export interface CatalogPageCopy {
   readonly description: string;
 }
 
+export type CatalogPrinciple = readonly [title: string, description: string];
+
 export interface CatalogSourceRecipe {
   readonly axis: "vertical" | "horizontal";
   readonly children: string;
@@ -69,9 +71,9 @@ export interface CatalogSourceRecipe {
   readonly rustState: string;
 }
 
-export interface CatalogRegistryEntry {
-  readonly id: CatalogComponentId;
-  readonly kind: "component" | "concept";
+export interface CatalogRegistryEntryBase<TId extends CatalogPageId, TKind> {
+  readonly id: TId;
+  readonly kind: TKind;
   readonly category: CatalogCategoryId;
   readonly displayName: string;
   readonly displayNameJa: string;
@@ -82,10 +84,34 @@ export interface CatalogRegistryEntry {
   readonly documentation: Readonly<
     Record<CatalogLocale, CatalogDocumentationCopy>
   >;
-  readonly source: CatalogSourceRecipe;
   readonly page: Readonly<Record<CatalogLocale, CatalogPageCopy>>;
   readonly demo: string;
 }
+
+export interface CatalogComponentRegistryEntry extends CatalogRegistryEntryBase<
+  CatalogComponentId,
+  "component"
+> {
+  readonly source: CatalogSourceRecipe;
+}
+
+export interface CatalogConceptRegistryEntry extends CatalogRegistryEntryBase<
+  CatalogConceptId,
+  "concept"
+> {
+  readonly principles: Readonly<
+    Record<CatalogLocale, readonly CatalogPrinciple[]>
+  >;
+}
+
+export type CatalogRegistryEntry =
+  CatalogComponentRegistryEntry | CatalogConceptRegistryEntry;
+
+/** A registry entry narrowed to a runtime component page. */
+export type CatalogComponentEntry = CatalogComponentRegistryEntry;
+
+/** A registry entry narrowed to the philosophy concept page. */
+export type CatalogConceptEntry = CatalogConceptRegistryEntry;
 
 export interface CatalogProperty {
   readonly key: string;

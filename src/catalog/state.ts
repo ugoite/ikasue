@@ -1,4 +1,8 @@
-import { CATALOG_COMPONENTS, CATALOG_PAGES, findPage } from "./metadata";
+import {
+  CATALOG_REGISTRY,
+  COMPONENT_REGISTRY,
+  findRegistryEntry,
+} from "./registry";
 import type { CatalogComponentId, CatalogPageId, CatalogProps } from "./types";
 
 export const DEFAULT_COMPONENT_ID: CatalogPageId = "philosophy";
@@ -9,7 +13,7 @@ export function isCatalogComponentId(
   return (
     value !== null &&
     value !== undefined &&
-    CATALOG_COMPONENTS.some((component) => component.id === value)
+    COMPONENT_REGISTRY.some((component) => component.id === value)
   );
 }
 
@@ -19,7 +23,7 @@ export function isCatalogPageId(
   return (
     value !== null &&
     value !== undefined &&
-    CATALOG_PAGES.some((page) => page.id === value)
+    CATALOG_REGISTRY.some((page) => page.id === value)
   );
 }
 
@@ -48,9 +52,9 @@ export function serializeComponentQuery(
 export const serializeCatalogQuery = serializeComponentQuery;
 
 export function defaultProps(id: CatalogPageId): CatalogProps {
-  const component = findPage(id);
+  const component = findRegistryEntry(id);
   return Object.fromEntries(
-    component.props.map((property) => [property.key, property.default]),
+    component.properties.map((property) => [property.key, property.default]),
   );
 }
 
