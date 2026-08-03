@@ -1,7 +1,9 @@
 ---
-import { PRINCIPLES, PRINCIPLES_EN } from "../../../src/catalog/metadata";
+import { findRegistryEntry } from "../../../src/catalog/registry";
 
-const principles = Astro.currentLocale === "en" ? PRINCIPLES_EN : PRINCIPLES;
+const locale = Astro.currentLocale === "en" ? "en" : "ja";
+const concept = findRegistryEntry("philosophy");
+const principles = concept.principles[locale];
 ---
 
 <div class="principles not-content">

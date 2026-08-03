@@ -11,11 +11,11 @@ import {
   getTableCell,
   type TableState,
 } from "./table-state";
-import { findComponent } from "./metadata";
+import { findRegistryEntry } from "./registry";
 import { horizontal, resolvePlane, vertical } from "../plane";
 import type {
   CatalogLocale,
-  CatalogPageMetadata,
+  CatalogComponentRegistryEntry,
   CatalogProps,
   CatalogPropertyValue,
 } from "./types";
@@ -106,7 +106,7 @@ function clear(container: HTMLElement): void {
 
 export function renderDemo(
   container: HTMLElement,
-  component: CatalogPageMetadata,
+  component: CatalogComponentRegistryEntry,
   props: CatalogProps,
   context: DemoContext,
 ): void {
@@ -318,13 +318,13 @@ function renderStatus(
 
 function renderPlane(
   container: HTMLElement,
-  component: CatalogPageMetadata,
+  component: CatalogComponentRegistryEntry,
   props: CatalogProps,
   context: DemoContext,
 ): void {
   const componentId = component.id;
   const axis = componentId === "horizontal" ? "horizontal" : "vertical";
-  const fitProperty = component.props.find(
+  const fitProperty = component.properties.find(
     (property) => property.key === "fit",
   );
   const fitOptions = ["elastic", "wrap", "scroll"].filter((value) =>
@@ -353,8 +353,8 @@ function renderPlane(
   stage.setAttribute(
     "aria-label",
     context.locale === "en"
-      ? `${component.name} resolved plane`
-      : `${component.ja}のresolved plane`,
+      ? `${component.displayName} resolved plane`
+      : `${component.displayNameJa}のresolved plane`,
   );
 
   const fitDescriptions = planeFitDescriptions(context.locale === "en");
@@ -1348,7 +1348,7 @@ export function renderPhilosophyDemo(
   clear(container);
   renderPlane(
     container,
-    findComponent("horizontal"),
+    findRegistryEntry("horizontal"),
     { fit: "elastic", gap: "md", items: "4" },
     context,
   );

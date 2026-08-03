@@ -7,17 +7,21 @@
  */
 import type {
   CatalogCategoryId,
+  CatalogComponentRegistryEntry,
   CatalogComponentId,
   CatalogComponentMetadata,
   CatalogDocumentationCopy,
+  CatalogConceptId,
   CatalogLocale,
   CatalogLocalizedText,
   CatalogPageCopy,
   CatalogRegistryEntry,
   CatalogSourceRecipe,
   CatalogConceptMetadata,
+  CatalogConceptRegistryEntry,
   CatalogPageId,
   CatalogPageMetadata,
+  CatalogPrinciple,
   CatalogProperty,
   CatalogPropertyValue,
 } from "./types";
@@ -48,18 +52,16 @@ export const CATALOG_GROUPS = [
   ["フィードバック", "feedback"],
 ] as const satisfies readonly (readonly [string, CatalogCategoryId])[];
 
-export const CATALOG_CONCEPTS = [
-  {
-    id: "philosophy",
-    cat: "philosophy",
-    name: "Design philosophy",
-    ja: "平面適応UIの思想",
-    summary:
-      "すべてのUIを一枚の平面上の順序と空間配分として扱う。必要な領域は同じ平面の中で場所を譲り、重なりを作らない。",
-    demo: "philosophy",
-    props: [],
-  },
-] as const satisfies readonly CatalogConceptMetadata[];
+const PHILOSOPHY_METADATA = {
+  id: "philosophy",
+  cat: "philosophy",
+  name: "Design philosophy",
+  ja: "平面適応UIの思想",
+  summary:
+    "すべてのUIを一枚の平面上の順序と空間配分として扱う。必要な領域は同じ平面の中で場所を譲り、重なりを作らない。",
+  demo: "philosophy",
+  props: [],
+} as const satisfies CatalogConceptMetadata;
 
 const BASE_CATALOG_COMPONENTS = [
   {
@@ -1413,15 +1415,153 @@ export const COMPONENT_MATRIX_PAGE_COPY = {
   },
 } as const satisfies Record<CatalogLocale, CatalogPageCopy>;
 
+const PHILOSOPHY_PAGE_COPY = {
+  ja: {
+    title: "Design philosophy / 平面適応UIの思想",
+    description: "ikasueの平面中心の原則。",
+  },
+  en: {
+    title: "Design philosophy",
+    description: "The plane-centered principles behind ikasue.",
+  },
+} as const satisfies Record<CatalogLocale, CatalogPageCopy>;
+
+const PHILOSOPHY_PRINCIPLES = {
+  ja: [
+    [
+      "One Plane",
+      "すべてのcomponentは同じ平面に置く。新しい領域は既存領域へ重ならず、flowの中で場所を作る。",
+    ],
+    [
+      "One Axis at a Time",
+      "開発者が選ぶのはverticalまたはhorizontalの一軸だけ。複雑な領域調停はランタイムが内部で行う。",
+    ],
+    [
+      "Simple Adaptation",
+      "収まる間は順序とサイズを保ち、必要になったときだけelastic、wrap、scrollへ決定的に適応する。",
+    ],
+    [
+      "Information Is Editable",
+      "TextとTextInputを分けない。情報へeditable capabilityとeditor kindを付け、読む状態を標準にする。",
+    ],
+    [
+      "Selection Owns Area",
+      "選択は下線や濃い枠だけで示さず、少し広がり、淡い面を持つ。未選択は静かに保つ。",
+    ],
+    [
+      "No Card Taxonomy",
+      "分類のために箱を増やさない。余白、境界線、順序で意味を分ける。",
+    ],
+    [
+      "Semantic Color Only",
+      "黒は構造。青・緑・赤・黄は状態だけに使用し、装飾paletteとして散らさない。",
+    ],
+    [
+      "Readable During Work",
+      "loadingや更新中も以前の内容を残し、処理対象の領域だけを黒いmotionで示す。",
+    ],
+  ],
+  en: [
+    [
+      "One Plane",
+      "Place every component on the same plane. New regions make room in the flow instead of covering existing regions.",
+    ],
+    [
+      "One Axis at a Time",
+      "The developer chooses only one axis, vertical or horizontal. Runtime behavior handles internal space negotiation.",
+    ],
+    [
+      "Simple Adaptation",
+      "Preserve order and size while content fits, then deterministically adapt with elastic, wrap, or scroll behavior.",
+    ],
+    [
+      "Information Is Editable",
+      "Do not split Text from TextInput. Give information an editable capability and editor kind while keeping reading as the default state.",
+    ],
+    [
+      "Selection Owns Area",
+      "Show selection with a little more area and a quiet surface, not only an underline or heavy border.",
+    ],
+    [
+      "No Card Taxonomy",
+      "Do not add boxes to create categories. Separate meaning with space, boundaries, and order.",
+    ],
+    [
+      "Semantic Color Only",
+      "Black is structural. Use blue, green, red, and yellow for state only.",
+    ],
+    [
+      "Readable During Work",
+      "Keep previous content visible during loading or updates, and show motion only on the region being processed.",
+    ],
+  ],
+} as const satisfies Record<CatalogLocale, readonly CatalogPrinciple[]>;
+
+const PHILOSOPHY_DOCUMENTATION = {
+  ja: {
+    category: "思想と契約",
+    summary: PHILOSOPHY_METADATA.summary,
+    philosophy:
+      "情報と操作は同じ平面に存在し、必要になった領域が所属するedgeから現れて既存空間を再配分する。",
+    useWhen: "業務画面の情報、操作、配置を一枚のplane modelで考えるとき。",
+    avoidWhen:
+      "情報を隠すoverlay、装飾のためのcard階層、任意方向のmotionを使うとき。",
+    implementation:
+      "`PlaneSpec`のaxis、fit、gap、childrenを宣言し、`resolvePlane`のoffset、size、line、overflowを描画へ反映する。",
+    keyboard:
+      "DOMの読み順をplaneの順序と一致させ、各componentのTab、矢印、Escape、Enterの契約を保つ。",
+    accessibility:
+      "見出し、label、role、状態名を公開し、色、motion、配置だけに意味を預けない。",
+    goodFor: "情報密度の高いworkspace、編集と配置の組み合わせ",
+    avoidFor: "装飾用container、自由な重なり、根拠を隠すmodal",
+    interaction:
+      "情報を読み、必要な領域へ面積と操作能力を渡しながら仕事を進める。",
+    propertyLabels: {},
+  },
+  en: {
+    category: "Philosophy & contracts",
+    summary:
+      "Treat every UI as order and area allocation on one plane; new regions make room without covering existing information.",
+    philosophy:
+      "Information and interaction share one plane. New regions enter from their owning edge and reallocate existing space.",
+    useWhen:
+      "Information, interaction, and placement should be reasoned about with one plane model.",
+    avoidWhen:
+      "Information is being hidden behind overlays, decorative card layers, or arbitrary motion.",
+    implementation:
+      "Declare axis, fit, gap, and children in `PlaneSpec`, then render `offset`, `size`, `line`, and `overflow` from `resolvePlane`.",
+    keyboard:
+      "Keep DOM reading order aligned with plane order and preserve each component's Tab, arrow, Escape, and Enter contract.",
+    accessibility:
+      "Expose headings, labels, roles, and state names; never make color, motion, or placement the only cue.",
+    goodFor: "Information-dense workspaces combining editing and placement",
+    avoidFor:
+      "Decorative containers, arbitrary overlap, and evidence-obscuring modals",
+    interaction:
+      "Read information and give area and interaction capability to the region needed for the task.",
+    propertyLabels: {},
+  },
+} as const satisfies Record<CatalogLocale, CatalogDocumentationCopy>;
+
 function registryProperties(
   component: (typeof BASE_CATALOG_COMPONENTS)[number],
   documentation: Readonly<Record<CatalogLocale, CatalogDocumentationCopy>>,
 ): readonly CatalogProperty[] {
-  return component.props.map((property) => ({
-    ...property,
-    labelJa: documentation.ja.propertyLabels[property.key] ?? property.labelJa,
-    labelEn: documentation.en.propertyLabels[property.key] ?? property.labelEn,
-  }));
+  return component.props.map((property) => {
+    const labelJa = documentation.ja.propertyLabels[property.key];
+    const labelEn = documentation.en.propertyLabels[property.key];
+    if (!labelJa || !labelEn) {
+      throw new Error(
+        `Missing bilingual property label for ${component.id}.${property.key}`,
+      );
+    }
+    return {
+      ...property,
+      label: labelJa,
+      labelJa,
+      labelEn,
+    };
+  });
 }
 
 export const COMPONENT_REGISTRY = BASE_CATALOG_COMPONENTS.map((component) => {
@@ -1432,7 +1572,7 @@ export const COMPONENT_REGISTRY = BASE_CATALOG_COMPONENTS.map((component) => {
 
   return {
     id: component.id,
-    kind: component.id === "developer-model" ? "concept" : "component",
+    kind: "component",
     category: component.cat,
     displayName: component.name,
     displayNameJa: component.ja,
@@ -1447,18 +1587,50 @@ export const COMPONENT_REGISTRY = BASE_CATALOG_COMPONENTS.map((component) => {
     page: COMPONENT_PAGE_COPY[component.id],
     demo: component.demo,
   };
-}) satisfies readonly CatalogRegistryEntry[];
+}) satisfies readonly CatalogComponentRegistryEntry[];
 
-export const CATALOG_REGISTRY = COMPONENT_REGISTRY;
+const PHILOSOPHY_REGISTRY_ENTRY = {
+  id: PHILOSOPHY_METADATA.id,
+  kind: "concept",
+  category: PHILOSOPHY_METADATA.cat,
+  displayName: PHILOSOPHY_METADATA.name,
+  displayNameJa: PHILOSOPHY_METADATA.ja,
+  catalogSummaryJa: PHILOSOPHY_METADATA.summary,
+  summary: {
+    ja: PHILOSOPHY_METADATA.summary,
+    en: PHILOSOPHY_DOCUMENTATION.en.summary,
+  } satisfies CatalogLocalizedText,
+  properties: PHILOSOPHY_METADATA.props,
+  documentation: PHILOSOPHY_DOCUMENTATION,
+  page: PHILOSOPHY_PAGE_COPY,
+  demo: PHILOSOPHY_METADATA.demo,
+  principles: PHILOSOPHY_PRINCIPLES,
+} satisfies CatalogConceptRegistryEntry;
+
 export const COMPONENT_DOCUMENTATION_COPY = COMPONENT_COPY;
 
-export const RUNTIME_COMPONENT_REGISTRY = COMPONENT_REGISTRY.filter(
-  (entry) => entry.kind === "component",
-);
+export const CONCEPT_REGISTRY = [
+  PHILOSOPHY_REGISTRY_ENTRY,
+] as const satisfies readonly CatalogConceptRegistryEntry[];
 
-export const CONCEPT_REGISTRY = COMPONENT_REGISTRY.filter(
-  (entry) => entry.kind === "concept",
-);
+export const CATALOG_REGISTRY = [
+  ...CONCEPT_REGISTRY,
+  ...COMPONENT_REGISTRY,
+] as const satisfies readonly CatalogRegistryEntry[];
+
+export const RUNTIME_COMPONENT_REGISTRY = COMPONENT_REGISTRY;
+
+export const CATALOG_CONCEPTS = CONCEPT_REGISTRY.map(
+  (concept): CatalogConceptMetadata => ({
+    id: concept.id,
+    cat: concept.category,
+    name: concept.displayName,
+    ja: concept.displayNameJa,
+    summary: concept.catalogSummaryJa,
+    demo: concept.demo,
+    props: concept.properties,
+  }),
+) as readonly CatalogConceptMetadata[];
 
 export const CATALOG_COMPONENTS = COMPONENT_REGISTRY.map(
   (component): CatalogComponentMetadata => ({
@@ -1491,8 +1663,13 @@ export const PAGE_IDS = CATALOG_PAGES.map(
 
 export function findRegistryEntry(
   id: CatalogComponentId,
-): CatalogRegistryEntry {
-  const entry = COMPONENT_REGISTRY.find((item) => item.id === id);
+): CatalogComponentRegistryEntry;
+export function findRegistryEntry(
+  id: CatalogConceptId,
+): CatalogConceptRegistryEntry;
+export function findRegistryEntry(id: CatalogPageId): CatalogRegistryEntry;
+export function findRegistryEntry(id: CatalogPageId): CatalogRegistryEntry {
+  const entry = CATALOG_REGISTRY.find((item) => item.id === id);
   if (!entry) {
     throw new Error(`Unknown catalog registry entry: ${id}`);
   }
@@ -1513,155 +1690,18 @@ export const getComponentDocumentation = componentDocumentationCopy;
 export const getComponentCopy = componentDocumentationCopy;
 export const getComponentSource = componentSource;
 
-export const PRINCIPLES = [
-  [
-    "One Plane",
-    "すべてのcomponentは同じ平面に置く。新しい領域は既存領域へ重ならず、flowの中で場所を作る。",
-  ],
-  [
-    "One Axis at a Time",
-    "開発者が選ぶのはverticalまたはhorizontalの一軸だけ。複雑な領域調停はランタイムが内部で行う。",
-  ],
-  [
-    "Simple Adaptation",
-    "収まる間は順序とサイズを保ち、必要になったときだけelastic、wrap、scrollへ決定的に適応する。",
-  ],
-  [
-    "Information Is Editable",
-    "TextとTextInputを分けない。情報へeditable capabilityとeditor kindを付け、読む状態を標準にする。",
-  ],
-  [
-    "Selection Owns Area",
-    "選択は下線や濃い枠だけで示さず、少し広がり、淡い面を持つ。未選択は静かに保つ。",
-  ],
-  [
-    "No Card Taxonomy",
-    "分類のために箱を増やさない。余白、境界線、順序で意味を分ける。",
-  ],
-  [
-    "Semantic Color Only",
-    "黒は構造。青・緑・赤・黄は状態だけに使用し、装飾paletteとして散らさない。",
-  ],
-  [
-    "Readable During Work",
-    "loadingや更新中も以前の内容を残し、処理対象の領域だけを黒いmotionで示す。",
-  ],
-] as const;
-
-export const PRINCIPLES_EN = [
-  [
-    "One Plane",
-    "Place every component on the same plane. New regions make room in the flow instead of covering existing regions.",
-  ],
-  [
-    "One Axis at a Time",
-    "The developer chooses only one axis, vertical or horizontal. Runtime behavior handles internal space negotiation.",
-  ],
-  [
-    "Simple Adaptation",
-    "Preserve order and size while content fits, then deterministically adapt with elastic, wrap, or scroll behavior.",
-  ],
-  [
-    "Information Is Editable",
-    "Do not split Text from TextInput. Give information an editable capability and editor kind while keeping reading as the default state.",
-  ],
-  [
-    "Selection Owns Area",
-    "Show selection with a little more area and a quiet surface, not only an underline or heavy border.",
-  ],
-  [
-    "No Card Taxonomy",
-    "Do not add boxes to create categories. Separate meaning with space, boundaries, and order.",
-  ],
-  [
-    "Semantic Color Only",
-    "Black is structural. Use blue, green, red, and yellow for state only.",
-  ],
-  [
-    "Readable During Work",
-    "Keep previous content visible during loading or updates, and show motion only on the region being processed.",
-  ],
-] as const;
-
-const PHILOSOPHY: Partial<Record<CatalogPageId, string>> = {
-  "theme-root":
-    "themeは装飾presetではなく、全componentが共有する判断規則。白、黒、OS fontを固定基盤とし、選択面の濃度、線、密度、motionだけを調整する。",
-  text: "情報は最初からeditorではない。読む状態を標準にし、editable capabilityがある情報だけ編集状態を持つ。",
-  rule: "境界線はcontainerを作るためではなく、意味の切れ目を一度だけ示す。二重囲いと階層surfaceを作らない。",
-  "status-icon":
-    "反復業務ではstatus labelを読まなくても意味が身につく。iconと色を主表示にし、言語説明はhover、focus、accessible nameへ退避する。",
-  vertical:
-    "Verticalは子要素の順序だけを開発者から受け取り、利用可能な高さに応じたサイズ調整を内部で決める。",
-  horizontal:
-    "Horizontalは子要素の順序だけを開発者から受け取り、利用可能な幅に応じたサイズ調整を内部で決める。",
-  "icon-action":
-    "actionは業務で反復されるほどiconだけで理解できる。初回学習と多言語対応はtooltip、accessible name、documentationが担う。",
-  "action-strip":
-    "複数actionをcontainerで囲まず、近接と同じbaselineでgroup化する。activeやbusyなactionだけを面で強調する。",
-  "boolean-text":
-    "booleanの本体はboxではなく文章の意味。falseは薄い文章、trueはcheckと選択面で示し、文章全体をhit targetにする。",
-  "choice-group":
-    "選択肢の中で現在値へ面積を渡す。値は即時commitし、横・縦で同じgrammarを保つ。",
-  "form-list":
-    "formはboxの集合ではなく情報の順序。labelの下にTextを置き、Tabはeditable capabilityを持つ情報だけを移動する。",
-  "data-table":
-    "cellが操作単位。選択cellを明確にしつつrowとcolumnの文脈は淡く残す。",
-  "history-gutter":
-    "変更履歴は別cardではなく、現在情報の横にある時間軸。線、点、差分色だけでrevisionを示す。",
-  "progress-region":
-    "中央spinnerは対象が不明になる。対象region全体へ黒いmotionを流し、以前の情報を読めるままにする。",
-  "message-region":
-    "messageは通知棚へ積まず、対象regionへのlinkとして機能する。押すとその領域へ注意を移す。",
-  "bottom-dialog":
-    "dialogもZ軸へ逃げない。下端からrowを追加し、元の情報を押し縮める。不可逆判断でも根拠を隠さない。",
-};
+export const PRINCIPLES = PHILOSOPHY_REGISTRY_ENTRY.principles.ja;
+export const PRINCIPLES_EN = PHILOSOPHY_REGISTRY_ENTRY.principles.en;
 
 export function componentPhilosophy(id: CatalogPageId): string {
-  return (
-    PHILOSOPHY[id] ??
-    "このcomponentはikasueの平面、境界、選択、順序の規則に従う。"
-  );
+  return findRegistryEntry(id).documentation.ja.philosophy;
 }
-
-const META: Partial<Record<CatalogPageId, readonly [string, string, string]>> =
-  {
-    text: [
-      "静的説明、metadata、form値、table cell",
-      "command検索のように常時入力が必要な欄",
-      "Enter/F2で編集、Escape取消、Tabで確定移動",
-    ],
-    vertical: [
-      "順序が意味を持つ文章、form、縦長の作業列",
-      "横方向の関連項目を無理に詰め込むこと",
-      "Tab、ArrowDown/Up、Home/End",
-    ],
-    horizontal: [
-      "toolbar、関連action、横方向の比較項目",
-      "読み順が縦になる内容を横へ押し込むこと",
-      "Tab、ArrowLeft/Right、Home/End",
-    ],
-    "bottom-dialog": [
-      "削除確認、短いsystem判断、補助command",
-      "長いformや常設detail",
-      "Escape、Tab、確定action",
-    ],
-    "data-table": [
-      "業務データ、copy/paste、inline edit",
-      "layout目的のtable",
-      "Arrow keys、Ctrl/Cmd+C/V、Enter/F2",
-    ],
-  };
 
 export function componentMeta(
   id: CatalogPageId,
 ): readonly [string, string, string] {
-  return (
-    META[id] ?? [
-      "業務画面の意味ある構造",
-      "装飾目的、card階層の代替",
-      "標準keyboardとaccessible name",
-    ]
-  );
+  const copy = findRegistryEntry(id).documentation.ja;
+  return [copy.useWhen, copy.avoidWhen, copy.keyboard];
 }
 
 export function findComponent(
