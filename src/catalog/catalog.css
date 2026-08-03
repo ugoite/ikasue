@@ -823,6 +823,25 @@
       transform var(--motion-fast) var(--spring);
   }
 
+  .ikasue-root .plane-demo-mount,
+  .ikasue-root .plane-composition-mount {
+    display: block;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .ikasue-root .plane-composition-mount {
+    width: 100%;
+  }
+
+  .ikasue-root .plane-composition-status {
+    margin: 0;
+    padding: 0.7rem 0;
+    border-top: var(--rule) solid var(--line);
+    color: var(--muted);
+    font-size: 0.78rem;
+  }
+
   .ikasue-root .plane-demo[data-axis="vertical"] {
     grid-template-rows: minmax(0, 1fr) auto;
     height: calc(var(--plane-available, 10) * var(--plane-unit) + 44px);
@@ -890,12 +909,9 @@
     flex: 0 0 calc(var(--plane-size, 1) * var(--plane-unit));
     min-width: 0;
     min-height: 42px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: flex-start;
-    gap: 2px;
-    padding: 10px 12px;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: start;
     border-bottom: var(--rule) solid var(--line);
     background: var(--selection);
     color: var(--ink);
@@ -904,6 +920,49 @@
       width var(--motion) var(--spring),
       height var(--motion) var(--spring),
       background-color var(--motion-fast);
+  }
+
+  .ikasue-root .plane-item[hidden],
+  .ikasue-root .plane-item-native[hidden] {
+    display: none !important;
+  }
+
+  .ikasue-root .plane-item-header {
+    display: flex;
+    min-width: 0;
+    min-height: 42px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: var(--rule) solid var(--line);
+  }
+
+  .ikasue-root .plane-item-header strong,
+  .ikasue-root .plane-item-header code {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ikasue-root .plane-item-header strong {
+    font-size: 0.78rem;
+    font-weight: 720;
+  }
+
+  .ikasue-root .plane-item-header code {
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.62rem;
+  }
+
+  .ikasue-root .plane-item-native {
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    padding: 8px 12px;
+    background: var(--canvas);
   }
 
   .ikasue-root .plane-item[data-focused="true"] {
@@ -918,11 +977,6 @@
 
   .ikasue-root .plane-demo[data-axis="horizontal"] .plane-item {
     min-height: 42px;
-  }
-
-  .ikasue-root .plane-item strong {
-    font-size: 0.78rem;
-    font-weight: 720;
   }
 
   .ikasue-root .plane-item small {

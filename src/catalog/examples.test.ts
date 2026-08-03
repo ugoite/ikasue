@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -11,6 +12,7 @@ import {
 } from "./examples";
 import { CATALOG_REGISTRY, findRegistryEntry } from "./registry";
 import { resolvePlane } from "../plane";
+import { resolveNativePlane, type NativePlaneComposition } from "./demos";
 
 const kinds: readonly ExampleKind[] = [
   "operations",
@@ -21,6 +23,90 @@ const kinds: readonly ExampleKind[] = [
 ];
 
 describe("shared example catalog", () => {
+  function constrainedComposition(
+    axis: "horizontal" | "vertical",
+  ): NativePlaneComposition {
+    const children = ["one", "two", "three", "four", "five"].map((id) => ({
+      id,
+      basis: 1,
+      min: 0.5,
+      label: { ja: id, en: id },
+      componentId: "text" as const,
+      props: { editable: false, value: id },
+    }));
+    return {
+      id: `test-${axis}`,
+      componentId: axis,
+      axis,
+      fit: "wrap",
+      gap: 0,
+      available: 2,
+      focus: "three",
+      navigation: true,
+      children,
+    };
+  }
+
+  it("shares the constrained native rail contract on both axes", () => {
+    for (const axis of ["horizontal", "vertical"] as const) {
+      const resolved = resolveNativePlane(constrainedComposition(axis));
+      expect(resolved.axis).toBe(axis);
+      expect(resolved.children.map(({ state }) => state)).toEqual([
+        "collapsed",
+        "collapsed",
+        "focused",
+        "collapsed",
+        "collapsed",
+      ]);
+      expect(resolved.children[2]).toMatchObject({
+        id: "three",
+        size: 2,
+        visible: true,
+        collapsed: false,
+      });
+      expect(resolved.overflow).toBe(false);
+      expect(resolved.canPrevious).toBe(true);
+      expect(resolved.canNext).toBe(true);
+      expect(resolved.previous).toBe("two");
+      expect(resolved.next).toBe("four");
+    }
+  });
+
+  it("keeps Examples on the shared native plane DOM contract", () => {
+    const demosSource = readFileSync(
+      new URL("./demos.ts", import.meta.url),
+      "utf8",
+    );
+    const exampleRendererSource = readFileSync(
+      new URL("./example-renderer.ts", import.meta.url),
+      "utf8",
+    );
+    const surfaceSource = readFileSync(
+      new URL(
+        "../../docs-site/src/components/ExampleSurface.astro",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    for (const className of [
+      "plane-demo",
+      "plane-viewport",
+      "plane-item",
+      "plane-navigation",
+    ]) {
+      expect(demosSource).toContain(`"${className}"`);
+    }
+    expect(exampleRendererSource).toContain("renderPlaneComposition");
+    expect(exampleRendererSource).toContain("children: plane.regions");
+    expect(exampleRendererSource).toContain("example-${kind}-${plane.id}");
+    expect(exampleRendererSource).not.toContain("example-plane");
+    expect(exampleRendererSource).not.toMatch(/fit[^\n]*scroll/i);
+    expect(surfaceSource).toContain("data-native-plane-mount");
+    expect(surfaceSource).not.toContain("example-plane");
+    expect(surfaceSource).not.toContain("example-region");
+  });
+
   it("keeps the bilingual example key sets aligned", () => {
     expect(Object.keys(EXAMPLE_SURFACE_COPY.ja).sort()).toEqual(
       Object.keys(EXAMPLE_SURFACE_COPY.en).sort(),
@@ -52,6 +138,11 @@ describe("shared example catalog", () => {
             expect(propertyKeys.has(propertyKey)).toBe(true);
           }
         }
+      }
+      for (const componentId of exampleComponentIds(kind)) {
+        expect(exampleSpec(kind).source.javascript).toContain(
+          `"${componentId}"`,
+        );
       }
     }
   });
