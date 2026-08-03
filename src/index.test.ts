@@ -78,6 +78,12 @@ describe("ikasue catalog metadata", () => {
       "wrap",
       "scroll",
     ]);
+    expect(
+      layoutPages.map((page) => page.props.map((prop) => prop.key)),
+    ).toEqual([
+      ["fit", "gap", "items", "basis", "available"],
+      ["fit", "gap", "items", "basis", "available"],
+    ]);
   });
 });
 
