@@ -1,61 +1,32 @@
 ---
 import "../../../src/styles.css";
-import { COMPONENT_MATRIX_PAGE_COPY } from "../../../src/catalog/registry";
 import { sitePath } from "../data/site-path";
 
-interface Props {
-  lang: "ja" | "en";
-  canonicalPath: string;
-}
-
-const { lang, canonicalPath } = Astro.props;
-const { title, description } = COMPONENT_MATRIX_PAGE_COPY[lang];
-const canonicalUrl = Astro.site
-  ? new URL(sitePath(canonicalPath), Astro.site).href
-  : undefined;
+const locale = Astro.currentLocale === "en" ? "en" : "ja";
 ---
 
-<!doctype html>
-<html lang={lang}>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content={description} />
-    <title>{title}</title>
-    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
-    <link rel="icon" href={sitePath("favicon.svg")} type="image/svg+xml" />
-  </head>
-  <body>
-    <main id="catalog" data-locale={lang} data-base-path={sitePath("")}></main>
-    <script>
-      import { mountCatalog } from "../../../src/index";
+<div
+  id="catalog"
+  data-catalog-mount
+  data-locale={locale}
+  data-base-path={sitePath("")}
+></div>
 
-      const target = document.querySelector<HTMLElement>("#catalog");
-      if (!target) {
-        throw new Error("The integrated catalog requires a #catalog element.");
-      }
+<script>
+  import { mountCatalog } from "../../../src/index";
 
-      const locale = target.dataset.locale === "en" ? "en" : "ja";
+  document
+    .querySelectorAll<HTMLElement>("[data-catalog-mount]")
+    .forEach((target) => {
+      const targetLocale = target.dataset.locale === "en" ? "en" : "ja";
       mountCatalog(target, {
+        embedded: true,
         label:
-          locale === "en"
+          targetLocale === "en"
             ? "ikasue component catalog"
             : "ikasueコンポーネントカタログ",
-        locale,
+        locale: targetLocale,
         basePath: target.dataset.basePath,
       });
-    </script>
-  </body>
-</html>
-
-<style is:global>
-  :root,
-  body {
-    margin: 0;
-    min-height: 100%;
-  }
-
-  body {
-    overflow: hidden;
-  }
-</style>
+    });
+</script>

@@ -49,6 +49,8 @@ export interface CatalogMountOptions {
   readonly locale?: CatalogLocale;
   /** Astro's BASE_URL, including the trailing slash when provided. */
   readonly basePath?: string;
+  /** Render only the catalog surface when a host site owns the page frame. */
+  readonly embedded?: boolean;
 }
 
 export interface CatalogMount {
@@ -163,8 +165,10 @@ export function mountCatalog(
   const window = document.defaultView;
   const locale = options.locale ?? "ja";
   const basePath = normalizeBasePath(options.basePath);
+  const embedded = options.embedded ?? false;
   const root = element(document, "section", "ikasue-root");
   root.setAttribute("aria-label", getCatalogMountLabel(options.label));
+  root.dataset.embedded = String(embedded);
   root.dataset.nav = (window?.innerWidth ?? 1024) < 901 ? "closed" : "open";
 
   const cleanup: Cleanup[] = [];
@@ -201,9 +205,13 @@ export function mountCatalog(
   navList.id = "navList";
   navList.setAttribute(
     "aria-label",
-    locale === "en"
-      ? "ikasue site and component navigation"
-      : "ikasueサイトとcomponentのナビゲーション",
+    embedded
+      ? locale === "en"
+        ? "Component selection"
+        : "component選択"
+      : locale === "en"
+        ? "ikasue site and component navigation"
+        : "ikasueサイトとcomponentのナビゲーション",
   );
   navCopy.append(navHead, navList);
   nav.append(rail, navCopy);
@@ -262,6 +270,21 @@ export function mountCatalog(
   main.append(topline, contentScroll);
   appPlane.append(nav, main);
 
+  const embeddedControls = element(document, "section", "catalog-controls");
+  embeddedControls.dataset.catalogControls = "page-local";
+  embeddedControls.setAttribute("aria-labelledby", "catalogControlsHeading");
+  const controlsHeading = element(document, "h2", "catalog-controls-heading");
+  controlsHeading.id = "catalogControlsHeading";
+  controlsHeading.textContent =
+    locale === "en" ? "Component controls" : "component操作";
+  const controlsNote = element(document, "p", "catalog-controls-note");
+  controlsNote.textContent =
+    locale === "en"
+      ? "Select a page-local component demo; site navigation stays in Starlight."
+      : "ページ内のcomponent demoを選択します。サイト移動はStarlightのnavigationを使います。";
+  if (embedded)
+    embeddedControls.append(controlsHeading, controlsNote, topActions, navList);
+
   const dialog = element(document, "section", "bottom-dialog");
   dialog.id = "bottomDialog";
   dialog.dataset.open = "false";
@@ -311,8 +334,12 @@ export function mountCatalog(
   }
   dialogInner.append(dialogHead, dialogText, dialogActions);
   dialog.append(dialogInner);
-  shell.append(appPlane, dialog);
-  root.append(shell);
+  if (embedded) {
+    root.append(embeddedControls, content, dialog);
+  } else {
+    shell.append(appPlane, dialog);
+    root.append(shell);
+  }
   target.append(root);
 
   const listenAndTrack = (
@@ -411,7 +438,7 @@ export function mountCatalog(
     for (const item of navCleanup) item();
     navCleanup = [];
     navList.replaceChildren();
-    navList.append(createSiteNav());
+    if (!embedded) navList.append(createSiteNav());
     const componentsSection = element(
       document,
       "section",
@@ -1041,7 +1068,7 @@ export function mountCatalog(
     if (page.kind === "concept") renderPhilosophy();
     else if (page.demo === "developer") renderDeveloper(page);
     else renderStandardPage(page);
-    contentScroll.scrollTop = 0;
+    (embedded ? root : contentScroll).scrollTop = 0;
     if (focusHeading) focusPageHeading(content);
   };
 
