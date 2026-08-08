@@ -2024,7 +2024,10 @@ function renderFocusWindowDemo(
         edgeRestoreFocus = focus;
       } else {
         const restore = restoreFocusAfterEdgeDismissal(resolved, "decision");
-        if (restore) focus = restore;
+        if (restore) {
+          focus = restore;
+          restoreDomFocusPath = restore;
+        }
       }
       edgeOpen = !edgeOpen;
       draw();
