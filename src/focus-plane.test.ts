@@ -224,6 +224,19 @@ describe("recursive focus plane", () => {
     expect(
       resolved.regions.find((region) => region.path === "root/other")?.state,
     ).toBe("collapsed");
+    const sliverResolved = resolveFocusPlane({
+      root: branch("root", "horizontal", [
+        branch("other", "vertical", [leaf("away")]),
+        branch("current", "vertical", [leaf("here")]),
+      ]),
+      focus: "root/current/here",
+      viewport: { inline: 1, block: 2 },
+      collapse: "sliver",
+    });
+    expect(
+      sliverResolved.regions.find((region) => region.path === "root/other")
+        ?.state,
+    ).toBe("collapsed");
   });
 
   it("bounds non-navigable overflow instead of leaking child rectangles", () => {
@@ -370,28 +383,35 @@ describe("recursive focus plane", () => {
 
   it("uses an edge path when duplicate local edge ids exist", () => {
     const resolved = resolveFocusPlane({
-      root: branch("root", "horizontal", [
-        branch("left", "vertical", [leaf("item")], {
-          edgeRegions: [
-            {
-              id: "decision",
-              edge: "bottom",
-              temporary: true,
-              restoreFocus: "root/left",
-            },
-          ],
-        }),
-        branch("right", "vertical", [leaf("item")], {
-          edgeRegions: [
-            {
-              id: "decision",
-              edge: "bottom",
-              temporary: true,
-              restoreFocus: "root/right/item",
-            },
-          ],
-        }),
-      ]),
+      root: branch(
+        "root",
+        "horizontal",
+        [
+          branch("left", "vertical", [leaf("item")], {
+            edgeRegions: [
+              {
+                id: "decision",
+                edge: "bottom",
+                temporary: true,
+                restoreFocus: "root/left",
+              },
+            ],
+          }),
+          branch("right", "vertical", [leaf("item")], {
+            edgeRegions: [
+              {
+                id: "decision",
+                edge: "bottom",
+                temporary: true,
+                restoreFocus: "root/right/item",
+              },
+            ],
+          }),
+        ],
+        {
+          edgeRegions: [{ id: "decision", edge: "top" }],
+        },
+      ),
       focus: "root/right/item",
       viewport: { inline: 6, block: 4 },
     });

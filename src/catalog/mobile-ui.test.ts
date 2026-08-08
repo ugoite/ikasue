@@ -93,6 +93,8 @@ describe("mobile runtime UI contracts", () => {
     );
     expect(demosSource).toContain("button.tabIndex = item.active ? 0 : -1");
     expect(demosSource).toContain("edgeSlots[edge.edge]");
+    expect(demosSource).toContain("restoreDomFocusControl");
+    expect(demosSource).toContain("button.dataset.focusControl = value");
     expect(catalogCss).toContain(".focus-window-edge-slot");
     expect(catalogCss).toContain("overflow: hidden");
   });
