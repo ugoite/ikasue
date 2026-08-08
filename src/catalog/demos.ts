@@ -1963,6 +1963,7 @@ function renderFocusWindowDemo(
   let edgeOpen = false;
   let edgeRestoreFocus = focus;
   let restoreDomFocusPath: string | undefined;
+  let restoreDomFocusControl: string | undefined;
   const english = context.locale === "en";
   const percentage = (value: number, total: number): string =>
     `${String(total > 0 ? (value / total) * 100 : 0)}%`;
@@ -1994,6 +1995,7 @@ function renderFocusWindowDemo(
       context,
       english ? "FocusRequest" : "FocusRequestを送る",
     );
+    request.dataset.focusControl = "request";
     addListener(context, request, "click", () => {
       const nextPath =
         focus === "work/alpha"
@@ -2006,6 +2008,7 @@ function renderFocusWindowDemo(
       focus =
         requestFocus(spec, { path: nextPath, level: "expanded" }).focus ??
         focus;
+      restoreDomFocusControl = "request";
       draw();
     });
     const edgeToggle = textAction(
@@ -2018,8 +2021,10 @@ function renderFocusWindowDemo(
           ? "Open edge regions"
           : "辺の領域を開く",
     );
+    edgeToggle.dataset.focusControl = "edge-toggle";
     edgeToggle.setAttribute("aria-pressed", String(edgeOpen));
     addListener(context, edgeToggle, "click", () => {
+      restoreDomFocusControl = "edge-toggle";
       if (!edgeOpen) {
         edgeRestoreFocus = focus;
       } else {
@@ -2034,9 +2039,11 @@ function renderFocusWindowDemo(
     });
     for (const value of ["sliver", "zero"] as const) {
       const button = textAction(context, value);
+      button.dataset.focusControl = value;
       button.setAttribute("aria-pressed", String(collapse === value));
       addListener(context, button, "click", () => {
         collapse = value;
+        restoreDomFocusControl = value;
         draw();
       });
       controls.append(button);
@@ -2261,13 +2268,18 @@ function renderFocusWindowDemo(
     result.setAttribute("role", "status");
     wrapper.append(headingRow, stage, navigation, result);
     container.replaceChildren(wrapper);
-    if (restoreDomFocusPath) {
-      const focusTarget = wrapper.querySelector<HTMLElement>(
-        `[data-focus-path="${restoreDomFocusPath}"]`,
-      );
-      focusTarget?.focus();
-      restoreDomFocusPath = undefined;
-    }
+    const focusTarget = restoreDomFocusPath
+      ? wrapper.querySelector<HTMLElement>(
+          `[data-focus-path="${restoreDomFocusPath}"]`,
+        )
+      : restoreDomFocusControl
+        ? wrapper.querySelector<HTMLElement>(
+            `[data-focus-control="${restoreDomFocusControl}"]`,
+          )
+        : undefined;
+    focusTarget?.focus();
+    restoreDomFocusPath = undefined;
+    restoreDomFocusControl = undefined;
   };
   draw();
 }

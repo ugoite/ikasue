@@ -706,23 +706,31 @@ function addNavigation(
       ? -1
       : branch.children.findIndex((child) => child.id === focusId);
   if (focusIndex < 0 || branch.children.length < 2) return;
-  const items = branch.children.map((child, index) => ({
-    path: `${path}/${child.id}`,
-    id: child.id,
-    index,
-    active: index === focusIndex,
-  }));
-  const canPrevious = focusIndex > 0;
-  const canNext = focusIndex < branch.children.length - 1;
-  const previous = canPrevious ? items[focusIndex - 1]?.path : undefined;
-  const next = canNext ? items[focusIndex + 1]?.path : undefined;
+  const items = branch.children.flatMap((child, index) =>
+    firstLeafPath(child, [path]) === undefined
+      ? []
+      : [
+          {
+            path: `${path}/${child.id}`,
+            id: child.id,
+            index,
+            active: index === focusIndex,
+          },
+        ],
+  );
+  const activeIndex = items.findIndex((item) => item.active);
+  if (activeIndex < 0 || items.length < 2) return;
+  const canPrevious = activeIndex > 0;
+  const canNext = activeIndex < items.length - 1;
+  const previous = canPrevious ? items[activeIndex - 1]?.path : undefined;
+  const next = canNext ? items[activeIndex + 1]?.path : undefined;
   navigation.push({
     path,
     axis: branch.axis,
     kind: branch.axis === "horizontal" ? "edge-nav" : "elastic-tabs",
     generated: true,
     items,
-    focusIndex,
+    focusIndex: activeIndex,
     canPrevious,
     canNext,
     ...(previous === undefined ? {} : { previous }),
@@ -797,11 +805,13 @@ export function resolveFocusPlane(input: FocusPlaneInput): ResolvedFocusPlane {
       rect,
       state: active
         ? "focused"
-        : constrained
-          ? spec.collapse === "zero"
-            ? "collapsed"
-            : "compressed"
-          : "visible",
+        : rect.width === 0 || rect.height === 0
+          ? "collapsed"
+          : constrained
+            ? spec.collapse === "zero"
+              ? "collapsed"
+              : "compressed"
+            : "visible",
       focused: active,
       children,
     });
@@ -875,9 +885,11 @@ export function restoreFocusAfterEdgeDismissal(
     (candidate) => candidate.path === normalizedPath && candidate.temporary,
   );
   const sameId = resolved.edges.filter(
-    (candidate) => candidate.id === normalizedPath && candidate.temporary,
+    (candidate) => candidate.id === normalizedPath,
   );
-  const edge = exact ?? (sameId.length === 1 ? sameId[0] : undefined);
+  const edge =
+    exact ??
+    (sameId.length === 1 && sameId[0]?.temporary ? sameId[0] : undefined);
   if (!edge) return resolved.focusPath || undefined;
   const candidate = edge.restoreFocus;
   if (candidate) {
