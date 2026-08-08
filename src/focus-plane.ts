@@ -284,7 +284,9 @@ function resolveRequestedPath(
     index += 1;
   }
   if (node.kind === "leaf") return prefix;
-  return firstLeafPath(node, prefix.slice(0, -1)) ?? [];
+  return (
+    firstLeafPath(node, prefix.slice(0, -1)) ?? firstLeafPath(root, []) ?? []
+  );
 }
 
 /** Normalizes recursive plane input and returns a stable v1 contract. */
