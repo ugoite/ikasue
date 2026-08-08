@@ -41,6 +41,28 @@ The package exposes a small framework-neutral plane model:
 
 The developer declares order, axis, and adaptation policy. The plane owner resolves available space. Child components do not need a parent reference or a public layout event to participate.
 
+## Recursive focus window API
+
+The v1 package also exposes `normalizeFocusPlane`, `resolveFocusPlane`, and
+`requestFocus` for a finite window over a recursive document plane. A
+`FocusBranch` owns one axis and ordered `FocusNode` children; a `FocusLeaf`
+owns semantic content. The developer supplies a slash-separated focus path
+such as `work/beta/detail/editor` and a viewport `{ inline, block }`.
+
+`resolveFocusPlane` returns normalized focus-path propagation, abstract
+`x`/`y`/`width`/`height` rectangles, semantic region state, direct sibling
+navigation, and edge allocations. Horizontal branches generate `edge-nav`
+metadata when constrained; vertical branches generate `elastic-tabs`
+metadata. A focus path gives area to the leaf and every ancestor, while
+off-path siblings are compressed or collapsed according to the declared
+policy. Edge regions, including a temporary bottom row, consume their owned
+space inside the parent plane and never overlay it. `restoreFocusAfterEdgeDismissal`
+returns the declared opener focus when a temporary edge region closes.
+
+The resolver uses abstract units. Renderers own pixel rounding and visual
+motion; semantic tests assert order, containment, non-overlap, focus, and
+navigation rather than screenshots.
+
 ## State ownership and behavioral contracts
 
 - Properties update live and can be reset to documented defaults.

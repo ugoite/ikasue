@@ -39,6 +39,12 @@ import {
   serializeComponentQuery,
 } from "./catalog/state";
 import { horizontal, normalizePlane, resolvePlane, vertical } from "./plane";
+import {
+  normalizeFocusPlane,
+  requestFocus,
+  resolveFocusPlane,
+  restoreFocusAfterEdgeDismissal,
+} from "./focus-plane";
 import type { CatalogMount, CatalogMountOptions } from "./catalog/shell";
 import type {
   CatalogCategoryId,
@@ -76,6 +82,24 @@ import type {
   ResolvedPlaneChild,
   ResolvedPlaneChildState,
 } from "./plane";
+import type {
+  EdgeRegion,
+  FocusBranch,
+  FocusCollapse,
+  FocusLeaf,
+  FocusNavigation,
+  FocusNavigationItem,
+  FocusNode,
+  FocusPlaneInput,
+  FocusPlaneSpec,
+  FocusRect,
+  FocusRequest,
+  FocusRegionState,
+  FocusViewport,
+  ResolvedEdgeRegion,
+  ResolvedFocusPlane,
+  ResolvedFocusRegion,
+} from "./focus-plane";
 
 export const PACKAGE_NAME = "@ugoite/ikasue";
 export const ROOT_CLASS_NAME = "ikasue-root";
@@ -115,6 +139,22 @@ export type {
   ResolvedPlane,
   ResolvedPlaneChild,
   ResolvedPlaneChildState,
+  EdgeRegion,
+  FocusBranch,
+  FocusCollapse,
+  FocusLeaf,
+  FocusNavigation,
+  FocusNavigationItem,
+  FocusNode,
+  FocusPlaneInput,
+  FocusPlaneSpec,
+  FocusRect,
+  FocusRequest,
+  FocusRegionState,
+  FocusViewport,
+  ResolvedEdgeRegion,
+  ResolvedFocusPlane,
+  ResolvedFocusRegion,
 };
 
 export {
@@ -140,10 +180,14 @@ export {
   horizontal,
   isCatalogComponentId,
   isCatalogPageId,
+  normalizeFocusPlane,
   normalizePlane,
   parseCatalogQuery,
   parseComponentQuery,
+  requestFocus,
+  resolveFocusPlane,
   resolvePlane,
+  restoreFocusAfterEdgeDismissal,
   serializeCatalogQuery,
   serializeComponentQuery,
   vertical,
