@@ -1907,6 +1907,7 @@ function focusWindowSpec(
   focus: string,
   edgeOpen: boolean,
   collapse: FocusCollapse,
+  restoreFocus = focus,
 ): FocusPlaneSpec {
   const detail = focusBranch("detail", "horizontal", [
     focusLeaf("source", 32),
@@ -1934,7 +1935,7 @@ function focusWindowSpec(
               basis: 12,
               min: 6,
               temporary: true,
-              restoreFocus: focus,
+              restoreFocus,
             },
             {
               id: "decision",
@@ -1942,7 +1943,7 @@ function focusWindowSpec(
               basis: 8,
               min: 4,
               temporary: true,
-              restoreFocus: focus,
+              restoreFocus,
             },
           ]
         : [],
@@ -1960,9 +1961,13 @@ function renderFocusWindowDemo(
   let focus = "work/beta/detail/editor";
   let collapse: FocusCollapse = "sliver";
   let edgeOpen = false;
+  let edgeRestoreFocus = focus;
+  let restoreDomFocusPath: string | undefined;
   const english = context.locale === "en";
+  const percentage = (value: number, total: number): string =>
+    `${String(total > 0 ? (value / total) * 100 : 0)}%`;
   const draw = (): void => {
-    const spec = focusWindowSpec(focus, edgeOpen, collapse);
+    const spec = focusWindowSpec(focus, edgeOpen, collapse, edgeRestoreFocus);
     const resolved = resolveFocusPlane(spec);
     const wrapper = element(context.document, "div", "focus-window-demo");
     const headingRow = element(context.document, "div", "focus-window-heading");
@@ -2015,7 +2020,9 @@ function renderFocusWindowDemo(
     );
     edgeToggle.setAttribute("aria-pressed", String(edgeOpen));
     addListener(context, edgeToggle, "click", () => {
-      if (edgeOpen) {
+      if (!edgeOpen) {
+        edgeRestoreFocus = focus;
+      } else {
         const restore = restoreFocusAfterEdgeDismissal(resolved, "decision");
         if (restore) focus = restore;
       }
@@ -2059,27 +2066,46 @@ function renderFocusWindowDemo(
       section.dataset.path = path;
       section.dataset.state = region?.state ?? "visible";
       section.dataset.kind = node.kind;
-      section.setAttribute("aria-current", String(path === resolved.focusPath));
-      if (parent) {
-        const mainSize =
-          parent.axis === "horizontal"
-            ? (region?.rect.width ?? 0)
-            : (region?.rect.height ?? 0);
-        section.style.setProperty(
-          "--focus-size",
-          String(Math.max(0, mainSize)),
-        );
-        section.style.flex = `${Math.max(0, mainSize)} 1 0`;
-      }
+      section.dataset.focused = String(region?.focused === true);
+      section.setAttribute("aria-current", String(region?.focused === true));
+      section.setAttribute(
+        "aria-label",
+        node.kind === "branch"
+          ? `${node.axis} / ${path}`
+          : `${node.id} / ${path}`,
+      );
+      const localRect = region?.rect ?? resolved.viewport;
+      const containingRect = parent?.rect ?? resolved.viewport;
+      section.style.left = percentage(
+        localRect.x - containingRect.x,
+        containingRect.width,
+      );
+      section.style.top = percentage(
+        localRect.y - containingRect.y,
+        containingRect.height,
+      );
+      section.style.width = percentage(localRect.width, containingRect.width);
+      section.style.height = percentage(
+        localRect.height,
+        containingRect.height,
+      );
       if (node.kind === "leaf") {
-        const button = element(context.document, "button", "focus-window-leaf");
-        button.type = "button";
-        button.setAttribute("aria-label", path);
-        addListener(context, button, "click", () => {
-          focus = path;
-          draw();
-        });
-        button.append(
+        const leaf =
+          region?.state === "collapsed"
+            ? element(context.document, "div", "focus-window-leaf")
+            : element(context.document, "button", "focus-window-leaf");
+        leaf.dataset.focusPath = path;
+        if (leaf.tagName === "BUTTON") {
+          const button = leaf as HTMLButtonElement;
+          button.type = "button";
+          button.setAttribute("aria-label", path);
+          addListener(context, button, "click", () => {
+            focus = path;
+            restoreDomFocusPath = path;
+            draw();
+          });
+        }
+        leaf.append(
           heading(context, "h3", node.id),
           paragraph(
             context,
@@ -2092,7 +2118,7 @@ function renderFocusWindowDemo(
                 : "順序を持つ兄弟region",
           ),
         );
-        section.append(button);
+        section.append(leaf);
         return section;
       }
       section.classList.add("focus-window-branch");
@@ -2120,16 +2146,39 @@ function renderFocusWindowDemo(
     };
     const root = appendNode(resolved.root, resolved.root.id, undefined);
     root.classList.add("focus-window-root");
-    stage.append(root);
-
-    const edgeList = element(context.document, "div", "focus-window-edges");
+    const layout = element(context.document, "div", "focus-window-layout");
+    const rootSlot = element(context.document, "div", "focus-window-root-slot");
+    rootSlot.append(root);
+    const edgeSlots = {
+      left: element(context.document, "div", "focus-window-edge-slot"),
+      right: element(context.document, "div", "focus-window-edge-slot"),
+      top: element(context.document, "div", "focus-window-edge-slot"),
+      bottom: element(context.document, "div", "focus-window-edge-slot"),
+    } satisfies Record<"left" | "right" | "top" | "bottom", HTMLElement>;
     for (const edge of resolved.edges) {
       const item = element(context.document, "span", "focus-window-edge");
       item.dataset.edge = edge.edge;
+      item.dataset.path = edge.path;
+      item.dataset.temporary = String(edge.temporary);
+      item.setAttribute("aria-label", `${edge.edge}: ${edge.id}`);
       item.textContent = `${edge.edge}: ${edge.id}`;
-      edgeList.append(item);
+      item.style.left = percentage(edge.rect.x, resolved.viewport.width);
+      item.style.top = percentage(edge.rect.y, resolved.viewport.height);
+      item.style.width = percentage(edge.rect.width, resolved.viewport.width);
+      item.style.height = percentage(
+        edge.rect.height,
+        resolved.viewport.height,
+      );
+      edgeSlots[edge.edge].append(item);
     }
-    stage.append(edgeList);
+    layout.append(rootSlot);
+    layout.append(
+      edgeSlots.left,
+      edgeSlots.right,
+      edgeSlots.top,
+      edgeSlots.bottom,
+    );
+    stage.append(layout);
 
     const navigation = element(
       context.document,
@@ -2139,6 +2188,7 @@ function renderFocusWindowDemo(
     for (const rail of resolved.navigation) {
       const nav = element(context.document, "nav", "focus-window-nav");
       nav.dataset.kind = rail.kind;
+      if (rail.kind === "elastic-tabs") nav.setAttribute("role", "tablist");
       nav.setAttribute(
         "aria-label",
         rail.kind === "edge-nav"
@@ -2154,11 +2204,46 @@ function renderFocusWindowDemo(
       nav.append(title);
       for (const item of rail.items) {
         const button = textAction(context, item.id);
-        button.setAttribute("aria-pressed", String(item.active));
+        button.dataset.focusPath = item.path;
+        if (rail.kind === "elastic-tabs") {
+          button.setAttribute("role", "tab");
+          button.setAttribute("aria-selected", String(item.active));
+          button.tabIndex = item.active ? 0 : -1;
+        } else {
+          button.setAttribute("aria-pressed", String(item.active));
+        }
         addListener(context, button, "click", () => {
           focus = requestFocus(spec, item.path).focus ?? focus;
+          restoreDomFocusPath = item.path;
           draw();
         });
+        if (rail.kind === "elastic-tabs") {
+          addListener(context, button, "keydown", (event) => {
+            const keyboardEvent = event as KeyboardEvent;
+            const currentIndex = rail.items.findIndex(
+              (candidate) => candidate.path === item.path,
+            );
+            const nextIndex =
+              keyboardEvent.key === "Home"
+                ? 0
+                : keyboardEvent.key === "End"
+                  ? rail.items.length - 1
+                  : keyboardEvent.key === "ArrowLeft" ||
+                      keyboardEvent.key === "ArrowUp"
+                    ? Math.max(0, currentIndex - 1)
+                    : keyboardEvent.key === "ArrowRight" ||
+                        keyboardEvent.key === "ArrowDown"
+                      ? Math.min(rail.items.length - 1, currentIndex + 1)
+                      : -1;
+            if (nextIndex < 0 || nextIndex === currentIndex) return;
+            const next = rail.items[nextIndex];
+            if (!next) return;
+            keyboardEvent.preventDefault();
+            focus = requestFocus(spec, next.path).focus ?? focus;
+            restoreDomFocusPath = next.path;
+            draw();
+          });
+        }
         nav.append(button);
       }
       navigation.append(nav);
@@ -2173,6 +2258,13 @@ function renderFocusWindowDemo(
     result.setAttribute("role", "status");
     wrapper.append(headingRow, stage, navigation, result);
     container.replaceChildren(wrapper);
+    if (restoreDomFocusPath) {
+      const focusTarget = wrapper.querySelector<HTMLElement>(
+        `[data-focus-path="${restoreDomFocusPath}"]`,
+      );
+      focusTarget?.focus();
+      restoreDomFocusPath = undefined;
+    }
   };
   draw();
 }

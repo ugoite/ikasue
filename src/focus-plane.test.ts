@@ -188,6 +188,100 @@ describe("recursive focus plane", () => {
     }
   });
 
+  it("keeps a constrained focused sliver positive when gaps consume the viewport", () => {
+    const resolved = resolveFocusPlane({
+      root: branch(
+        "root",
+        "horizontal",
+        [leaf("alpha", 10, 0), leaf("beta", 10, 0), leaf("gamma", 10, 0)],
+        { gap: 1 },
+      ),
+      focus: "root/beta",
+      viewport: { inline: 1, block: 2 },
+      collapse: "sliver",
+    });
+    const children = regionsByParent(resolved, "root");
+
+    expect(
+      children.find((region) => region.path === "root/beta")?.rect.width,
+    ).toBeGreaterThan(0);
+    expect(
+      children.reduce((sum, region) => sum + region.rect.width, 0),
+    ).toBeLessThanOrEqual(1);
+  });
+
+  it("marks off-path constrained branches collapsed in zero mode", () => {
+    const resolved = resolveFocusPlane({
+      root: branch("root", "horizontal", [
+        branch("other", "vertical", [leaf("away")]),
+        branch("current", "vertical", [leaf("here")]),
+      ]),
+      focus: "root/current/here",
+      viewport: { inline: 1, block: 2 },
+      collapse: "zero",
+    });
+
+    expect(
+      resolved.regions.find((region) => region.path === "root/other")?.state,
+    ).toBe("collapsed");
+  });
+
+  it("bounds non-navigable overflow instead of leaking child rectangles", () => {
+    const resolved = resolveFocusPlane({
+      root: branch(
+        "root",
+        "horizontal",
+        [leaf("alpha", 10, 5), leaf("beta", 10, 5)],
+        { navigation: false },
+      ),
+      viewport: { inline: 4, block: 2 },
+    });
+    const children = regionsByParent(resolved, "root");
+
+    expect(children.map((region) => region.rect.width)).toEqual([2, 2]);
+    expect(
+      children.every((region) => region.rect.x + region.rect.width <= 4),
+    ).toBe(true);
+    expect(resolved.navigation).toEqual([]);
+  });
+
+  it("clamps oversized gaps and preserves wrap lines as semantic rectangles", () => {
+    const gapResolved = resolveFocusPlane({
+      root: branch(
+        "root",
+        "horizontal",
+        [leaf("alpha", 4, 0), leaf("beta", 4, 0)],
+        { gap: 10, navigation: false },
+      ),
+      viewport: { inline: 5, block: 2 },
+    });
+    const gapChildren = regionsByParent(gapResolved, "root");
+    expect(
+      gapChildren.every(
+        (region) =>
+          region.rect.x >= 0 && region.rect.x + region.rect.width <= 5,
+      ),
+    ).toBe(true);
+
+    const wrapResolved = resolveFocusPlane({
+      root: branch(
+        "root",
+        "horizontal",
+        [leaf("alpha", 3, 0), leaf("beta", 3, 0)],
+        { fit: "wrap", gap: 1, navigation: false },
+      ),
+      viewport: { inline: 4, block: 4 },
+    });
+    const wrapChildren = regionsByParent(wrapResolved, "root");
+    expect(new Set(wrapChildren.map((region) => region.rect.y)).size).toBe(2);
+    expect(
+      wrapChildren.every(
+        (region) =>
+          region.rect.y >= 0 && region.rect.y + region.rect.height <= 4,
+      ),
+    ).toBe(true);
+  });
+
   it("allocates edge and bottom regions inside the plane and restores focus", () => {
     const plane = nestedPlane({
       root: branch("work", "horizontal", [leaf("alpha"), leaf("beta")], {
@@ -196,13 +290,23 @@ describe("recursive focus plane", () => {
             id: "tools",
             edge: "right",
             basis: 1,
+            min: 0.5,
             temporary: true,
-            restoreFocus: "work/beta",
+            restoreFocus: "work/alpha",
           },
-          { id: "decision", edge: "bottom", basis: 1, temporary: true },
+          {
+            id: "decision",
+            edge: "bottom",
+            basis: 1,
+            min: 0.5,
+            temporary: true,
+          },
+          { id: "top-tools", edge: "top", basis: 0.5, min: 0.25 },
+          { id: "left-tools", edge: "left", basis: 4, min: 2 },
         ],
       }),
       focus: "work/beta",
+      viewport: { inline: 5, block: 3 },
     });
     const resolved = resolveFocusPlane(plane);
     const root = resolved.regions.find((region) => region.path === "work");
@@ -216,13 +320,78 @@ describe("recursive focus plane", () => {
     expect(contentChild).toBeDefined();
     expect(tools?.edge).toBe("right");
     expect(decision?.edge).toBe("bottom");
-    expect(tools?.rect.x).toBe(5);
-    expect(decision?.rect.y).toBe(3);
+    expect(tools?.rect.width).toBeGreaterThanOrEqual(0.5);
+    expect(decision?.rect.height).toBeGreaterThanOrEqual(0.5);
+    expect(
+      resolved.edges.find((edge) => edge.id === "left-tools")?.rect.width,
+    ).toBeGreaterThanOrEqual(2);
+    expect(
+      resolved.edges.every(
+        (edge) =>
+          edge.rect.x >= 0 &&
+          edge.rect.y >= 0 &&
+          edge.rect.x + edge.rect.width <= 5 &&
+          edge.rect.y + edge.rect.height <= 3,
+      ),
+    ).toBe(true);
+    for (const [index, left] of resolved.edges.entries()) {
+      for (const right of resolved.edges.slice(index + 1)) {
+        const overlapWidth =
+          Math.min(
+            left.rect.x + left.rect.width,
+            right.rect.x + right.rect.width,
+          ) - Math.max(left.rect.x, right.rect.x);
+        const overlapHeight =
+          Math.min(
+            left.rect.y + left.rect.height,
+            right.rect.y + right.rect.height,
+          ) - Math.max(left.rect.y, right.rect.y);
+        expect(overlapWidth > 0 && overlapHeight > 0).toBe(false);
+      }
+    }
     expect(contentChild && root).toBeDefined();
     if (contentChild && root) expectRectContained(contentChild, root);
-    expect(restoreFocusAfterEdgeDismissal(resolved, "tools")).toBe("work/beta");
+    expect(restoreFocusAfterEdgeDismissal(resolved, "tools")).toBe(
+      "work/alpha",
+    );
     expect(restoreFocusAfterEdgeDismissal(resolved, "decision")).toBe(
       "work/beta",
+    );
+  });
+
+  it("uses an edge path when duplicate local edge ids exist", () => {
+    const resolved = resolveFocusPlane({
+      root: branch("root", "horizontal", [
+        branch("left", "vertical", [leaf("item")], {
+          edgeRegions: [
+            {
+              id: "decision",
+              edge: "bottom",
+              temporary: true,
+              restoreFocus: "root/left/item",
+            },
+          ],
+        }),
+        branch("right", "vertical", [leaf("item")], {
+          edgeRegions: [
+            {
+              id: "decision",
+              edge: "bottom",
+              temporary: true,
+              restoreFocus: "root/right/item",
+            },
+          ],
+        }),
+      ]),
+      focus: "root/right/item",
+      viewport: { inline: 6, block: 4 },
+    });
+
+    expect(
+      restoreFocusAfterEdgeDismissal(resolved, "root/left/@edge/decision"),
+    ).toBe("root/left/item");
+    expect(restoreFocusAfterEdgeDismissal(resolved, "decision")).toBe(
+      "root/right/item",
     );
   });
 });

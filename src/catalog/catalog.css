@@ -1226,8 +1226,6 @@
   }
 
   .ikasue-root .focus-window-stage {
-    display: grid;
-    grid-template-rows: minmax(260px, 1fr) auto;
     min-width: 0;
     min-height: 320px;
     overflow: hidden;
@@ -1235,9 +1233,30 @@
     background: var(--canvas);
   }
 
+  .ikasue-root .focus-window-layout {
+    position: relative;
+    display: block;
+    min-width: 0;
+    min-height: 320px;
+    overflow: hidden;
+  }
+
+  .ikasue-root .focus-window-root-slot,
+  .ikasue-root .focus-window-edge-slot {
+    position: absolute;
+    inset: 0;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .ikasue-root .focus-window-edge-slot {
+    pointer-events: none;
+  }
+
   .ikasue-root .focus-window-root,
   .ikasue-root .focus-window-children {
-    display: flex;
+    position: absolute;
     min-width: 0;
     min-height: 0;
     overflow: hidden;
@@ -1248,16 +1267,8 @@
     height: 100%;
   }
 
-  .ikasue-root .focus-window-children[data-axis="horizontal"] {
-    flex-direction: row;
-  }
-
-  .ikasue-root .focus-window-children[data-axis="vertical"] {
-    flex-direction: column;
-  }
-
   .ikasue-root .focus-window-region {
-    position: relative;
+    position: absolute;
     min-width: 0;
     min-height: 0;
     overflow: hidden;
@@ -1308,7 +1319,7 @@
 
   .ikasue-root .focus-window-branch > .focus-window-children {
     position: absolute;
-    inset: 31px 0 0;
+    inset: 0;
   }
 
   .ikasue-root .focus-window-leaf {
@@ -1342,18 +1353,11 @@
     font-size: 0.72rem;
   }
 
-  .ikasue-root .focus-window-edges {
-    display: flex;
+  .ikasue-root .focus-window-edge {
+    position: absolute;
+    box-sizing: border-box;
     min-width: 0;
     min-height: 0;
-    gap: 0;
-    overflow: hidden;
-    border-top: var(--rule) solid var(--line);
-  }
-
-  .ikasue-root .focus-window-edge {
-    flex: 1 1 0;
-    min-width: 0;
     padding: 7px 9px;
     overflow: hidden;
     color: var(--muted);
@@ -1363,8 +1367,20 @@
     white-space: nowrap;
   }
 
-  .ikasue-root .focus-window-edge + .focus-window-edge {
+  .ikasue-root .focus-window-edge[data-edge="left"] {
+    border-right: var(--rule) solid var(--line);
+  }
+
+  .ikasue-root .focus-window-edge[data-edge="right"] {
     border-left: var(--rule) solid var(--line);
+  }
+
+  .ikasue-root .focus-window-edge[data-edge="top"] {
+    border-bottom: var(--rule) solid var(--line);
+  }
+
+  .ikasue-root .focus-window-edge[data-edge="bottom"] {
+    border-top: var(--rule) solid var(--line);
   }
 
   .ikasue-root .focus-window-navigation {

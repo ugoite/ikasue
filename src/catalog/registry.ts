@@ -1137,7 +1137,7 @@ export const COMPONENT_SOURCE_RECIPES: Record<
     children:
       '[{ kind: "branch", id: "work", axis: "horizontal", children: [{ kind: "leaf", id: "alpha" }, { kind: "branch", id: "beta", axis: "vertical", children: [{ kind: "leaf", id: "detail" }] }] }]',
     planeOptions:
-      '{ viewport: { inline: 100, block: 48 }, focus: "work/beta/detail", collapse: "sliver" }',
+      '{ viewport: { inline: 100, block: 48 }, focus: "work/beta/detail", collapse: "sliver", edgeRegions: [{ id: "tools", edge: "right", basis: 12, min: 6, temporary: true, restoreFocus: "work/beta/detail" }, { id: "decision", edge: "bottom", basis: 8, min: 4, temporary: true, restoreFocus: "work/beta/detail" }] }',
     componentProps:
       '{ focus: "work/beta/detail", navigation: "runtime-owned", edges: ["right", "bottom"] }',
     ownership:
@@ -1316,6 +1316,10 @@ const plane = {
     id: "work",
     axis: "horizontal",
     navigation: true,
+    edgeRegions: [
+      { id: "tools", edge: "right", basis: 12, min: 6, temporary: true, restoreFocus: "work/beta/detail" },
+      { id: "decision", edge: "bottom", basis: 8, min: 4, temporary: true, restoreFocus: "work/beta/detail" },
+    ],
     children: [
       { kind: "leaf", id: "alpha", basis: 40, min: 2 },
       {
@@ -1372,18 +1376,34 @@ function rustSource(id: CatalogComponentId, recipe: SourceRecipe): string {
     return `#[derive(Debug)]
 enum Node<'a> {
     Leaf { id: &'a str, basis: f32, min: f32 },
-    Branch { id: &'a str, axis: Axis, children: Vec<Node<'a>> },
+    Branch { id: &'a str, axis: Axis, edge_regions: Vec<EdgeRegion<'a>>, children: Vec<Node<'a>> },
+}
+
+enum Edge { Left, Right, Top, Bottom }
+
+struct EdgeRegion<'a> {
+    id: &'a str,
+    edge: Edge,
+    basis: f32,
+    min: f32,
+    temporary: bool,
+    restore_focus: Option<&'a str>,
 }
 
 let plane = FocusPlane {
     root: Node::Branch {
         id: "work",
         axis: Axis::Horizontal,
+        edge_regions: vec![
+            EdgeRegion { id: "tools", edge: Edge::Right, basis: 12.0, min: 6.0, temporary: true, restore_focus: Some("work/beta/detail") },
+            EdgeRegion { id: "decision", edge: Edge::Bottom, basis: 8.0, min: 4.0, temporary: true, restore_focus: Some("work/beta/detail") },
+        ],
         children: vec![
             Node::Leaf { id: "alpha", basis: 40.0, min: 2.0 },
             Node::Branch {
                 id: "beta",
                 axis: Axis::Vertical,
+                edge_regions: vec![],
                 children: vec![Node::Leaf { id: "detail", basis: 20.0, min: 2.0 }],
             },
         ],

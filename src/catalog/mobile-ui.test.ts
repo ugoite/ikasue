@@ -79,6 +79,24 @@ describe("mobile runtime UI contracts", () => {
     );
   });
 
+  it("keeps the focus window demo aligned with the recursive semantic contract", () => {
+    expect(demosSource).toContain("resolveFocusPlane(spec)");
+    expect(demosSource).toContain("restoreFocusAfterEdgeDismissal");
+    expect(demosSource).toContain('classList.add("focus-window-branch")');
+    expect(demosSource).toContain(
+      'layout = element(context.document, "div", "focus-window-layout")',
+    );
+    expect(demosSource).toContain('nav.setAttribute("role", "tablist")');
+    expect(demosSource).toContain('button.setAttribute("role", "tab")');
+    expect(demosSource).toContain(
+      'button.setAttribute("aria-selected", String(item.active))',
+    );
+    expect(demosSource).toContain("button.tabIndex = item.active ? 0 : -1");
+    expect(demosSource).toContain("edgeSlots[edge.edge]");
+    expect(catalogCss).toContain(".focus-window-edge-slot");
+    expect(catalogCss).toContain("overflow: hidden");
+  });
+
   it("keeps the public examples entry point simple and bilingual", () => {
     const vertical = read(join(docsContentRoot, "components", "vertical.mdx"));
     const horizontal = read(
