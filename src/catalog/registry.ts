@@ -1133,11 +1133,11 @@ export const COMPONENT_SOURCE_RECIPES: Record<
   SourceRecipe
 > = {
   "developer-model": {
-    axis: "vertical",
+    axis: "horizontal",
     children:
-      '[{ kind: "branch", id: "work", axis: "horizontal", children: [{ kind: "leaf", id: "alpha" }, { kind: "branch", id: "beta", axis: "vertical", children: [{ kind: "leaf", id: "detail" }] }] }]',
+      '[{ kind: "branch", id: "work", axis: "horizontal", edgeRegions: [{ id: "tools", edge: "right", basis: 12, min: 6, temporary: true, restoreFocus: "work/beta/detail" }, { id: "decision", edge: "bottom", basis: 8, min: 4, temporary: true, restoreFocus: "work/beta/detail" }], children: [{ kind: "leaf", id: "alpha" }, { kind: "branch", id: "beta", axis: "vertical", children: [{ kind: "leaf", id: "detail" }] }] }]',
     planeOptions:
-      '{ viewport: { inline: 100, block: 48 }, focus: "work/beta/detail", collapse: "sliver", edgeRegions: [{ id: "tools", edge: "right", basis: 12, min: 6, temporary: true, restoreFocus: "work/beta/detail" }, { id: "decision", edge: "bottom", basis: 8, min: 4, temporary: true, restoreFocus: "work/beta/detail" }] }',
+      '{ viewport: { inline: 100, block: 48 }, focus: "work/beta/detail", collapse: "sliver" }',
     componentProps:
       '{ focus: "work/beta/detail", navigation: "runtime-owned", edges: ["right", "bottom"] }',
     ownership:
