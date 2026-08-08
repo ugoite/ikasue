@@ -280,6 +280,15 @@ describe("recursive focus plane", () => {
           region.rect.y >= 0 && region.rect.y + region.rect.height <= 4,
       ),
     ).toBe(true);
+
+    const oversizedWrap = resolveFocusPlane({
+      root: branch("root", "horizontal", [leaf("oversized", 6, 0)], {
+        fit: "wrap",
+        navigation: false,
+      }),
+      viewport: { inline: 4, block: 2 },
+    });
+    expect(regionsByParent(oversizedWrap, "root")[0]?.rect.width).toBe(4);
   });
 
   it("allocates edge and bottom regions inside the plane and restores focus", () => {
@@ -368,7 +377,7 @@ describe("recursive focus plane", () => {
               id: "decision",
               edge: "bottom",
               temporary: true,
-              restoreFocus: "root/left/item",
+              restoreFocus: "root/left",
             },
           ],
         }),

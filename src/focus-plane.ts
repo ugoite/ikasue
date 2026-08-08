@@ -652,6 +652,18 @@ function allocateChildren(
       constrained: false,
     };
   }
+  if (branch.fit === "wrap") {
+    return {
+      resolved,
+      sizes: resolved.children.map((child) => Math.min(child.size, available)),
+      offsets: resolved.children.map((child) =>
+        Math.min(child.offset, available),
+      ),
+      lines: resolved.children.map((child) => child.line),
+      lineCount: resolved.lines,
+      constrained: false,
+    };
+  }
   const rawSizes = resolved.children.map((child) => child.size);
   const gap = branch.gap ?? DEFAULT_GAP;
   const gapCount = Math.max(0, rawSizes.length - 1);
@@ -720,20 +732,16 @@ function addNavigation(
 
 function regionState(
   path: string,
-  size: number,
+  rect: FocusRect,
   focusPath: string,
   constrained: boolean,
   collapse: FocusCollapse,
 ): FocusRegionState {
   if (path === focusPath) return "focused";
   if (focusPath.startsWith(`${path}/`)) return "focused";
-  if (constrained)
-    return size === 0
-      ? "collapsed"
-      : collapse === "sliver"
-        ? "compressed"
-        : "collapsed";
-  return size === 0 ? "collapsed" : "visible";
+  if (rect.width === 0 || rect.height === 0) return "collapsed";
+  if (constrained) return collapse === "sliver" ? "compressed" : "collapsed";
+  return "visible";
 }
 
 /** Resolves a recursive focus window into semantic rectangles and navigation. */
@@ -768,7 +776,7 @@ export function resolveFocusPlane(input: FocusPlaneInput): ResolvedFocusPlane {
         rect,
         state: regionState(
           path,
-          Math.max(rect.width, rect.height),
+          rect,
           focusPath,
           constrained,
           spec.collapse ?? DEFAULT_COLLAPSE,
@@ -838,6 +846,25 @@ export function resolveFocusPlane(input: FocusPlaneInput): ResolvedFocusPlane {
   };
 }
 
+function resolvedRestoreTarget(
+  resolved: ResolvedFocusPlane,
+  path: string,
+): string | undefined {
+  const regionIndex = resolved.regions.findIndex(
+    (region) => region.path === path,
+  );
+  if (regionIndex < 0) return undefined;
+  const region = resolved.regions[regionIndex];
+  if (!region) return undefined;
+  if (region.kind === "leaf") return region.path;
+  return resolved.regions.find(
+    (candidate, index) =>
+      index > regionIndex &&
+      candidate.kind === "leaf" &&
+      candidate.path.startsWith(`${path}/`),
+  )?.path;
+}
+
 /** Returns the focus that should receive focus after a temporary edge closes. */
 export function restoreFocusAfterEdgeDismissal(
   resolved: ResolvedFocusPlane,
@@ -853,7 +880,9 @@ export function restoreFocusAfterEdgeDismissal(
   const edge = exact ?? (sameId.length === 1 ? sameId[0] : undefined);
   if (!edge) return resolved.focusPath || undefined;
   const candidate = edge.restoreFocus;
-  if (candidate && resolved.regions.some((region) => region.path === candidate))
-    return candidate;
+  if (candidate) {
+    const target = resolvedRestoreTarget(resolved, candidate);
+    if (target) return target;
+  }
   return resolved.focusPath || undefined;
 }
