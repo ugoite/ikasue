@@ -127,6 +127,16 @@ describe("recursive focus plane", () => {
     expect(requestFocus(nestedPlane(), "work/removed").focus).toBe(
       "work/alpha",
     );
+    expect(
+      normalizeFocusPlane({
+        root: branch("root", "horizontal", [
+          branch("empty", "vertical", []),
+          leaf("available"),
+        ]),
+        focus: "root/empty",
+        viewport: { inline: 4, block: 2 },
+      }).focus,
+    ).toBe("root/available");
   });
 
   it("normalizes malformed nodes, duplicate sibling ids, and invalid extents", () => {

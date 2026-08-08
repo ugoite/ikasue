@@ -2223,8 +2223,9 @@ function renderFocusWindowDemo(
           button.setAttribute("aria-pressed", String(item.active));
         }
         addListener(context, button, "click", () => {
-          focus = requestFocus(spec, item.path).focus ?? focus;
-          restoreDomFocusPath = item.path;
+          const requestedFocus = requestFocus(spec, item.path).focus;
+          focus = requestedFocus ?? focus;
+          restoreDomFocusPath = requestedFocus ?? item.path;
           draw();
         });
         if (rail.kind === "elastic-tabs") {
@@ -2249,8 +2250,9 @@ function renderFocusWindowDemo(
             const next = rail.items[nextIndex];
             if (!next) return;
             keyboardEvent.preventDefault();
-            focus = requestFocus(spec, next.path).focus ?? focus;
-            restoreDomFocusPath = next.path;
+            const requestedFocus = requestFocus(spec, next.path).focus;
+            focus = requestedFocus ?? focus;
+            restoreDomFocusPath = requestedFocus ?? next.path;
             draw();
           });
         }
