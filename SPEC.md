@@ -57,7 +57,9 @@ metadata. A focus path gives area to the leaf and every ancestor, while
 off-path siblings are compressed or collapsed according to the declared
 policy. Edge regions, including a temporary bottom row, consume their owned
 space inside the parent plane and never overlay it. `restoreFocusAfterEdgeDismissal`
-returns the declared opener focus when a temporary edge region closes.
+returns the declared opener focus when a temporary edge region closes. Pass a
+resolved edge path such as `work/@edge/decision`; a local edge id is accepted
+only when it is unambiguous.
 
 The resolver uses abstract units. Renderers own pixel rounding and visual
 motion; semantic tests assert order, containment, non-overlap, focus, and

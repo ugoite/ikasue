@@ -183,14 +183,14 @@ function normalizeEdgeRegions(value: unknown): readonly EdgeRegion[] {
     if (!id || !edge || seen.has(id)) continue;
     seen.add(id);
     const { basis, min } = normalizeBasisMin(input.basis, input.min);
-    const restoreFocus = normalizeId(input.restoreFocus);
+    const restoreFocusPath = pathKey(normalizePath(input.restoreFocus));
     result.push({
       id,
       edge,
       basis,
       min,
       temporary: input.temporary === true,
-      ...(restoreFocus === undefined ? {} : { restoreFocus }),
+      ...(restoreFocusPath ? { restoreFocus: restoreFocusPath } : {}),
     });
   }
   return result;
@@ -317,7 +317,7 @@ export function normalizeFocusPlane(
 
 /** Creates a focus request without exposing coordinates or DOM state. */
 export function requestFocus(
-  input: FocusPlaneInput | FocusPlaneSpec,
+  input: FocusPlaneInput,
   request: FocusRequest | string,
 ): FocusPlaneSpec {
   const path = typeof request === "string" ? request : request.path;
@@ -369,18 +369,34 @@ function edgeExtent(edge: EdgeRegion): number {
   return edge.basis ?? DEFAULT_BASIS;
 }
 
+function edgeMinimum(edge: EdgeRegion): number {
+  return edge.min ?? 0;
+}
+
 function allocateOppositeEdgeExtents(
   first: readonly EdgeRegion[],
   second: readonly EdgeRegion[],
   available: number,
 ): readonly [readonly number[], readonly number[]] {
   const requested = [...first, ...second].map(edgeExtent);
+  const minimums = [...first, ...second].map(edgeMinimum);
   const total = requested.reduce((sum, size) => sum + size, 0);
-  const factor = total > available && total > 0 ? available / total : 1;
+  const minimumTotal = minimums.reduce((sum, size) => sum + size, 0);
+  const factor =
+    total > available && total > minimumTotal
+      ? Math.max(0, available - minimumTotal) / (total - minimumTotal)
+      : 1;
   const firstCount = first.length;
+  const sizes = requested.map((size, index) => {
+    const minimum = minimums[index] ?? 0;
+    return total > available ? minimum + (size - minimum) * factor : size;
+  });
+  const finalTotal = sizes.reduce((sum, size) => sum + size, 0);
+  const finalFactor =
+    finalTotal > available && finalTotal > 0 ? available / finalTotal : 1;
   return [
-    requested.slice(0, firstCount).map((size) => size * factor),
-    requested.slice(firstCount).map((size) => size * factor),
+    sizes.slice(0, firstCount).map((size) => size * finalFactor),
+    sizes.slice(firstCount).map((size) => size * finalFactor),
   ];
 }
 
@@ -473,12 +489,18 @@ function allocateEdges(
         : { restoreFocus: item.restoreFocus }),
     });
   };
-  left.forEach((item, index) => addEdge(item, leftSizes[index] ?? 0, index));
-  right.forEach((item, index) => addEdge(item, rightSizes[index] ?? 0, index));
-  top.forEach((item, index) => addEdge(item, topSizes[index] ?? 0, index));
-  bottom.forEach((item, index) =>
-    addEdge(item, bottomSizes[index] ?? 0, index),
-  );
+  left.forEach((item, index) => {
+    addEdge(item, leftSizes[index] ?? 0, index);
+  });
+  right.forEach((item, index) => {
+    addEdge(item, rightSizes[index] ?? 0, index);
+  });
+  top.forEach((item, index) => {
+    addEdge(item, topSizes[index] ?? 0, index);
+  });
+  bottom.forEach((item, index) => {
+    addEdge(item, bottomSizes[index] ?? 0, index);
+  });
   return {
     content,
     edges: edges.slice(
@@ -545,7 +567,11 @@ function focusedAllocation(
     };
   }
   const gap = branch.gap ?? DEFAULT_GAP;
-  const gapBudget = gap * Math.max(0, count - 1);
+  const requestedGapBudget = gap * Math.max(0, count - 1);
+  const focusMin = branch.children[focusIndex]?.min ?? 0;
+  const hasRoomForGaps = available >= requestedGapBudget + focusMin;
+  const effectiveGap = hasRoomForGaps ? gap : 0;
+  const gapBudget = effectiveGap * Math.max(0, count - 1);
   const usable = Math.max(0, available - gapBudget);
   const slivers = branch.children.map((child, index) => {
     if (index === focusIndex) return 0;
@@ -554,8 +580,11 @@ function focusedAllocation(
     return Math.min(basis, Math.max(min, available * SLIVER_FRACTION));
   });
   const sliverTotal = slivers.reduce((sum, size) => sum + size, 0);
-  const focusedMin = branch.children[focusIndex]?.min ?? 0;
-  const maxSliverTotal = Math.max(0, usable - Math.min(focusedMin, usable));
+  const focusedFloor =
+    available === 0
+      ? 0
+      : Math.min(usable, Math.max(focusMin, Math.min(1, usable)));
+  const maxSliverTotal = Math.max(0, usable - focusedFloor);
   const factor =
     sliverTotal > maxSliverTotal ? maxSliverTotal / sliverTotal : 1;
   const sizes = slivers.map((size, index) =>
@@ -567,7 +596,7 @@ function focusedAllocation(
   let offset = 0;
   for (const size of sizes) {
     offsets.push(offset);
-    offset += size + gap;
+    offset += size + effectiveGap;
   }
   return {
     resolved: undefined,
@@ -613,12 +642,40 @@ function allocateChildren(
     navigation: branch.navigation === true,
     children: childInputs,
   });
+  if (!resolved.overflow) {
+    return {
+      resolved,
+      sizes: resolved.children.map((child) => child.size),
+      offsets: resolved.children.map((child) => child.offset),
+      lines: resolved.children.map((child) => child.line),
+      lineCount: resolved.lines,
+      constrained: false,
+    };
+  }
+  const rawSizes = resolved.children.map((child) => child.size);
+  const gap = branch.gap ?? DEFAULT_GAP;
+  const gapCount = Math.max(0, rawSizes.length - 1);
+  const effectiveGap = gapCount > 0 ? Math.min(gap, available / gapCount) : 0;
+  const gapBudget = effectiveGap * gapCount;
+  const availableForChildren = Math.max(0, available - gapBudget);
+  const rawTotal = rawSizes.reduce((sum, size) => sum + size, 0);
+  const factor =
+    rawTotal > availableForChildren && rawTotal > 0
+      ? availableForChildren / rawTotal
+      : 1;
+  const sizes = rawSizes.map((size) => size * factor);
+  const offsets: number[] = [];
+  let offset = 0;
+  for (const size of sizes) {
+    offsets.push(offset);
+    offset += size + effectiveGap;
+  }
   return {
     resolved,
-    sizes: resolved.children.map((child) => child.size),
-    offsets: resolved.children.map((child) => child.offset),
-    lines: resolved.children.map((child) => child.line),
-    lineCount: resolved.lines,
+    sizes,
+    offsets,
+    lines: sizes.map(() => 0),
+    lineCount: sizes.length ? 1 : 0,
     constrained: false,
   };
 }
@@ -680,9 +737,7 @@ function regionState(
 }
 
 /** Resolves a recursive focus window into semantic rectangles and navigation. */
-export function resolveFocusPlane(
-  input: FocusPlaneInput | FocusPlaneSpec,
-): ResolvedFocusPlane {
+export function resolveFocusPlane(input: FocusPlaneInput): ResolvedFocusPlane {
   const spec = normalizeFocusPlane(input);
   const focusSegments = normalizePath(spec.focus);
   const focusPath = pathKey(focusSegments);
@@ -732,7 +787,13 @@ export function resolveFocusPlane(
       kind: "branch",
       axis: node.axis,
       rect,
-      state: active ? "focused" : constrained ? "compressed" : "visible",
+      state: active
+        ? "focused"
+        : constrained
+          ? spec.collapse === "zero"
+            ? "collapsed"
+            : "compressed"
+          : "visible",
       focused: active,
       children,
     });
@@ -780,11 +841,16 @@ export function resolveFocusPlane(
 /** Returns the focus that should receive focus after a temporary edge closes. */
 export function restoreFocusAfterEdgeDismissal(
   resolved: ResolvedFocusPlane,
-  edgeId: string,
+  edgePath: string,
 ): string | undefined {
-  const edge = resolved.edges.find(
-    (candidate) => candidate.id === edgeId && candidate.temporary,
+  const normalizedPath = pathKey(normalizePath(edgePath));
+  const exact = resolved.edges.find(
+    (candidate) => candidate.path === normalizedPath && candidate.temporary,
   );
+  const sameId = resolved.edges.filter(
+    (candidate) => candidate.id === normalizedPath && candidate.temporary,
+  );
+  const edge = exact ?? (sameId.length === 1 ? sameId[0] : undefined);
   if (!edge) return resolved.focusPath || undefined;
   const candidate = edge.restoreFocus;
   if (candidate && resolved.regions.some((region) => region.path === candidate))
