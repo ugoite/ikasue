@@ -20,6 +20,17 @@ import {
   type PlaneFit,
   type ResolvedPlane,
 } from "../plane";
+import {
+  requestFocus,
+  resolveFocusPlane,
+  restoreFocusAfterEdgeDismissal,
+  type FocusBranch,
+  type FocusCollapse,
+  type FocusLeaf,
+  type FocusNode,
+  type FocusPlaneSpec,
+  type ResolvedFocusRegion,
+} from "../focus-plane";
 import type {
   CatalogLocale,
   CatalogComponentRegistryEntry,
@@ -1866,42 +1877,302 @@ export function renderDeveloperDemo(
   context: DemoContext,
 ): void {
   clear(container);
-  const stack = element(context.document, "div", "stack");
-  const host = element(context.document, "span", "info-text");
-  let editable = false;
-  const draw = (): void => {
-    createInfoText(
-      host,
-      {
-        value: localized(context, {
-          ja: "同じText component",
-          en: "The same Text component",
-        }),
-        editable,
-        editor: "text",
-        state: "clean",
-      },
-      context,
-    );
+  renderFocusWindowDemo(container, context);
+}
+
+function focusLeaf(id: string, basis: number): FocusLeaf {
+  return { kind: "leaf", id, basis, min: 0.5 };
+}
+
+function focusBranch(
+  id: string,
+  axis: FocusBranch["axis"],
+  children: readonly FocusNode[],
+  basis = 40,
+): FocusBranch {
+  return {
+    kind: "branch",
+    id,
+    axis,
+    fit: "elastic",
+    gap: 1,
+    basis,
+    min: 2,
+    navigation: true,
+    children,
   };
-  const controls = element(context.document, "div", "cluster");
-  for (const [mode, label] of [
-    ["read", "editable: false"],
-    ["edit", "editable: true"],
-  ] as const) {
-    const button = textAction(context, label);
-    button.dataset.mode = mode;
-    button.setAttribute("aria-pressed", String(mode === "read"));
-    addListener(context, button, "click", () => {
-      editable = mode === "edit";
-      for (const sibling of controls.querySelectorAll("button"))
-        sibling.setAttribute("aria-pressed", "false");
-      button.setAttribute("aria-pressed", "true");
+}
+
+function focusWindowSpec(
+  focus: string,
+  edgeOpen: boolean,
+  collapse: FocusCollapse,
+): FocusPlaneSpec {
+  const detail = focusBranch("detail", "horizontal", [
+    focusLeaf("source", 32),
+    focusLeaf("editor", 32),
+    focusLeaf("history", 32),
+  ]);
+  const beta = focusBranch("beta", "vertical", [
+    focusLeaf("overview", 20),
+    detail,
+    focusLeaf("validation", 20),
+  ]);
+  const root = focusBranch("work", "horizontal", [
+    focusLeaf("alpha", 40),
+    beta,
+    focusLeaf("gamma", 40),
+  ]);
+  return {
+    root: {
+      ...root,
+      edgeRegions: edgeOpen
+        ? [
+            {
+              id: "tools",
+              edge: "right",
+              basis: 12,
+              min: 6,
+              temporary: true,
+              restoreFocus: focus,
+            },
+            {
+              id: "decision",
+              edge: "bottom",
+              basis: 8,
+              min: 4,
+              temporary: true,
+              restoreFocus: focus,
+            },
+          ]
+        : [],
+    },
+    focus,
+    viewport: { inline: 100, block: 48 },
+    collapse,
+  };
+}
+
+function renderFocusWindowDemo(
+  container: HTMLElement,
+  context: DemoContext,
+): void {
+  let focus = "work/beta/detail/editor";
+  let collapse: FocusCollapse = "sliver";
+  let edgeOpen = false;
+  const english = context.locale === "en";
+  const draw = (): void => {
+    const spec = focusWindowSpec(focus, edgeOpen, collapse);
+    const resolved = resolveFocusPlane(spec);
+    const wrapper = element(context.document, "div", "focus-window-demo");
+    const headingRow = element(context.document, "div", "focus-window-heading");
+    headingRow.append(
+      heading(
+        context,
+        "h2",
+        english ? "Recursive focus window" : "再帰 focus window",
+      ),
+      paragraph(
+        context,
+        english
+          ? `focus path: ${resolved.focusPath}`
+          : `focus path: ${resolved.focusPath}`,
+        "focus-window-path",
+      ),
+    );
+    const controls = element(
+      context.document,
+      "div",
+      "cluster focus-window-controls",
+    );
+    const request = textAction(
+      context,
+      english ? "FocusRequest" : "FocusRequestを送る",
+    );
+    addListener(context, request, "click", () => {
+      const nextPath =
+        focus === "work/alpha"
+          ? "work/beta/overview"
+          : focus === "work/beta/overview"
+            ? "work/beta/detail/editor"
+            : focus === "work/beta/detail/editor"
+              ? "work/beta/detail/history"
+              : "work/alpha";
+      focus =
+        requestFocus(spec, { path: nextPath, level: "expanded" }).focus ??
+        focus;
       draw();
     });
-    controls.append(button);
-  }
+    const edgeToggle = textAction(
+      context,
+      edgeOpen
+        ? english
+          ? "Close edge regions"
+          : "辺の領域を閉じる"
+        : english
+          ? "Open edge regions"
+          : "辺の領域を開く",
+    );
+    edgeToggle.setAttribute("aria-pressed", String(edgeOpen));
+    addListener(context, edgeToggle, "click", () => {
+      if (edgeOpen) {
+        const restore = restoreFocusAfterEdgeDismissal(resolved, "decision");
+        if (restore) focus = restore;
+      }
+      edgeOpen = !edgeOpen;
+      draw();
+    });
+    for (const value of ["sliver", "zero"] as const) {
+      const button = textAction(context, value);
+      button.setAttribute("aria-pressed", String(collapse === value));
+      addListener(context, button, "click", () => {
+        collapse = value;
+        draw();
+      });
+      controls.append(button);
+    }
+    controls.prepend(request, edgeToggle);
+    headingRow.append(controls);
+
+    const stage = element(context.document, "div", "focus-window-stage");
+    stage.setAttribute("role", "region");
+    stage.setAttribute(
+      "aria-label",
+      english ? "Infinite plane focus window" : "無限平面の focus window",
+    );
+    stage.dataset.focus = resolved.focusPath;
+    stage.dataset.collapse = resolved.collapse;
+    const regionMap = new Map(
+      resolved.regions.map((region) => [region.path, region]),
+    );
+    const appendNode = (
+      node: FocusNode,
+      path: string,
+      parent: ResolvedFocusRegion | undefined,
+    ): HTMLElement => {
+      const region = regionMap.get(path);
+      const section = element(
+        context.document,
+        "section",
+        "focus-window-region",
+      );
+      section.dataset.path = path;
+      section.dataset.state = region?.state ?? "visible";
+      section.dataset.kind = node.kind;
+      section.setAttribute("aria-current", String(path === resolved.focusPath));
+      if (parent) {
+        const mainSize =
+          parent.axis === "horizontal"
+            ? (region?.rect.width ?? 0)
+            : (region?.rect.height ?? 0);
+        section.style.setProperty(
+          "--focus-size",
+          String(Math.max(0, mainSize)),
+        );
+        section.style.flex = `${Math.max(0, mainSize)} 1 0`;
+      }
+      if (node.kind === "leaf") {
+        const button = element(context.document, "button", "focus-window-leaf");
+        button.type = "button";
+        button.setAttribute("aria-label", path);
+        addListener(context, button, "click", () => {
+          focus = path;
+          draw();
+        });
+        button.append(
+          heading(context, "h3", node.id),
+          paragraph(
+            context,
+            path === resolved.focusPath
+              ? english
+                ? "focused leaf; ancestors also receive area"
+                : "注視中のleaf。祖先も面積を受け取ります"
+              : english
+                ? "ordered sibling region"
+                : "順序を持つ兄弟region",
+          ),
+        );
+        section.append(button);
+        return section;
+      }
+      section.classList.add("focus-window-branch");
+      const label = element(
+        context.document,
+        "div",
+        "focus-window-branch-label",
+      );
+      label.append(
+        element(context.document, "code"),
+        paragraph(context, node.id),
+      );
+      const code = label.querySelector("code");
+      if (code) code.textContent = `${node.axis} / ${path}`;
+      const children = element(
+        context.document,
+        "div",
+        "focus-window-children",
+      );
+      children.dataset.axis = node.axis;
+      for (const child of node.children)
+        children.append(appendNode(child, `${path}/${child.id}`, region));
+      section.append(label, children);
+      return section;
+    };
+    const root = appendNode(resolved.root, resolved.root.id, undefined);
+    root.classList.add("focus-window-root");
+    stage.append(root);
+
+    const edgeList = element(context.document, "div", "focus-window-edges");
+    for (const edge of resolved.edges) {
+      const item = element(context.document, "span", "focus-window-edge");
+      item.dataset.edge = edge.edge;
+      item.textContent = `${edge.edge}: ${edge.id}`;
+      edgeList.append(item);
+    }
+    stage.append(edgeList);
+
+    const navigation = element(
+      context.document,
+      "div",
+      "focus-window-navigation",
+    );
+    for (const rail of resolved.navigation) {
+      const nav = element(context.document, "nav", "focus-window-nav");
+      nav.dataset.kind = rail.kind;
+      nav.setAttribute(
+        "aria-label",
+        rail.kind === "edge-nav"
+          ? english
+            ? "Generated EdgeNav"
+            : "自動生成 EdgeNav"
+          : english
+            ? "Generated ElasticTabs"
+            : "自動生成 ElasticTabs",
+      );
+      const title = element(context.document, "span", "focus-window-nav-title");
+      title.textContent = `${rail.kind} · ${rail.path}`;
+      nav.append(title);
+      for (const item of rail.items) {
+        const button = textAction(context, item.id);
+        button.setAttribute("aria-pressed", String(item.active));
+        addListener(context, button, "click", () => {
+          focus = requestFocus(spec, item.path).focus ?? focus;
+          draw();
+        });
+        nav.append(button);
+      }
+      navigation.append(nav);
+    }
+    const result = paragraph(
+      context,
+      english
+        ? `Resolved ${String(resolved.regions.length)} regions; ${String(resolved.edges.length)} edge regions; no overlay or scroll policy.`
+        : `resolved: ${String(resolved.regions.length)} region / edge ${String(resolved.edges.length)} / overlayとscrollなし`,
+      "focus-window-result",
+    );
+    result.setAttribute("role", "status");
+    wrapper.append(headingRow, stage, navigation, result);
+    container.replaceChildren(wrapper);
+  };
   draw();
-  stack.append(host, controls);
-  container.append(stack);
 }

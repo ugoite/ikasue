@@ -14,6 +14,7 @@ import {
   horizontal,
   isCatalogComponentId,
   isCatalogPageId,
+  normalizeFocusPlane,
   normalizePlane,
   PACKAGE_NAME,
   PAGE_IDS,
@@ -21,6 +22,8 @@ import {
   parseComponentQuery,
   ROOT_CLASS_NAME,
   resolvePlane,
+  resolveFocusPlane,
+  requestFocus,
   serializeCatalogQuery,
   serializeComponentQuery,
   vertical,
@@ -153,6 +156,28 @@ describe("package identity and plane exports", () => {
       "second",
     ]);
     expect(resolved.children.map((child) => child.offset)).toEqual([0, 2]);
+  });
+
+  it("exposes the recursive focus-window contract from the root package", () => {
+    const plane = normalizeFocusPlane({
+      root: {
+        kind: "branch",
+        id: "work",
+        axis: "horizontal",
+        navigation: true,
+        children: [
+          { kind: "leaf", id: "list", basis: 4 },
+          { kind: "leaf", id: "detail", basis: 4 },
+        ],
+      },
+      viewport: { inline: 4, block: 2 },
+      focus: "work/detail",
+    });
+    const resolved = resolveFocusPlane(plane);
+
+    expect(resolved.focusPath).toBe("work/detail");
+    expect(resolved.navigation[0]?.kind).toBe("edge-nav");
+    expect(requestFocus(plane, "work/list").focus).toBe("work/list");
   });
 
   it("normalizes invalid runtime values to safe defaults", () => {
