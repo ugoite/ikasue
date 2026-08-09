@@ -1,0 +1,902 @@
+import {
+  resolvePlane,
+  type PlaneAxis,
+  type PlaneFit,
+  type ResolvedPlane,
+} from "./plane";
+
+export type FocusCollapse = "sliver" | "zero";
+
+export interface FocusViewport {
+  readonly inline: number;
+  readonly block: number;
+}
+
+export interface FocusLeaf {
+  readonly kind: "leaf";
+  readonly id: string;
+  readonly basis?: number;
+  readonly min?: number;
+}
+
+export interface EdgeRegion {
+  readonly id: string;
+  readonly edge: "left" | "right" | "top" | "bottom";
+  readonly basis?: number;
+  readonly min?: number;
+  readonly temporary?: boolean;
+  readonly restoreFocus?: string;
+}
+
+export interface FocusBranch {
+  readonly kind: "branch";
+  readonly id: string;
+  readonly axis: PlaneAxis;
+  readonly fit?: PlaneFit;
+  readonly gap?: number;
+  readonly basis?: number;
+  readonly min?: number;
+  readonly navigation?: boolean;
+  readonly children: readonly FocusNode[];
+  readonly edgeRegions?: readonly EdgeRegion[];
+}
+
+export type FocusNode = FocusLeaf | FocusBranch;
+
+export interface FocusPlaneInput {
+  readonly root: FocusBranch;
+  readonly focus?: string;
+  readonly viewport: FocusViewport;
+  readonly collapse?: FocusCollapse;
+}
+
+export type FocusPlaneSpec = FocusPlaneInput;
+
+export interface FocusRequest {
+  readonly path: string;
+  readonly level?: "compact" | "expanded" | "exclusive";
+}
+
+export interface FocusRect {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+export type FocusRegionState =
+  "focused" | "visible" | "compressed" | "collapsed";
+
+export interface ResolvedFocusRegion {
+  readonly path: string;
+  readonly parentPath?: string;
+  readonly id: string;
+  readonly kind: FocusNode["kind"];
+  readonly axis?: PlaneAxis;
+  readonly rect: FocusRect;
+  readonly state: FocusRegionState;
+  readonly focused: boolean;
+  readonly children: readonly string[];
+}
+
+export interface ResolvedEdgeRegion {
+  readonly path: string;
+  readonly parentPath: string;
+  readonly id: string;
+  readonly edge: EdgeRegion["edge"];
+  readonly rect: FocusRect;
+  readonly temporary: boolean;
+  readonly restoreFocus?: string;
+}
+
+export interface FocusNavigationItem {
+  readonly path: string;
+  readonly id: string;
+  readonly index: number;
+  readonly active: boolean;
+}
+
+export interface FocusNavigation {
+  readonly path: string;
+  readonly axis: PlaneAxis;
+  readonly kind: "edge-nav" | "elastic-tabs";
+  readonly generated: true;
+  readonly items: readonly FocusNavigationItem[];
+  readonly focusIndex: number;
+  readonly canPrevious: boolean;
+  readonly canNext: boolean;
+  readonly previous?: string;
+  readonly next?: string;
+}
+
+export interface ResolvedFocusPlane {
+  readonly root: FocusBranch;
+  readonly viewport: FocusRect;
+  readonly focusPath: string;
+  readonly focusLeaf?: string;
+  readonly collapse: FocusCollapse;
+  readonly regions: readonly ResolvedFocusRegion[];
+  readonly edges: readonly ResolvedEdgeRegion[];
+  readonly navigation: readonly FocusNavigation[];
+}
+
+const DEFAULT_AXIS: PlaneAxis = "vertical";
+const DEFAULT_FIT: PlaneFit = "elastic";
+const DEFAULT_BASIS = 1;
+const DEFAULT_GAP = 0;
+const DEFAULT_COLLAPSE: FocusCollapse = "sliver";
+const SLIVER_FRACTION = 0.08;
+
+function isFiniteNonNegative(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function normalizeId(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const id = value.trim();
+  return id && !id.includes("/") ? id : undefined;
+}
+
+function normalizePath(value: unknown): readonly string[] {
+  if (typeof value !== "string") return [];
+  return value
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+}
+
+function pathKey(path: readonly string[]): string {
+  return path.join("/");
+}
+
+function normalizeExtent(value: unknown, fallback: number): number {
+  return isFiniteNonNegative(value) ? value : fallback;
+}
+
+function normalizeBasisMin(
+  basisValue: unknown,
+  minValue: unknown,
+): { readonly basis: number; readonly min: number } {
+  const basis = normalizeExtent(basisValue, DEFAULT_BASIS);
+  const min = isFiniteNonNegative(minValue) ? Math.min(minValue, basis) : 0;
+  return { basis, min };
+}
+
+function normalizeEdge(value: unknown): EdgeRegion["edge"] | undefined {
+  return value === "left" ||
+    value === "right" ||
+    value === "top" ||
+    value === "bottom"
+    ? value
+    : undefined;
+}
+
+function normalizeEdgeRegions(value: unknown): readonly EdgeRegion[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const result: EdgeRegion[] = [];
+  for (const candidate of value) {
+    if (!candidate || typeof candidate !== "object") continue;
+    const input = candidate as Record<string, unknown>;
+    const id = normalizeId(input.id);
+    const edge = normalizeEdge(input.edge);
+    if (!id || !edge || seen.has(id)) continue;
+    seen.add(id);
+    const { basis, min } = normalizeBasisMin(input.basis, input.min);
+    const restoreFocusPath = pathKey(normalizePath(input.restoreFocus));
+    result.push({
+      id,
+      edge,
+      basis,
+      min,
+      temporary: input.temporary === true,
+      ...(restoreFocusPath ? { restoreFocus: restoreFocusPath } : {}),
+    });
+  }
+  return result;
+}
+
+function normalizeNode(value: unknown): FocusNode | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const input = value as Record<string, unknown>;
+  const id = normalizeId(input.id);
+  if (!id) return undefined;
+  const { basis, min } = normalizeBasisMin(input.basis, input.min);
+  if (input.kind === "leaf") return { kind: "leaf", id, basis, min };
+  if (input.kind !== "branch") return undefined;
+
+  const axis: PlaneAxis =
+    input.axis === "horizontal" || input.axis === "vertical"
+      ? input.axis
+      : DEFAULT_AXIS;
+  const fit: PlaneFit =
+    input.fit === "elastic" || input.fit === "wrap" ? input.fit : DEFAULT_FIT;
+  const gap = normalizeExtent(input.gap, DEFAULT_GAP);
+  const children: FocusNode[] = [];
+  const seen = new Set<string>();
+  if (Array.isArray(input.children)) {
+    for (const childValue of input.children) {
+      const child = normalizeNode(childValue);
+      if (!child || seen.has(child.id)) continue;
+      seen.add(child.id);
+      children.push(child);
+    }
+  }
+  return {
+    kind: "branch",
+    id,
+    axis,
+    fit,
+    gap,
+    basis,
+    min,
+    navigation: input.navigation === true,
+    children,
+    edgeRegions: normalizeEdgeRegions(input.edgeRegions),
+  };
+}
+
+function emptyRoot(): FocusBranch {
+  return {
+    kind: "branch",
+    id: "root",
+    axis: DEFAULT_AXIS,
+    fit: DEFAULT_FIT,
+    gap: DEFAULT_GAP,
+    basis: DEFAULT_BASIS,
+    min: 0,
+    navigation: false,
+    children: [],
+    edgeRegions: [],
+  };
+}
+
+function firstLeafPath(
+  node: FocusNode,
+  prefix: readonly string[],
+): readonly string[] | undefined {
+  const path = [...prefix, node.id];
+  if (node.kind === "leaf") return path;
+  for (const child of node.children) {
+    const result = firstLeafPath(child, path);
+    if (result) return result;
+  }
+  return undefined;
+}
+
+function resolveRequestedPath(
+  root: FocusBranch,
+  requested: readonly string[],
+): readonly string[] {
+  const rootPath = [root.id];
+  const segments =
+    requested[0] === root.id ? requested : [root.id, ...requested];
+  let node: FocusNode = root;
+  let prefix = rootPath;
+  let index = segments[0] === root.id ? 1 : 0;
+  while (index < segments.length && node.kind === "branch") {
+    const childMatch: FocusNode | undefined = node.children.find(
+      (child) => child.id === segments[index],
+    );
+    if (!childMatch) break;
+    node = childMatch;
+    prefix = [...prefix, childMatch.id];
+    index += 1;
+  }
+  if (node.kind === "leaf") return prefix;
+  return (
+    firstLeafPath(node, prefix.slice(0, -1)) ?? firstLeafPath(root, []) ?? []
+  );
+}
+
+/** Normalizes recursive plane input and returns a stable v1 contract. */
+export function normalizeFocusPlane(
+  input: FocusPlaneInput | null = null,
+): FocusPlaneSpec {
+  const candidate = (input ?? {}) as Record<string, unknown>;
+  const root = normalizeNode(candidate.root);
+  const normalizedRoot = root?.kind === "branch" ? root : emptyRoot();
+  const viewportValue =
+    candidate.viewport && typeof candidate.viewport === "object"
+      ? (candidate.viewport as Record<string, unknown>)
+      : {};
+  const viewport: FocusViewport = {
+    inline: normalizeExtent(viewportValue.inline, 0),
+    block: normalizeExtent(viewportValue.block, 0),
+  };
+  const requested = normalizePath(candidate.focus);
+  const focusPath = resolveRequestedPath(normalizedRoot, requested);
+  return {
+    root: normalizedRoot,
+    viewport,
+    ...(focusPath.length ? { focus: pathKey(focusPath) } : {}),
+    collapse:
+      candidate.collapse === "zero" || candidate.collapse === "sliver"
+        ? candidate.collapse
+        : DEFAULT_COLLAPSE,
+  };
+}
+
+/** Creates a focus request without exposing coordinates or DOM state. */
+export function requestFocus(
+  input: FocusPlaneInput,
+  request: FocusRequest | string,
+): FocusPlaneSpec {
+  const path = typeof request === "string" ? request : request.path;
+  const level = typeof request === "string" ? undefined : request.level;
+  return normalizeFocusPlane({
+    ...input,
+    focus: path,
+    ...(level === "exclusive" ? { collapse: "zero" } : {}),
+    ...(level === "compact" ? { collapse: "sliver" } : {}),
+  });
+}
+
+function rectMain(rect: FocusRect, axis: PlaneAxis): number {
+  return axis === "horizontal" ? rect.width : rect.height;
+}
+
+function setRectMain(
+  rect: FocusRect,
+  axis: PlaneAxis,
+  offset: number,
+  size: number,
+  line: number,
+  lines: number,
+): FocusRect {
+  if (axis === "horizontal") {
+    const lineHeight = lines > 0 ? rect.height / lines : rect.height;
+    return {
+      x: rect.x + offset,
+      y: rect.y + line * lineHeight,
+      width: size,
+      height: lineHeight,
+    };
+  }
+  const lineWidth = lines > 0 ? rect.width / lines : rect.width;
+  return {
+    x: rect.x + line * lineWidth,
+    y: rect.y + offset,
+    width: lineWidth,
+    height: size,
+  };
+}
+
+interface EdgeAllocation {
+  readonly content: FocusRect;
+  readonly edges: readonly ResolvedEdgeRegion[];
+}
+
+function edgeExtent(edge: EdgeRegion): number {
+  return edge.basis ?? DEFAULT_BASIS;
+}
+
+function edgeMinimum(edge: EdgeRegion): number {
+  return edge.min ?? 0;
+}
+
+function allocateOppositeEdgeExtents(
+  first: readonly EdgeRegion[],
+  second: readonly EdgeRegion[],
+  available: number,
+): readonly [readonly number[], readonly number[]] {
+  const requested = [...first, ...second].map(edgeExtent);
+  const minimums = [...first, ...second].map(edgeMinimum);
+  const total = requested.reduce((sum, size) => sum + size, 0);
+  const minimumTotal = minimums.reduce((sum, size) => sum + size, 0);
+  const factor =
+    total > available && total > minimumTotal
+      ? Math.max(0, available - minimumTotal) / (total - minimumTotal)
+      : 1;
+  const firstCount = first.length;
+  const sizes = requested.map((size, index) => {
+    const minimum = minimums[index] ?? 0;
+    return total > available ? minimum + (size - minimum) * factor : size;
+  });
+  const finalTotal = sizes.reduce((sum, size) => sum + size, 0);
+  const finalFactor =
+    finalTotal > available && finalTotal > 0 ? available / finalTotal : 1;
+  return [
+    sizes.slice(0, firstCount).map((size) => size * finalFactor),
+    sizes.slice(firstCount).map((size) => size * finalFactor),
+  ];
+}
+
+function allocateEdges(
+  branch: FocusBranch,
+  path: string,
+  rect: FocusRect,
+  edges: ResolvedEdgeRegion[],
+): EdgeAllocation {
+  const left = branch.edgeRegions?.filter((item) => item.edge === "left") ?? [];
+  const right =
+    branch.edgeRegions?.filter((item) => item.edge === "right") ?? [];
+  const top = branch.edgeRegions?.filter((item) => item.edge === "top") ?? [];
+  const bottom =
+    branch.edgeRegions?.filter((item) => item.edge === "bottom") ?? [];
+  const [leftSizes, rightSizes] = allocateOppositeEdgeExtents(
+    left,
+    right,
+    rect.width,
+  );
+  const [topSizes, bottomSizes] = allocateOppositeEdgeExtents(
+    top,
+    bottom,
+    rect.height,
+  );
+  const leftExtent = leftSizes.reduce((sum, size) => sum + size, 0);
+  const rightExtent = rightSizes.reduce((sum, size) => sum + size, 0);
+  const topExtent = topSizes.reduce((sum, size) => sum + size, 0);
+  const bottomExtent = bottomSizes.reduce((sum, size) => sum + size, 0);
+  const content: FocusRect = {
+    x: rect.x + leftExtent,
+    y: rect.y + topExtent,
+    width: Math.max(0, rect.width - leftExtent - rightExtent),
+    height: Math.max(0, rect.height - topExtent - bottomExtent),
+  };
+
+  const addEdge = (item: EdgeRegion, size: number, edgeIndex: number): void => {
+    const itemPath = `${path}/@edge/${item.id}`;
+    let itemRect: FocusRect;
+    if (item.edge === "left") {
+      const offset = leftSizes
+        .slice(0, edgeIndex)
+        .reduce((sum, value) => sum + value, 0);
+      itemRect = {
+        x: rect.x + offset,
+        y: content.y,
+        width: size,
+        height: content.height,
+      };
+    } else if (item.edge === "right") {
+      const offset = rightSizes
+        .slice(0, edgeIndex)
+        .reduce((sum, value) => sum + value, 0);
+      itemRect = {
+        x: content.x + content.width + offset,
+        y: content.y,
+        width: size,
+        height: content.height,
+      };
+    } else if (item.edge === "top") {
+      const offset = topSizes
+        .slice(0, edgeIndex)
+        .reduce((sum, value) => sum + value, 0);
+      itemRect = {
+        x: content.x,
+        y: rect.y + offset,
+        width: content.width,
+        height: size,
+      };
+    } else {
+      const offset = bottomSizes
+        .slice(0, edgeIndex)
+        .reduce((sum, value) => sum + value, 0);
+      itemRect = {
+        x: content.x,
+        y: content.y + content.height + offset,
+        width: content.width,
+        height: size,
+      };
+    }
+    edges.push({
+      path: itemPath,
+      parentPath: path,
+      id: item.id,
+      edge: item.edge,
+      rect: itemRect,
+      temporary: item.temporary === true,
+      ...(item.restoreFocus === undefined
+        ? {}
+        : { restoreFocus: item.restoreFocus }),
+    });
+  };
+  left.forEach((item, index) => {
+    addEdge(item, leftSizes[index] ?? 0, index);
+  });
+  right.forEach((item, index) => {
+    addEdge(item, rightSizes[index] ?? 0, index);
+  });
+  top.forEach((item, index) => {
+    addEdge(item, topSizes[index] ?? 0, index);
+  });
+  bottom.forEach((item, index) => {
+    addEdge(item, bottomSizes[index] ?? 0, index);
+  });
+  return {
+    content,
+    edges: edges.slice(
+      -left.length - right.length - top.length - bottom.length,
+    ),
+  };
+}
+
+interface ChildAllocation {
+  readonly resolved: ResolvedPlane | undefined;
+  readonly sizes: readonly number[];
+  readonly offsets: readonly number[];
+  readonly lines: readonly number[];
+  readonly lineCount: number;
+  readonly constrained: boolean;
+}
+
+function requestedExtent(branch: FocusBranch): number {
+  const gap = branch.gap ?? DEFAULT_GAP;
+  return branch.children.reduce(
+    (sum, child, index) =>
+      sum + (child.basis ?? DEFAULT_BASIS) + (index > 0 ? gap : 0),
+    0,
+  );
+}
+
+function focusedChildId(
+  path: string,
+  focusPath: readonly string[],
+): string | undefined {
+  const current = path.split("/");
+  if (focusPath.length <= current.length) return undefined;
+  if (current.some((segment, index) => focusPath[index] !== segment))
+    return undefined;
+  return focusPath[current.length];
+}
+
+function focusedAllocation(
+  branch: FocusBranch,
+  available: number,
+  focusIndex: number,
+  collapse: FocusCollapse,
+): ChildAllocation {
+  const count = branch.children.length;
+  if (count === 0)
+    return {
+      resolved: undefined,
+      sizes: [],
+      offsets: [],
+      lines: [],
+      lineCount: 0,
+      constrained: true,
+    };
+  if (collapse === "zero") {
+    return {
+      resolved: undefined,
+      sizes: branch.children.map((_, index) =>
+        index === focusIndex ? available : 0,
+      ),
+      offsets: branch.children.map(() => 0),
+      lines: branch.children.map(() => 0),
+      lineCount: 1,
+      constrained: true,
+    };
+  }
+  const gap = branch.gap ?? DEFAULT_GAP;
+  const requestedGapBudget = gap * Math.max(0, count - 1);
+  const focusMin = branch.children[focusIndex]?.min ?? 0;
+  const hasRoomForGaps = available >= requestedGapBudget + focusMin;
+  const effectiveGap = hasRoomForGaps ? gap : 0;
+  const gapBudget = effectiveGap * Math.max(0, count - 1);
+  const usable = Math.max(0, available - gapBudget);
+  const slivers = branch.children.map((child, index) => {
+    if (index === focusIndex) return 0;
+    const basis = child.basis ?? DEFAULT_BASIS;
+    const min = child.min ?? 0;
+    return Math.min(basis, Math.max(min, available * SLIVER_FRACTION));
+  });
+  const sliverTotal = slivers.reduce((sum, size) => sum + size, 0);
+  const focusedFloor =
+    available === 0
+      ? 0
+      : Math.min(usable, Math.max(focusMin, Math.min(1, usable)));
+  const maxSliverTotal = Math.max(0, usable - focusedFloor);
+  const factor =
+    sliverTotal > maxSliverTotal ? maxSliverTotal / sliverTotal : 1;
+  const sizes = slivers.map((size, index) =>
+    index === focusIndex ? 0 : size * factor,
+  );
+  const used = sizes.reduce((sum, size) => sum + size, 0);
+  sizes[focusIndex] = Math.max(0, usable - used);
+  const offsets: number[] = [];
+  let offset = 0;
+  for (const size of sizes) {
+    offsets.push(offset);
+    offset += size + effectiveGap;
+  }
+  return {
+    resolved: undefined,
+    sizes,
+    offsets,
+    lines: branch.children.map(() => 0),
+    lineCount: 1,
+    constrained: true,
+  };
+}
+
+function allocateChildren(
+  branch: FocusBranch,
+  rect: FocusRect,
+  path: string,
+  focusPath: readonly string[],
+  collapse: FocusCollapse,
+): ChildAllocation {
+  const available = rectMain(rect, branch.axis);
+  const focusId = focusedChildId(path, focusPath);
+  const focusIndex =
+    focusId === undefined
+      ? -1
+      : branch.children.findIndex((child) => child.id === focusId);
+  if (
+    branch.navigation === true &&
+    focusIndex >= 0 &&
+    requestedExtent(branch) > available
+  ) {
+    return focusedAllocation(branch, available, focusIndex, collapse);
+  }
+  const childInputs = branch.children.map((child) => ({
+    id: child.id,
+    basis: child.basis ?? DEFAULT_BASIS,
+    min: child.min ?? 0,
+  }));
+  const resolved = resolvePlane({
+    axis: branch.axis,
+    fit: branch.fit ?? DEFAULT_FIT,
+    gap: branch.gap ?? DEFAULT_GAP,
+    available,
+    ...(focusId === undefined ? {} : { focus: focusId }),
+    navigation: branch.navigation === true,
+    children: childInputs,
+  });
+  if (!resolved.overflow) {
+    return {
+      resolved,
+      sizes: resolved.children.map((child) => child.size),
+      offsets: resolved.children.map((child) => child.offset),
+      lines: resolved.children.map((child) => child.line),
+      lineCount: resolved.lines,
+      constrained: false,
+    };
+  }
+  if (branch.fit === "wrap") {
+    return {
+      resolved,
+      sizes: resolved.children.map((child) => Math.min(child.size, available)),
+      offsets: resolved.children.map((child) =>
+        Math.min(child.offset, available),
+      ),
+      lines: resolved.children.map((child) => child.line),
+      lineCount: resolved.lines,
+      constrained: false,
+    };
+  }
+  const rawSizes = resolved.children.map((child) => child.size);
+  const gap = branch.gap ?? DEFAULT_GAP;
+  const gapCount = Math.max(0, rawSizes.length - 1);
+  const effectiveGap = gapCount > 0 ? Math.min(gap, available / gapCount) : 0;
+  const gapBudget = effectiveGap * gapCount;
+  const availableForChildren = Math.max(0, available - gapBudget);
+  const rawTotal = rawSizes.reduce((sum, size) => sum + size, 0);
+  const factor =
+    rawTotal > availableForChildren && rawTotal > 0
+      ? availableForChildren / rawTotal
+      : 1;
+  const sizes = rawSizes.map((size) => size * factor);
+  const offsets: number[] = [];
+  let offset = 0;
+  for (const size of sizes) {
+    offsets.push(offset);
+    offset += size + effectiveGap;
+  }
+  return {
+    resolved,
+    sizes,
+    offsets,
+    lines: sizes.map(() => 0),
+    lineCount: sizes.length ? 1 : 0,
+    constrained: false,
+  };
+}
+
+function addNavigation(
+  branch: FocusBranch,
+  path: string,
+  focusPath: readonly string[],
+  allocation: ChildAllocation,
+  navigation: FocusNavigation[],
+): void {
+  if (!allocation.constrained || branch.navigation !== true) return;
+  const focusId = focusedChildId(path, focusPath);
+  const focusIndex =
+    focusId === undefined
+      ? -1
+      : branch.children.findIndex((child) => child.id === focusId);
+  if (focusIndex < 0 || branch.children.length < 2) return;
+  const items = branch.children.flatMap((child, index) =>
+    firstLeafPath(child, [path]) === undefined
+      ? []
+      : [
+          {
+            path: `${path}/${child.id}`,
+            id: child.id,
+            index,
+            active: index === focusIndex,
+          },
+        ],
+  );
+  const activeIndex = items.findIndex((item) => item.active);
+  if (activeIndex < 0 || items.length < 2) return;
+  const canPrevious = activeIndex > 0;
+  const canNext = activeIndex < items.length - 1;
+  const previous = canPrevious ? items[activeIndex - 1]?.path : undefined;
+  const next = canNext ? items[activeIndex + 1]?.path : undefined;
+  navigation.push({
+    path,
+    axis: branch.axis,
+    kind: branch.axis === "horizontal" ? "edge-nav" : "elastic-tabs",
+    generated: true,
+    items,
+    focusIndex: activeIndex,
+    canPrevious,
+    canNext,
+    ...(previous === undefined ? {} : { previous }),
+    ...(next === undefined ? {} : { next }),
+  });
+}
+
+function regionState(
+  path: string,
+  rect: FocusRect,
+  focusPath: string,
+  constrained: boolean,
+  collapse: FocusCollapse,
+): FocusRegionState {
+  if (path === focusPath) return "focused";
+  if (focusPath.startsWith(`${path}/`)) return "focused";
+  if (rect.width === 0 || rect.height === 0) return "collapsed";
+  if (constrained) return collapse === "sliver" ? "compressed" : "collapsed";
+  return "visible";
+}
+
+/** Resolves a recursive focus window into semantic rectangles and navigation. */
+export function resolveFocusPlane(input: FocusPlaneInput): ResolvedFocusPlane {
+  const spec = normalizeFocusPlane(input);
+  const focusSegments = normalizePath(spec.focus);
+  const focusPath = pathKey(focusSegments);
+  const viewport: FocusRect = {
+    x: 0,
+    y: 0,
+    width: spec.viewport.inline,
+    height: spec.viewport.block,
+  };
+  const regions: ResolvedFocusRegion[] = [];
+  const edges: ResolvedEdgeRegion[] = [];
+  const navigation: FocusNavigation[] = [];
+
+  const visit = (
+    node: FocusNode,
+    path: string,
+    rect: FocusRect,
+    parentPath: string | undefined,
+    constrained: boolean,
+  ): void => {
+    const active = focusPath === path || focusPath.startsWith(`${path}/`);
+    if (node.kind === "leaf") {
+      regions.push({
+        path,
+        ...(parentPath === undefined ? {} : { parentPath }),
+        id: node.id,
+        kind: "leaf",
+        rect,
+        state: regionState(
+          path,
+          rect,
+          focusPath,
+          constrained,
+          spec.collapse ?? DEFAULT_COLLAPSE,
+        ),
+        focused: active,
+        children: [],
+      });
+      return;
+    }
+    const edgeAllocation = allocateEdges(node, path, rect, edges);
+    const children = node.children.map((child) => `${path}/${child.id}`);
+    regions.push({
+      path,
+      ...(parentPath === undefined ? {} : { parentPath }),
+      id: node.id,
+      kind: "branch",
+      axis: node.axis,
+      rect,
+      state: active
+        ? "focused"
+        : rect.width === 0 || rect.height === 0
+          ? "collapsed"
+          : constrained
+            ? spec.collapse === "zero"
+              ? "collapsed"
+              : "compressed"
+            : "visible",
+      focused: active,
+      children,
+    });
+    const allocation = allocateChildren(
+      node,
+      edgeAllocation.content,
+      path,
+      focusSegments,
+      spec.collapse ?? DEFAULT_COLLAPSE,
+    );
+    addNavigation(node, path, focusSegments, allocation, navigation);
+    node.children.forEach((child, index) => {
+      const size = allocation.sizes[index] ?? 0;
+      const offset = allocation.offsets[index] ?? 0;
+      const line = allocation.lines[index] ?? 0;
+      const childRect = setRectMain(
+        edgeAllocation.content,
+        node.axis,
+        offset,
+        size,
+        line,
+        allocation.lineCount,
+      );
+      const childPath = `${path}/${child.id}`;
+      visit(child, childPath, childRect, path, allocation.constrained);
+    });
+  };
+
+  visit(spec.root, spec.root.id, viewport, undefined, false);
+  const focusLeaf = focusSegments.length
+    ? focusSegments[focusSegments.length - 1]
+    : undefined;
+  return {
+    root: spec.root,
+    viewport,
+    focusPath,
+    ...(focusLeaf === undefined ? {} : { focusLeaf }),
+    collapse: spec.collapse ?? DEFAULT_COLLAPSE,
+    regions,
+    edges,
+    navigation,
+  };
+}
+
+function resolvedRestoreTarget(
+  resolved: ResolvedFocusPlane,
+  path: string,
+): string | undefined {
+  const regionIndex = resolved.regions.findIndex(
+    (region) => region.path === path,
+  );
+  if (regionIndex < 0) return undefined;
+  const region = resolved.regions[regionIndex];
+  if (!region) return undefined;
+  if (region.kind === "leaf") return region.path;
+  return resolved.regions.find(
+    (candidate, index) =>
+      index > regionIndex &&
+      candidate.kind === "leaf" &&
+      candidate.path.startsWith(`${path}/`),
+  )?.path;
+}
+
+/** Returns the focus that should receive focus after a temporary edge closes. */
+export function restoreFocusAfterEdgeDismissal(
+  resolved: ResolvedFocusPlane,
+  edgePath: string,
+): string | undefined {
+  const normalizedPath = pathKey(normalizePath(edgePath));
+  const exact = resolved.edges.find(
+    (candidate) => candidate.path === normalizedPath && candidate.temporary,
+  );
+  const sameId = resolved.edges.filter(
+    (candidate) => candidate.id === normalizedPath,
+  );
+  const edge =
+    exact ??
+    (sameId.length === 1 && sameId[0]?.temporary ? sameId[0] : undefined);
+  if (!edge) return resolved.focusPath || undefined;
+  const candidate = edge.restoreFocus;
+  if (candidate) {
+    const target = resolvedRestoreTarget(resolved, candidate);
+    if (target) return target;
+  }
+  return resolved.focusPath || undefined;
+}

@@ -1199,6 +1199,220 @@
     font-size: 0.72rem;
   }
 
+  .ikasue-root .focus-window-demo {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .ikasue-root .focus-window-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 12px;
+    align-items: end;
+  }
+
+  .ikasue-root .focus-window-path,
+  .ikasue-root .focus-window-result,
+  .ikasue-root .focus-window-nav-title {
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+  }
+
+  .ikasue-root .focus-window-heading > .focus-window-controls {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
+  .ikasue-root .focus-window-stage {
+    min-width: 0;
+    min-height: 320px;
+    overflow: hidden;
+    border-block: var(--rule) solid var(--line);
+    background: var(--canvas);
+  }
+
+  .ikasue-root .focus-window-layout {
+    position: relative;
+    display: block;
+    min-width: 0;
+    min-height: 320px;
+    overflow: hidden;
+  }
+
+  .ikasue-root .focus-window-root-slot,
+  .ikasue-root .focus-window-edge-slot {
+    position: absolute;
+    inset: 0;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .ikasue-root .focus-window-edge-slot {
+    pointer-events: none;
+  }
+
+  .ikasue-root .focus-window-root,
+  .ikasue-root .focus-window-children {
+    position: absolute;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .ikasue-root .focus-window-root {
+    width: 100%;
+    height: 100%;
+  }
+
+  .ikasue-root .focus-window-region {
+    position: absolute;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    border-right: var(--rule) solid var(--line);
+    border-bottom: var(--rule) solid var(--line);
+    background: var(--canvas);
+    transition:
+      flex var(--motion-slow) var(--spring),
+      background var(--motion-fast),
+      opacity var(--motion-fast);
+  }
+
+  .ikasue-root .focus-window-region:last-child {
+    border-right: 0;
+    border-bottom: 0;
+  }
+
+  .ikasue-root .focus-window-region[data-state="focused"] {
+    background: var(--selection-strong);
+  }
+
+  .ikasue-root .focus-window-region[data-state="compressed"] {
+    opacity: 0.64;
+  }
+
+  .ikasue-root .focus-window-region[data-state="collapsed"] {
+    opacity: 0.22;
+  }
+
+  .ikasue-root .focus-window-branch-label {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    padding: 6px 8px;
+    border-bottom: var(--rule) solid var(--line);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.62rem;
+  }
+
+  .ikasue-root .focus-window-branch-label code {
+    color: var(--faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ikasue-root .focus-window-branch > .focus-window-children {
+    position: absolute;
+    inset: 0;
+  }
+
+  .ikasue-root .focus-window-leaf {
+    display: grid;
+    align-content: start;
+    gap: 5px;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 12px;
+    text-align: left;
+    color: var(--muted);
+  }
+
+  .ikasue-root .focus-window-leaf:hover,
+  .ikasue-root .focus-window-leaf:focus-visible {
+    background: var(--selection);
+    color: var(--ink);
+  }
+
+  .ikasue-root .focus-window-leaf h3 {
+    overflow: hidden;
+    color: var(--ink);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ikasue-root .focus-window-leaf p {
+    color: inherit;
+    font-size: 0.72rem;
+  }
+
+  .ikasue-root .focus-window-edge {
+    position: absolute;
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: 0;
+    padding: 7px 9px;
+    overflow: hidden;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.64rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ikasue-root .focus-window-edge[data-edge="left"] {
+    border-right: var(--rule) solid var(--line);
+  }
+
+  .ikasue-root .focus-window-edge[data-edge="right"] {
+    border-left: var(--rule) solid var(--line);
+  }
+
+  .ikasue-root .focus-window-edge[data-edge="top"] {
+    border-bottom: var(--rule) solid var(--line);
+  }
+
+  .ikasue-root .focus-window-edge[data-edge="bottom"] {
+    border-top: var(--rule) solid var(--line);
+  }
+
+  .ikasue-root .focus-window-navigation {
+    display: grid;
+    gap: 8px;
+  }
+
+  .ikasue-root .focus-window-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    align-items: center;
+    min-width: 0;
+    padding: 5px 0;
+    border-bottom: var(--rule) solid var(--line);
+  }
+
+  .ikasue-root .focus-window-nav[data-kind="elastic-tabs"] {
+    border-left: 2px solid var(--line);
+    padding-left: 8px;
+  }
+
+  .ikasue-root .focus-window-nav[data-kind="edge-nav"] {
+    border-right: 2px solid var(--line);
+    padding-right: 8px;
+  }
+
+  .ikasue-root .focus-window-nav-title {
+    min-width: 12rem;
+    margin-right: 4px;
+  }
+
   .ikasue-root .plane-note {
     margin-top: 10px;
     color: var(--muted);
