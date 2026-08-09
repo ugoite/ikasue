@@ -98,7 +98,7 @@ export function splitView(
   normalized.forEach((pane) => {
     collapsed[pane.id] = pane.disabled
       ? false
-      : Boolean(input?.collapsed?.[pane.id]);
+      : pane.collapsible === true && Boolean(input?.collapsed?.[pane.id]);
   });
   const motionOrigin =
     input?.motionOrigin === "start" ||
@@ -150,7 +150,7 @@ export function createSplitViewState(
   normalized.forEach((pane) => {
     collapsed[pane.id] = pane.disabled
       ? false
-      : Boolean(initial?.collapsed?.[pane.id]);
+      : pane.collapsible === true && Boolean(initial?.collapsed?.[pane.id]);
   });
   const state: { -readonly [K in keyof SplitViewState]: SplitViewState[K] } = {
     sizes: initialSizes,
@@ -163,6 +163,11 @@ export function createSplitViewState(
     disabled: new Set(
       normalized.filter((pane) => pane.disabled).map((pane) => pane.id),
     ),
+    collapsible: new Set(
+      normalized
+        .filter((pane) => pane.collapsible === true)
+        .map((pane) => pane.id),
+    ),
   });
   return frozen;
 }
@@ -172,6 +177,7 @@ const metaByState = new WeakMap<
   {
     readonly paneIds: readonly string[];
     readonly disabled: ReadonlySet<string>;
+    readonly collapsible: ReadonlySet<string>;
   }
 >();
 const hasPane = (state: SplitViewState, id: string): boolean => {
@@ -186,6 +192,8 @@ const hasPane = (state: SplitViewState, id: string): boolean => {
 };
 const isDisabled = (state: SplitViewState, id: string): boolean =>
   metaByState.get(state)?.disabled.has(id) === true;
+const isCollapsible = (state: SplitViewState, id: string): boolean =>
+  metaByState.get(state)?.collapsible.has(id) ?? true;
 export function setActivePane(
   state: SplitViewState,
   id: string,
@@ -225,6 +233,7 @@ export function setPaneCollapsed(
   if (
     !hasPane(state, id) ||
     isDisabled(state, id) ||
+    !isCollapsible(state, id) ||
     typeof value !== "boolean" ||
     state.collapsed[id] === value
   )

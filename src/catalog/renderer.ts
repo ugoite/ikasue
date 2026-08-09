@@ -50,7 +50,7 @@ import type {
 } from "../types";
 import type { CatalogComponentId, CatalogLocale } from "./types";
 import { findRegistryEntry } from "./registry";
-import { element } from "./dom";
+import { element, type Cleanup } from "./dom";
 
 export interface DomAllocator {
   allocate(role: string, raw: unknown, index: number): string;
@@ -537,7 +537,7 @@ function renderSplitView(
   target: HTMLElement,
   spec: SplitViewSpec,
   allocator: DomAllocator,
-): void {
+): Cleanup {
   target.className = "ikasue-split-view";
   target.dataset.orientation = spec.orientation;
   target.dataset.motionOrigin = spec.motionOrigin;
@@ -550,6 +550,7 @@ function renderSplitView(
     responsiveColumn ? "vertical" : spec.orientation;
   const collapsed = { ...spec.collapsed };
   const paneNodes = new Map<string, HTMLElement>();
+  const collapseButtons = new Map<string, HTMLButtonElement>();
   const applyTrack = (node: HTMLElement, track: string): void => {
     const fr = /^(\d+(?:\.\d+)?)fr$/.exec(track);
     if (fr) {
@@ -604,6 +605,12 @@ function renderSplitView(
       });
   };
   const setCollapsed = (pane: HTMLElement, value: boolean): void => {
+    const paneId = pane.dataset.paneId;
+    const collapse = paneId ? collapseButtons.get(paneId) : undefined;
+    if (collapse) {
+      collapse.textContent = value ? "Expand" : "Collapse";
+      collapse.setAttribute("aria-expanded", String(!value));
+    }
     pane.dataset.collapsed = String(value);
     pane.toggleAttribute("aria-hidden", value);
     pane.setAttribute("aria-hidden", String(value));
@@ -753,6 +760,7 @@ function renderSplitView(
       const collapse = element(document, "button", "Collapse");
       collapse.type = "button";
       collapse.dataset.paneCollapse = pane.id;
+      collapse.setAttribute("aria-controls", paneId);
       collapse.addEventListener("click", () => {
         const next = collapsed[pane.id] !== true;
         collapsed[pane.id] = next;
@@ -763,7 +771,8 @@ function renderSplitView(
           // A controlled callback cannot invalidate the collapsed state.
         }
       });
-      paneNode.append(collapse);
+      collapseButtons.set(pane.id, collapse);
+      controls.append(collapse);
     }
     if (pane.disabled) paneNode.setAttribute("aria-disabled", "true");
     setCollapsed(paneNode, collapsed[pane.id] === true);
@@ -881,8 +890,12 @@ function renderSplitView(
   target.prepend(controls);
   updateResponsive();
   const observed = target.parentElement ?? target;
-  if (typeof ResizeObserver !== "undefined")
-    new ResizeObserver(updateResponsive).observe(observed);
+  let observer: ResizeObserver | undefined;
+  if (typeof ResizeObserver !== "undefined") {
+    observer = new ResizeObserver(updateResponsive);
+    observer.observe(observed);
+  }
+  return () => observer?.disconnect();
 }
 
 function renderField(
@@ -943,7 +956,7 @@ function renderComponentDemo(
   target: HTMLElement,
   id: CatalogComponentId,
   allocator: DomAllocator,
-): void {
+): Cleanup | undefined {
   switch (id) {
     case "theme-root": {
       const spec = themeRoot({});
@@ -1270,7 +1283,7 @@ function renderComponentDemo(
       );
       return;
     case "split-view":
-      renderSplitView(
+      return renderSplitView(
         document,
         target,
         splitView(
@@ -1297,7 +1310,6 @@ function renderComponentDemo(
         ),
         allocator,
       );
-      return;
     case "side-panel": {
       const spec: SidePanelSpec = sidePanel({
         title: "Inspector",
@@ -1362,7 +1374,7 @@ export function renderCatalogComponent(
   id: CatalogComponentId,
   locale: CatalogLocale,
   allocator: DomAllocator,
-): void {
+): Cleanup | undefined {
   const entry = findRegistryEntry(id);
   const page = element(document, "article");
   page.className = "ikasue-component-page";
@@ -1377,8 +1389,9 @@ export function renderCatalogComponent(
   const content = element(document, "div");
   content.className = "ikasue-layout-container";
   surface.append(content);
-  renderComponentDemo(document, content, id, allocator);
+  const cleanup = renderComponentDemo(document, content, id, allocator);
   demo.append(surface);
   page.append(demo);
   target.append(page);
+  return cleanup;
 }

@@ -7,6 +7,7 @@ describe("fixed bilingual routes", () => {
     expect(routeData.componentIds).toHaveLength(28);
     expect(routesForBase("/").ja[0]).toBe("/");
     expect(routesForBase("/ikasue/").en[0]).toBe("/ikasue/en/");
+    expect(routesForBase("/docs/v1/").ja[0]).toBe("/docs/v1/");
     expect(routesForBase("/ikasue/").ja).toContain("/ikasue/components/text/");
     const queryMarker = String.fromCharCode(63) + "component" + "=";
     expect(

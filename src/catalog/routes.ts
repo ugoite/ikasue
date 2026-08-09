@@ -9,7 +9,7 @@ export function normalizeBase(value?: string): string {
     !value ||
     typeof value !== "string" ||
     !value.trim() ||
-    !/^\/?[A-Za-z0-9._-]+\/?$/.test(value.trim())
+    !/^\/?[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*\/?$/.test(value.trim())
   )
     return "/";
   const normalized = value.trim();

@@ -309,9 +309,12 @@ export function form(options?: FormOptions): FormSpec {
     return [field];
   });
   const values: Record<string, string> = {};
-  for (const field of fields)
-    values[field.id.trim()] =
-      options?.values?.[field.id] ?? content(field.initialValue);
+  const suppliedValues = record(options?.values);
+  for (const field of fields) {
+    const supplied = suppliedValues?.[field.id];
+    values[field.id] =
+      typeof supplied === "string" ? supplied : content(field.initialValue);
+  }
   const result: Mutable<FormSpec> = {
     kind: "form",
     fields,
