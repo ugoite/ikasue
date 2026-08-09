@@ -47,6 +47,7 @@ type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
 const text = (value: unknown) =>
   typeof value === "string" ? value.trim() : "";
+const content = (value: unknown) => (typeof value === "string" ? value : "");
 type UnknownRecord = Record<string, unknown>;
 const record = (value: unknown): UnknownRecord | undefined =>
   typeof value === "object" && value !== null
@@ -111,7 +112,7 @@ export function themeRoot(options?: ThemeRootOptions): ThemeRootSpec {
         : "default",
   });
 }
-export function tabs(options: TabsOptions): TabsSpec {
+export function tabs(options?: TabsOptions): TabsSpec {
   const normalized = items(options?.items);
   const result: Mutable<TabsSpec> = {
     kind: "tabs",
@@ -126,7 +127,7 @@ export function tabs(options: TabsOptions): TabsSpec {
     result.onActiveChange = options.onActiveChange;
   return Object.freeze(result);
 }
-export function sidebar(options: SidebarOptions): SidebarSpec {
+export function sidebar(options?: SidebarOptions): SidebarSpec {
   const normalized = items(options?.items);
   const result: Mutable<SidebarSpec> = {
     kind: "sidebar",
@@ -139,7 +140,7 @@ export function sidebar(options: SidebarOptions): SidebarSpec {
     result.onActiveChange = options.onActiveChange;
   return Object.freeze(result);
 }
-export function toolbar(options: ToolbarOptions): ToolbarSpec {
+export function toolbar(options?: ToolbarOptions): ToolbarSpec {
   const used = new Set<string>();
   const normalized = list(options?.items).flatMap((value) => {
     const item = record(value);
@@ -187,7 +188,7 @@ export function iconButton(options: IconButtonOptions): IconButtonSpec {
 export function textComponent(options: TextOptions): TextSpec {
   return Object.freeze({
     kind: "text",
-    content: text(options?.content),
+    content: content(options?.content),
     tone:
       options?.tone === "muted" ||
       options?.tone === "danger" ||
@@ -202,21 +203,21 @@ export function textField(options: TextFieldOptions): TextFieldSpec {
     kind: "text-field",
     id: text(options?.id),
     label: text(options?.label),
-    value: text(options?.value),
-    placeholder: text(options?.placeholder),
+    value: content(options?.value),
+    placeholder: content(options?.placeholder),
     disabled: options?.disabled === true,
     required: options?.required === true,
   };
-  if (text(options?.description))
-    result.description = text(options?.description);
-  if (text(options?.error)) result.error = text(options?.error);
+  if (typeof options?.description === "string")
+    result.description = options.description;
+  if (typeof options?.error === "string") result.error = options.error;
   if (typeof options?.onInput === "function") result.onInput = options.onInput;
   return Object.freeze(result);
 }
-export function editableText(options: EditableTextOptions): EditableTextSpec {
+export function editableText(options?: EditableTextOptions): EditableTextSpec {
   const result: Mutable<EditableTextSpec> = {
     kind: "editable-text",
-    value: text(options?.value),
+    value: content(options?.value),
     disabled: options?.disabled === true,
   };
   if (text(options?.id)) result.id = text(options?.id);
@@ -272,11 +273,11 @@ const choiceResult = (
     result.onChange = options.onChange;
   return Object.freeze(result);
 };
-export function radioGroup(options: RadioGroupOptions): RadioGroupSpec {
+export function radioGroup(options?: RadioGroupOptions): RadioGroupSpec {
   return choiceResult("radio-group", options) as RadioGroupSpec;
 }
 export function segmentedControl(
-  options: SegmentedControlOptions,
+  options?: SegmentedControlOptions,
 ): SegmentedControlSpec {
   return choiceResult("segmented-control", options) as SegmentedControlSpec;
 }
@@ -286,14 +287,14 @@ export function field(options: FieldOptions): FieldSpec {
     id: text(options?.id),
     label: text(options?.label),
     required: options?.required === true,
-    content: text(options?.content),
+    content: content(options?.content),
   };
-  if (text(options?.description))
-    result.description = text(options?.description);
-  if (text(options?.error)) result.error = text(options?.error);
+  if (typeof options?.description === "string")
+    result.description = options.description;
+  if (typeof options?.error === "string") result.error = options.error;
   return Object.freeze(result);
 }
-export function form(options: FormOptions): FormSpec {
+export function form(options?: FormOptions): FormSpec {
   const ids = new Set<string>();
   const fields = list(options?.fields).flatMap((value) => {
     const source = record(value);
@@ -310,7 +311,7 @@ export function form(options: FormOptions): FormSpec {
   const values: Record<string, string> = {};
   for (const field of fields)
     values[field.id.trim()] =
-      options?.values?.[field.id] ?? text(field.initialValue);
+      options?.values?.[field.id] ?? content(field.initialValue);
   const result: Mutable<FormSpec> = {
     kind: "form",
     fields,
@@ -328,7 +329,7 @@ export function form(options: FormOptions): FormSpec {
     result.onSubmit = options.onSubmit;
   return Object.freeze(result);
 }
-export function dataGrid(options: DataGridOptions): DataGridSpec {
+export function dataGrid(options?: DataGridOptions): DataGridSpec {
   const sourceOptions = record(options);
   const columnsProvided = Boolean(sourceOptions && "columns" in sourceOptions);
   const rowsProvided = Boolean(sourceOptions && "rows" in sourceOptions);
@@ -446,7 +447,7 @@ export function statusIndicator(
 export function alert(options: AlertOptions): AlertSpec {
   const result: Mutable<AlertSpec> = {
     kind: "alert",
-    message: text(options?.message),
+    message: content(options?.message),
     severity:
       options?.severity === "success" ||
       options?.severity === "warning" ||
@@ -460,7 +461,7 @@ export function alert(options: AlertOptions): AlertSpec {
     result.onDismiss = options.onDismiss;
   return Object.freeze(result);
 }
-export function progress(options: ProgressOptions): ProgressSpec {
+export function progress(options?: ProgressOptions): ProgressSpec {
   const max =
     typeof options?.max === "number" &&
     Number.isFinite(options.max) &&
@@ -482,7 +483,7 @@ export function progress(options: ProgressOptions): ProgressSpec {
   return Object.freeze(result);
 }
 export function historyTimeline(
-  options: HistoryTimelineOptions,
+  options?: HistoryTimelineOptions,
 ): HistoryTimelineSpec {
   const ids = new Set<string>();
   const entries = list(options?.entries).flatMap((value) => {
