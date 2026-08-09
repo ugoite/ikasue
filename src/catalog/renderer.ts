@@ -297,8 +297,10 @@ function renderDataGrid(
     }
   };
   const beginEdit = (node: HTMLElement, row: string, column: string): void => {
-    const cell = cells.get(keyFor(row, column));
-    if (!cell) return;
+    const key = keyFor(row, column);
+    const cell =
+      cells.get(key) ?? ({ row, column, value: "", status: "clean" } as const);
+    cells.set(key, cell);
     editing = { key: keyFor(row, column), original: cell.value };
     node.contentEditable = "true";
     node.focus();
@@ -489,8 +491,15 @@ function renderDataGrid(
       .then((accepted) => {
         if (token !== operation || !accepted) return;
         const key = keyFor(selection.row, selection.column);
-        const cell = cells.get(key);
-        if (!cell || cell.value === value) return;
+        const cell =
+          cells.get(key) ??
+          ({
+            row: selection.row,
+            column: selection.column,
+            value: "",
+            status: "clean",
+          } as const);
+        if (cell.value === value && cells.has(key)) return;
         cells.set(key, { ...cell, value, status: "dirty" });
         const node = cellNodes.get(key);
         if (node) node.textContent = value;
@@ -521,6 +530,7 @@ function renderSplitView(
   const controls = element(document, "div");
   controls.className = "ikasue-split-controls";
   let activePane = spec.activePane;
+  let sizes = [...spec.sizes];
   const collapsed = { ...spec.collapsed };
   const paneNodes = new Map<string, HTMLElement>();
   const applyTrack = (node: HTMLElement, track: string): void => {
@@ -542,7 +552,7 @@ function renderSplitView(
     index: number,
     node: HTMLElement,
   ): void => {
-    applyTrack(node, spec.sizes[index] ?? pane.basis ?? "1fr");
+    applyTrack(node, sizes[index] ?? pane.basis ?? "1fr");
     if (pane.grow !== undefined) node.style.flexGrow = String(pane.grow);
     if (pane.shrink !== undefined) node.style.flexShrink = String(pane.shrink);
     if (pane.minSize) {
@@ -589,14 +599,47 @@ function renderSplitView(
       // A controlled callback cannot invalidate the rendered state.
     }
   };
-  const minPixels = (value: string | undefined, total: number): number => {
+  const minPixels = (
+    value: string | undefined,
+    total: number,
+    node: HTMLElement,
+  ): number => {
     if (!value || value === "0") return 0;
     if (value.endsWith("%")) {
       const percent = Number.parseFloat(value);
       return Number.isFinite(percent) ? (total * percent) / 100 : 0;
     }
     const pixels = Number.parseFloat(value);
-    return Number.isFinite(pixels) && pixels >= 0 ? pixels : 0;
+    if (value.endsWith("px"))
+      return Number.isFinite(pixels) && pixels >= 0 ? pixels : 0;
+    const property =
+      spec.orientation === "horizontal" ? "min-width" : "min-height";
+    const computed = document.defaultView?.getComputedStyle(node);
+    const computedValue = computed?.getPropertyValue(property) ?? "";
+    const resolved = Number.parseFloat(computedValue);
+    if (
+      (computedValue.endsWith("px") || computedValue === "0") &&
+      Number.isFinite(resolved) &&
+      resolved >= 0
+    )
+      return resolved;
+    const rootSize = Number.parseFloat(
+      document.defaultView?.getComputedStyle(document.documentElement)
+        .fontSize ?? "",
+    );
+    const fontSize = Number.parseFloat(computed?.fontSize ?? "");
+    if (value.endsWith("rem") && Number.isFinite(rootSize))
+      return Math.max(0, pixels * rootSize);
+    if (value.endsWith("em") && Number.isFinite(fontSize))
+      return Math.max(0, pixels * fontSize);
+    if (value.endsWith("ch") && Number.isFinite(fontSize))
+      return Math.max(0, pixels * fontSize * 0.5);
+    const viewport = document.defaultView;
+    if (value.endsWith("vw") && viewport)
+      return Math.max(0, (pixels * viewport.innerWidth) / 100);
+    if (value.endsWith("vh") && viewport)
+      return Math.max(0, (pixels * viewport.innerHeight) / 100);
+    return 0;
   };
   const mainPixels = (rect: DOMRect): number =>
     spec.orientation === "horizontal" ? rect.width : rect.height;
@@ -610,6 +653,9 @@ function renderSplitView(
     const first = spec.panes[firstIndex];
     const second = spec.panes[secondIndex];
     if (!first || !second || first.disabled || second.disabled) return;
+    const firstNode = paneNodes.get(first.id);
+    const secondNode = paneNodes.get(second.id);
+    if (!firstNode || !secondNode) return;
     const firstPixels = mainPixels(firstRect);
     const secondPixels = mainPixels(secondRect);
     const pairPixels = firstPixels + secondPixels;
@@ -619,8 +665,8 @@ function renderSplitView(
       !Number.isFinite(delta)
     )
       return;
-    const firstMin = minPixels(first.minSize, pairPixels);
-    const secondMin = minPixels(second.minSize, pairPixels);
+    const firstMin = minPixels(first.minSize, pairPixels, firstNode);
+    const secondMin = minPixels(second.minSize, pairPixels, secondNode);
     if (firstMin + secondMin > pairPixels) return;
     const nextFirst = Math.max(
       firstMin,
@@ -628,9 +674,12 @@ function renderSplitView(
     );
     const nextSecond = pairPixels - nextFirst;
     if (nextFirst === firstPixels || nextSecond === secondPixels) return;
-    const nextSizes = [...spec.sizes];
+    const nextSizes = [...sizes];
     nextSizes[firstIndex] = `${String(Math.round(nextFirst * 100) / 100)}px`;
     nextSizes[secondIndex] = `${String(Math.round(nextSecond * 100) / 100)}px`;
+    sizes = nextSizes;
+    applyPaneStyle(first, firstIndex, firstNode);
+    applyPaneStyle(second, secondIndex, secondNode);
     try {
       spec.onSizesChange?.(nextSizes);
     } catch {
@@ -1282,7 +1331,10 @@ export function renderCatalogComponent(
   const demo = section(document, locale === "ja" ? "サンプル" : "Example");
   const surface = element(document, "div");
   surface.className = "ikasue-demo";
-  renderComponentDemo(document, surface, id, allocator);
+  const content = element(document, "div");
+  content.className = "ikasue-layout-container";
+  surface.append(content);
+  renderComponentDemo(document, content, id, allocator);
   demo.append(surface);
   page.append(demo);
   target.append(page);

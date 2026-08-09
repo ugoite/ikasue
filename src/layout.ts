@@ -36,8 +36,9 @@ const length = new RegExp(`^(?:0|${number}(?:px|rem|em|ch|vw|vh|%))$`);
 const flexBasis = new RegExp(
   `^(?:auto|0|${number}(?:px|rem|em|ch|vw|vh|%|fr))$`,
 );
+const trackUnit = `(?:auto|none|0|${number}(?:px|rem|em|ch|vw|vh|%|fr))`;
 const track = new RegExp(
-  `^(?:auto|none|0|${number}(?:px|rem|em|ch|vw|vh|%|fr)|minmax\\((?:auto|none|0|${number}(?:px|rem|em|ch|vw|vh|%|fr)),(?:auto|none|0|${number}(?:px|rem|em|ch|vw|vh|%|fr))\\)|repeat\\([1-9][0-9]*,(?:auto|none|0|${number}(?:px|rem|em|ch|vw|vh|%|fr))\\)|fit-content\\((?:0|${number}(?:px|rem|em|ch|vw|vh|%))\\))$`,
+  `^(?:${trackUnit}|minmax\\(${trackUnit}\\s*,\\s*${trackUnit}\\)|repeat\\([1-9][0-9]*\\s*,\\s*${trackUnit}\\)|fit-content\\((?:0|${number}(?:px|rem|em|ch|vw|vh|%))\\))$`,
 );
 const gap = (value: unknown): string => {
   if (typeof value !== "string") return "0";
@@ -137,7 +138,21 @@ const trackList = (value: unknown): string => {
   if (typeof value !== "string") return "none";
   const normalized = value.trim();
   if (!normalized) return "none";
-  return normalized.split(/ +/).every((item) => isTrack(item))
+  const items: string[] = [];
+  let depth = 0;
+  let item = "";
+  for (const character of normalized) {
+    if (character === "(") depth += 1;
+    if (character === ")") depth -= 1;
+    if (depth < 0) return "none";
+    if (/\s/.test(character) && depth === 0) {
+      if (item) items.push(item);
+      item = "";
+    } else item += character;
+  }
+  if (depth !== 0) return "none";
+  if (item) items.push(item);
+  return items.length > 0 && items.every((entry) => isTrack(entry))
     ? normalized
     : "none";
 };

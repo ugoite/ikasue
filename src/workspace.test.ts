@@ -49,4 +49,13 @@ describe("workspace state", () => {
     expect(setActivePane(state, "disabled")).toBe(state);
     expect(setPaneCollapsed(state, "disabled", true)).toBe(state);
   });
+
+  it("updates a state restored without allocator metadata", () => {
+    const restored = {
+      sizes: ["1fr", "1fr"],
+      collapsed: { list: false, detail: false },
+    };
+    expect(setActivePane(restored, "detail").activePane).toBe("detail");
+    expect(setPaneCollapsed(restored, "list", true).collapsed.list).toBe(true);
+  });
 });

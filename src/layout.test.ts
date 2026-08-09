@@ -13,6 +13,12 @@ describe("standard layout descriptors", () => {
     expect(
       grid(["a"], { columns: "1fr 2fr", rows: "auto", gap: "0.5rem" }),
     ).toMatchObject({ columns: "1fr 2fr", rows: "auto", gap: "0.5rem" });
+    expect(grid([], { columns: "repeat(3, 1fr)" }).columns).toBe(
+      "repeat(3, 1fr)",
+    );
+    expect(grid([], { columns: "minmax(0, 1fr) 2fr" }).columns).toBe(
+      "minmax(0, 1fr) 2fr",
+    );
   });
 
   it("normalizes malformed values to small defaults", () => {

@@ -23,7 +23,6 @@ body {
 .ikasue-stack,
 .ikasue-grid,
 .ikasue-split-view {
-  container-type: inline-size;
   min-width: 0;
   min-height: 0;
 }
@@ -107,9 +106,14 @@ body {
 .ikasue-demo {
   display: grid;
   gap: 1rem;
+  container-type: inline-size;
   border: 1px solid var(--ikasue-line);
   padding: 1rem;
   background: var(--ikasue-surface);
+}
+.ikasue-layout-container {
+  min-width: 0;
+  min-height: 0;
 }
 .ikasue-demo-label {
   color: var(--ikasue-ink);

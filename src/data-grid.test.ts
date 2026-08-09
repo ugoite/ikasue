@@ -47,4 +47,15 @@ describe("data grid state", () => {
     expect(empty.rowsProvided).toBe(true);
     expect(empty.cells).toEqual([]);
   });
+
+  it("creates a dirty cell when a valid domain coordinate was blank", () => {
+    const state = createDataGridState([], {
+      rowIds: ["r1"],
+      columnIds: ["c1"],
+    });
+    const edited = commitDataGridCell(state, "r1", "c1", "value");
+    expect(edited.cells).toEqual([
+      { row: "r1", column: "c1", value: "value", status: "dirty" },
+    ]);
+  });
 });
