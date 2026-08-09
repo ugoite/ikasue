@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-condition */
+
 import { isFlexBasis, isMinSize } from "./layout";
 import type {
   BottomPanelOptions,
@@ -16,9 +18,14 @@ import type {
 
 const clean = (value: unknown): string =>
   typeof value === "string" ? value.trim() : "";
-const validPane = (pane: SplitPane): SplitPane | undefined => {
+const record = (value: unknown): Record<string, unknown> | undefined =>
+  typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : undefined;
+const validPane = (value: unknown): SplitPane | undefined => {
+  const pane = record(value);
   if (
-    typeof pane.id !== "string" ||
+    typeof pane?.id !== "string" ||
     !pane.id.trim() ||
     typeof pane.content !== "string"
   )
@@ -51,22 +58,22 @@ const validPane = (pane: SplitPane): SplitPane | undefined => {
   if (typeof pane.disabled === "boolean") result.disabled = pane.disabled;
   return result;
 };
-const panes = (
-  values: readonly SplitPane[] | null | undefined,
-): SplitPane[] => {
+const panes = (values: unknown): SplitPane[] => {
   const ids = new Set<string>();
-  return (values ?? []).map(validPane).filter((pane): pane is SplitPane => {
-    if (!pane || ids.has(pane.id)) return false;
-    ids.add(pane.id);
-    return true;
-  });
+  return (Array.isArray(values) ? values : [])
+    .map(validPane)
+    .filter((pane): pane is SplitPane => {
+      if (!pane || ids.has(pane.id)) return false;
+      ids.add(pane.id);
+      return true;
+    });
 };
 const sizes = (
   panes: readonly SplitPane[],
   requested?: readonly string[],
 ): string[] => {
   if (
-    requested &&
+    Array.isArray(requested) &&
     requested.length === panes.length &&
     requested.every(isFlexBasis)
   )
@@ -75,50 +82,60 @@ const sizes = (
 };
 
 export function splitView(
-  paneInput: readonly SplitPane[] = [],
-  options?: SplitViewOptions,
+  paneInput: readonly SplitPane[],
+  options: SplitViewOptions,
 ): SplitViewSpec {
+  const input = options as SplitViewOptions | undefined;
   const normalized = panes(paneInput);
   const orientation =
-    options?.orientation === "vertical" ? "vertical" : "horizontal";
+    input?.orientation === "vertical" ? "vertical" : "horizontal";
   const active =
-    typeof options?.activePane === "string" &&
-    normalized.some((pane) => pane.id === options.activePane && !pane.disabled)
-      ? options.activePane
+    typeof input?.activePane === "string" &&
+    normalized.some((pane) => pane.id === input.activePane && !pane.disabled)
+      ? input.activePane
       : undefined;
   const collapsed: Record<string, boolean> = {};
   normalized.forEach((pane) => {
     collapsed[pane.id] = pane.disabled
       ? false
-      : Boolean(options?.collapsed?.[pane.id]);
+      : Boolean(input?.collapsed?.[pane.id]);
   });
+  const motionOrigin =
+    input?.motionOrigin === "start" ||
+    input?.motionOrigin === "end" ||
+    input?.motionOrigin === "top" ||
+    input?.motionOrigin === "bottom"
+      ? input.motionOrigin
+      : orientation === "horizontal"
+        ? "start"
+        : "top";
   const result: { -readonly [K in keyof SplitViewSpec]: SplitViewSpec[K] } = {
     kind: "split-view",
     orientation,
     panes: normalized,
-    sizes: sizes(normalized, options?.sizes),
-    collapsible: Boolean(options?.collapsible),
+    sizes: sizes(normalized, input?.sizes),
+    collapsible: Boolean(input?.collapsible),
     collapsed,
-    motionOrigin:
-      options?.motionOrigin ?? (orientation === "horizontal" ? "start" : "top"),
+    motionOrigin,
   };
   if (active !== undefined) result.activePane = active;
-  if (options?.onActivePaneChange)
-    result.onActivePaneChange = options.onActivePaneChange;
-  if (options?.onSizesChange) result.onSizesChange = options.onSizesChange;
-  if (options?.onCollapsedChange)
-    result.onCollapsedChange = options.onCollapsedChange;
+  if (typeof input?.onActivePaneChange === "function")
+    result.onActivePaneChange = input.onActivePaneChange;
+  if (typeof input?.onSizesChange === "function")
+    result.onSizesChange = input.onSizesChange;
+  if (typeof input?.onCollapsedChange === "function")
+    result.onCollapsedChange = input.onCollapsedChange;
   return Object.freeze(result);
 }
 
 export function createSplitViewState(
-  paneInput: readonly SplitPane[] = [],
+  paneInput: readonly SplitPane[],
   initial?: Partial<SplitViewState>,
 ): SplitViewState {
   const normalized = panes(paneInput);
   const paneIds = normalized.map((pane) => pane.id);
   const initialSizes =
-    initial?.sizes &&
+    Array.isArray(initial?.sizes) &&
     initial.sizes.length === paneIds.length &&
     initial.sizes.every(isFlexBasis)
       ? initial.sizes.map((value) => value.trim())
@@ -136,47 +153,84 @@ export function createSplitViewState(
       : Boolean(initial?.collapsed?.[pane.id]);
   });
   const state: { -readonly [K in keyof SplitViewState]: SplitViewState[K] } = {
-    paneIds,
     sizes: initialSizes,
     collapsed,
   };
   if (activePane !== undefined) state.activePane = activePane;
-  return Object.freeze(state);
+  const frozen = Object.freeze(state);
+  metaByState.set(frozen, {
+    paneIds,
+    disabled: new Set(
+      normalized.filter((pane) => pane.disabled).map((pane) => pane.id),
+    ),
+  });
+  return frozen;
 }
 const same = (a: unknown, b: unknown) => Object.is(a, b);
+const metaByState = new WeakMap<
+  SplitViewState,
+  {
+    readonly paneIds: readonly string[];
+    readonly disabled: ReadonlySet<string>;
+  }
+>();
 export function setActivePane(
   state: SplitViewState,
   id: string,
 ): SplitViewState {
-  if (!state.paneIds.includes(id) || state.activePane === id) return state;
-  return Object.freeze({ ...state, activePane: id });
+  if (
+    !metaByState.get(state)?.paneIds.includes(id) ||
+    metaByState.get(state)?.disabled.has(id) ||
+    state.activePane === id
+  )
+    return state;
+  const next = Object.freeze({ ...state, activePane: id });
+  const meta = metaByState.get(state);
+  if (meta) metaByState.set(next, meta);
+  return next;
 }
 export function setPaneSizes(
   state: SplitViewState,
   value: readonly string[],
 ): SplitViewState {
   if (
-    value.length !== state.paneIds.length ||
+    !Array.isArray(value) ||
+    value.length !==
+      (metaByState.get(state)?.paneIds.length ?? state.sizes.length) ||
     !value.every(isFlexBasis) ||
     value.every((item, i) => same(item, state.sizes[i]))
   )
     return state;
-  return Object.freeze({ ...state, sizes: value.map((item) => item.trim()) });
+  const next = Object.freeze({
+    ...state,
+    sizes: value.map((item) => item.trim()),
+  });
+  const meta = metaByState.get(state);
+  if (meta) metaByState.set(next, meta);
+  return next;
 }
 export function setPaneCollapsed(
   state: SplitViewState,
   id: string,
   value: boolean,
 ): SplitViewState {
-  if (!state.paneIds.includes(id) || state.collapsed[id] === value)
+  if (
+    !metaByState.get(state)?.paneIds.includes(id) ||
+    metaByState.get(state)?.disabled.has(id) ||
+    typeof value !== "boolean" ||
+    state.collapsed[id] === value
+  )
     return state;
-  return Object.freeze({
+  const next = Object.freeze({
     ...state,
     collapsed: Object.freeze({ ...state.collapsed, [id]: value }),
   });
+  const meta = metaByState.get(state);
+  if (meta) metaByState.set(next, meta);
+  return next;
 }
 
-export function sidePanel(options?: SidePanelOptions): SidePanelSpec {
+export function sidePanel(options: SidePanelOptions): SidePanelSpec {
   const result: { -readonly [K in keyof SidePanelSpec]: SidePanelSpec[K] } = {
     kind: "side-panel",
     title: clean(options?.title),
@@ -185,10 +239,10 @@ export function sidePanel(options?: SidePanelOptions): SidePanelSpec {
     open: Boolean(options?.open),
   };
   if (clean(options?.id)) result.id = clean(options?.id);
-  if (options?.onClose) result.onClose = options.onClose;
+  if (typeof options?.onClose === "function") result.onClose = options.onClose;
   return Object.freeze(result);
 }
-export function bottomPanel(options?: BottomPanelOptions): BottomPanelSpec {
+export function bottomPanel(options: BottomPanelOptions): BottomPanelSpec {
   const result: { -readonly [K in keyof BottomPanelSpec]: BottomPanelSpec[K] } =
     {
       kind: "bottom-panel",
@@ -197,11 +251,11 @@ export function bottomPanel(options?: BottomPanelOptions): BottomPanelSpec {
       open: Boolean(options?.open),
     };
   if (clean(options?.id)) result.id = clean(options?.id);
-  if (options?.onClose) result.onClose = options.onClose;
+  if (typeof options?.onClose === "function") result.onClose = options.onClose;
   return Object.freeze(result);
 }
 export function loadingRegion(
-  options?: LoadingRegionOptions,
+  options: LoadingRegionOptions,
 ): LoadingRegionSpec {
   const result: {
     -readonly [K in keyof LoadingRegionSpec]: LoadingRegionSpec[K];
@@ -221,7 +275,7 @@ export function loadingRegion(
     result.progress = options.progress;
   return Object.freeze(result);
 }
-export function dialog(options?: DialogOptions): DialogSpec {
+export function dialog(options: DialogOptions): DialogSpec {
   const result: { -readonly [K in keyof DialogSpec]: DialogSpec[K] } = {
     kind: "dialog",
     title: clean(options?.title),
@@ -231,6 +285,6 @@ export function dialog(options?: DialogOptions): DialogSpec {
   };
   if (clean(options?.id)) result.id = clean(options?.id);
   if (clean(options?.openerId)) result.openerId = clean(options?.openerId);
-  if (options?.onClose) result.onClose = options.onClose;
+  if (typeof options?.onClose === "function") result.onClose = options.onClose;
   return Object.freeze(result);
 }

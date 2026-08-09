@@ -17,15 +17,44 @@ const rawBase =
 const base = rawBase === "/" ? "/" : `/${rawBase.replace(/^\/+|\/+$/g, "")}/`;
 const routes = [...routeData.jaRoutes, ...routeData.enRoutes];
 const errors = [];
-for (const route of routes) {
-  const relative =
-    route === "/"
-      ? "index.html"
-      : `${route.replace(/^\//, "").replace(/\/$/, "")}/index.html`;
-  if (!fs.existsSync(path.join(dist, relative)))
-    errors.push(`Missing generated route: ${relative}`);
+const joinBase = (route) =>
+  base === "/" ? route : `${base.slice(0, -1)}${route}`;
+const routeFile = (route) =>
+  route === "/"
+    ? "index.html"
+    : `${route.replace(/^\//, "").replace(/\/$/, "")}/index.html`;
+const expectedFiles = new Set(routes.map(routeFile));
+function htmlFiles(directory, prefix = "") {
+  if (!fs.existsSync(directory)) return [];
+  const result = [];
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const absolute = path.join(directory, entry.name);
+    const relative = path.join(prefix, entry.name).replaceAll(path.sep, "/");
+    if (entry.isDirectory()) result.push(...htmlFiles(absolute, relative));
+    else if (
+      entry.isFile() &&
+      relative.endsWith(".html") &&
+      relative !== "404.html"
+    )
+      result.push(relative);
+  }
+  return result;
 }
 if (!fs.existsSync(dist)) errors.push("Missing documentation output");
+const actualFiles = new Set(htmlFiles(dist));
+for (const route of routes) {
+  const relative = routeFile(route);
+  const absolute = path.join(dist, relative);
+  if (!actualFiles.has(relative))
+    errors.push(`Missing generated route: ${relative}`);
+  else if (!fs.readFileSync(absolute, "utf8").includes(joinBase(route)))
+    errors.push(
+      `Generated route does not contain its configured base path: ${joinBase(route)}`,
+    );
+}
+for (const relative of actualFiles)
+  if (!expectedFiles.has(relative))
+    errors.push(`Unexpected generated route: ${relative}`);
 if (errors.length) {
   console.error(errors.join("\n"));
   process.exitCode = 1;

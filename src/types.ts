@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-invalid-void-type */
+
 export type LayoutChild =
   | string
   | {
@@ -117,7 +119,6 @@ export interface SplitViewSpec {
 }
 
 export interface SplitViewState {
-  readonly paneIds: readonly string[];
   readonly activePane?: string;
   readonly sizes: readonly string[];
   readonly collapsed: Readonly<Record<string, boolean>>;
@@ -449,7 +450,7 @@ export interface FormOptions {
   readonly status?: FormStateStatus;
   readonly onSubmit?: (
     values: Readonly<Record<string, string>>,
-  ) => undefined | Promise<"success" | "error" | undefined>;
+  ) => void | Promise<"success" | "error" | void>;
 }
 
 export interface FormSpec {
@@ -459,7 +460,7 @@ export interface FormSpec {
   readonly status: FormStateStatus;
   readonly onSubmit?: (
     values: Readonly<Record<string, string>>,
-  ) => undefined | Promise<"success" | "error" | undefined>;
+  ) => void | Promise<"success" | "error" | void>;
 }
 
 export interface DataGridCell {

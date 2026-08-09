@@ -76,10 +76,173 @@ const component = (id: CatalogComponentId): CatalogEntry => ({
     typescript: `import { ${camel(id)} } from "@ugoite/ikasue";`,
     rust: `use ikasue::${id.replaceAll("-", "_")};`,
   },
-  properties: [],
+  properties: componentProperties[id],
 });
 const camel = (id: string) =>
   id.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
+
+type ComponentProperty = {
+  readonly name: string;
+  readonly type: string;
+  readonly default?: string | boolean;
+};
+const property = (
+  name: string,
+  type: string,
+  defaultValue?: string | boolean,
+): ComponentProperty =>
+  defaultValue === undefined
+    ? { name, type }
+    : { name, type, default: defaultValue };
+const componentProperties: Record<
+  CatalogComponentId,
+  readonly ComponentProperty[]
+> = {
+  "theme-root": [
+    property("tokens", "Record<string, string>", "{}"),
+    property("variant", "default | quiet | dense", "default"),
+  ],
+  text: [
+    property("content", "string", ""),
+    property("tone", "default | muted | danger | success", "default"),
+    property("selectable", "boolean", true),
+  ],
+  "editable-text": [
+    property("value", "string", ""),
+    property("disabled", "boolean", false),
+  ],
+  flex: [
+    property("direction", "row | column", "row"),
+    property("wrap", "nowrap | wrap | wrap-reverse", "nowrap"),
+    property("gap", "string", "0"),
+    property("align", "FlexAlign", "stretch"),
+    property("justify", "FlexJustify", "start"),
+  ],
+  stack: [
+    property("gap", "string", "0"),
+    property("align", "FlexAlign", "stretch"),
+    property("justify", "FlexJustify", "start"),
+  ],
+  grid: [
+    property("columns", "string", "none"),
+    property("rows", "string", "none"),
+    property("gap", "string", "0"),
+    property("align", "FlexAlign", "stretch"),
+    property("justify", "FlexJustify", "start"),
+  ],
+  "scroll-area": [
+    property("axis", "x | y | both", "y"),
+    property("overscroll", "auto | contain", "auto"),
+  ],
+  separator: [property("orientation", "horizontal | vertical", "horizontal")],
+  tabs: [
+    property("items", "Item[]", "[]"),
+    property("variant", "default | elastic", "default"),
+    property("orientation", "horizontal | vertical", "horizontal"),
+  ],
+  sidebar: [
+    property("items", "Item[]", "[]"),
+    property("collapsed", "boolean", false),
+  ],
+  toolbar: [
+    property("items", "ToolbarItem[]", "[]"),
+    property("overflow", "none | menu", "none"),
+  ],
+  "icon-button": [
+    property("label", "string", ""),
+    property("type", "button | submit | reset", "button"),
+    property("disabled", "boolean", false),
+    property("pressed", "boolean", false),
+  ],
+  "text-field": [
+    property("id", "string", ""),
+    property("label", "string", ""),
+    property("value", "string", ""),
+    property("placeholder", "string", ""),
+    property("disabled", "boolean", false),
+    property("required", "boolean", false),
+  ],
+  checkbox: [
+    property("id", "string", ""),
+    property("label", "string", ""),
+    property("checked", "boolean", false),
+    property("disabled", "boolean", false),
+  ],
+  "radio-group": [
+    property("options", "ChoiceOption[]", "[]"),
+    property("disabled", "boolean", false),
+  ],
+  "segmented-control": [
+    property("options", "ChoiceOption[]", "[]"),
+    property("disabled", "boolean", false),
+    property("variant", "default | elastic", "default"),
+  ],
+  field: [
+    property("id", "string", ""),
+    property("label", "string", ""),
+    property("required", "boolean", false),
+    property("content", "string", ""),
+  ],
+  form: [
+    property("fields", "FormField[]", "[]"),
+    property("values", "Record<string, string>", "{}"),
+    property("status", "FormStateStatus", "idle"),
+  ],
+  "data-grid": [
+    property("columns", "GridColumn[]", "[]"),
+    property("rows", "GridRow[]", "[]"),
+    property("cells", "DataGridCell[]", "[]"),
+    property("columnsProvided", "boolean", false),
+    property("rowsProvided", "boolean", false),
+  ],
+  "status-indicator": [
+    property("label", "string", ""),
+    property(
+      "status",
+      "neutral | info | success | warning | danger",
+      "neutral",
+    ),
+  ],
+  alert: [
+    property("message", "string", ""),
+    property("severity", "info | success | warning | danger", "info"),
+    property("dismissible", "boolean", false),
+  ],
+  progress: [property("max", "number", "100"), property("label", "string", "")],
+  dialog: [
+    property("title", "string", ""),
+    property("content", "string", ""),
+    property("open", "boolean", false),
+    property("modal", "boolean", true),
+  ],
+  "split-view": [
+    property("panes", "SplitPane[]", "[]"),
+    property("orientation", "horizontal | vertical", "horizontal"),
+    property("sizes", "string[]", "[]"),
+    property("collapsible", "boolean", false),
+    property("motionOrigin", "start | end | top | bottom", "start"),
+  ],
+  "side-panel": [
+    property("title", "string", ""),
+    property("content", "string", ""),
+    property("side", "start | end", "end"),
+    property("open", "boolean", false),
+  ],
+  "bottom-panel": [
+    property("title", "string", ""),
+    property("content", "string", ""),
+    property("open", "boolean", false),
+  ],
+  "loading-region": [
+    property("content", "string", ""),
+    property("busy", "boolean", false),
+    property("label", "string", "Loading"),
+  ],
+  "history-timeline": [
+    property("entries", "HistoryEntry[]", "[]"),
+    property("orientation", "horizontal | vertical", "vertical"),
+  ],
+};
 const philosophy: CatalogEntry = {
   kind: "concept",
   id: "philosophy",
@@ -93,12 +256,9 @@ const philosophy: CatalogEntry = {
   properties: [],
 };
 const siteCopy: Record<string, { ja: string; en: string }> = {
-  root: { ja: "標準レイアウトから始める", en: "Start with standard layout" },
-  components: {
-    ja: "公開コンポーネント一覧",
-    en: "Public component inventory",
-  },
-  examples: { ja: "構成例", en: "Composition examples" },
+  root: { ja: "Getting Started", en: "Getting Started" },
+  components: { ja: "Components", en: "Components" },
+  examples: { ja: "Examples", en: "Examples" },
   "guides/behavioral-contracts": {
     ja: "Behavioral Contracts",
     en: "Behavioral Contracts",
@@ -115,7 +275,14 @@ const site = (
   id,
   group: "principles",
   title: { ja: siteCopy[id]?.ja ?? id, en: siteCopy[id]?.en ?? id },
-  summary: { ja: siteCopy[id]?.ja ?? id, en: siteCopy[id]?.en ?? id },
+  summary:
+    id === "root"
+      ? { ja: "標準レイアウトから始める", en: "Start with standard layout" }
+      : id === "components"
+        ? { ja: "公開コンポーネント一覧", en: "Public component inventory" }
+        : id === "examples"
+          ? { ja: "構成例", en: "Composition examples" }
+          : { ja: siteCopy[id]?.ja ?? id, en: siteCopy[id]?.en ?? id },
   source: { typescript: "", rust: "" },
   properties: [],
 });
@@ -208,14 +375,79 @@ export const CATALOG_PAGE_COPY = Object.fromEntries(
   ]),
 );
 export const RUNTIME_COMPONENT_REGISTRY = COMPONENT_REGISTRY;
+const componentDefaults: Record<
+  CatalogComponentId,
+  Readonly<Record<string, string | boolean>>
+> = {
+  "theme-root": { tokens: "{}", variant: "default" },
+  text: { content: "", tone: "default", selectable: true },
+  "editable-text": { value: "", disabled: false },
+  flex: {
+    direction: "row",
+    wrap: "nowrap",
+    gap: "0",
+    align: "stretch",
+    justify: "start",
+  },
+  stack: {
+    direction: "column",
+    wrap: "nowrap",
+    gap: "0",
+    align: "stretch",
+    justify: "start",
+  },
+  grid: {
+    columns: "none",
+    rows: "none",
+    gap: "0",
+    align: "stretch",
+    justify: "start",
+  },
+  "scroll-area": { axis: "y", overscroll: "auto" },
+  separator: { orientation: "horizontal" },
+  tabs: { items: "[]", variant: "default", orientation: "horizontal" },
+  sidebar: { items: "[]", collapsed: false },
+  toolbar: { items: "[]", overflow: "none" },
+  "icon-button": { label: "", type: "button", disabled: false, pressed: false },
+  "text-field": {
+    id: "",
+    label: "",
+    value: "",
+    placeholder: "",
+    disabled: false,
+    required: false,
+  },
+  checkbox: { id: "", label: "", checked: false, disabled: false },
+  "radio-group": { options: "[]", disabled: false },
+  "segmented-control": { options: "[]", disabled: false, variant: "default" },
+  field: { id: "", label: "", required: false, content: "" },
+  form: { fields: "[]", values: "{}", status: "idle" },
+  "data-grid": {
+    columns: "[]",
+    rows: "[]",
+    cells: "[]",
+    columnsProvided: false,
+    rowsProvided: false,
+  },
+  "status-indicator": { label: "", status: "neutral" },
+  alert: { message: "", severity: "info", dismissible: false },
+  progress: { max: "100", label: "" },
+  dialog: { title: "", content: "", open: false, modal: true },
+  "split-view": {
+    panes: "[]",
+    orientation: "horizontal",
+    sizes: "[]",
+    collapsible: false,
+    motionOrigin: "start",
+  },
+  "side-panel": { title: "", content: "", side: "end", open: false },
+  "bottom-panel": { title: "", content: "", open: false },
+  "loading-region": { content: "", busy: false, label: "Loading" },
+  "history-timeline": { entries: "[]", orientation: "vertical" },
+};
 export const defaultProps = (
   id: CatalogComponentId,
-): Readonly<Record<string, string | boolean>> =>
-  id === "stack"
-    ? { direction: "column" }
-    : id === "flex"
-      ? { direction: "row", wrap: "nowrap", gap: "0" }
-      : {};
+): Readonly<Record<string, string | boolean>> => componentDefaults[id];
 export const componentDocumentationCopy = (
   id: CatalogComponentId,
   locale: "ja" | "en" = "ja",

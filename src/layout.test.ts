@@ -25,5 +25,6 @@ describe("standard layout descriptors", () => {
     expect(
       separator({ orientation: "vertical", role: "separator" }),
     ).toMatchObject({ orientation: "vertical", role: "separator" });
+    expect(flex(null as never)).toMatchObject({ children: [] });
   });
 });
