@@ -12,27 +12,17 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/types/index.d.ts",
+      "types": "./dist/types/src/index.d.ts",
       "import": "./dist/ikasue.es.js"
     },
     "./style.css": "./dist/ikasue.css"
   },
   "scripts": {
-    "setup": "npm install",
-    "dev": "vite",
-    "build": "npm run typecheck && vite build && tsc -p tsconfig.build.json",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test",
-    "test": "vitest run",
-    "catalog": "vite --host 0.0.0.0",
-    "docs": "npm run docs:dev",
-    "docs:dev": "npm --prefix docs-site run dev",
-    "docs:build": "npm --prefix docs-site run build && node scripts/check-docs-build.mjs",
-    "docs:sync": "node scripts/check-docs-sync.mjs",
-    "docs:check": "npm run docs:sync && npm --prefix docs-site run check",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "check": "prettier --check . && eslint . && tsc --noEmit && vitest run && npm run contract:check",
+    "build": "tsc --noEmit && vite build && tsc -p tsconfig.build.json && node scripts/fix-declaration-imports.mjs && npm run contract:check",
+    "contract:check": "node scripts/forbidden-vocabulary.mjs",
+    "docs:build": "npm --prefix docs-site run build && node scripts/check-docs-build.mjs && npm run contract:check",
+    "docs:check": "node scripts/check-docs-sync.mjs && npm --prefix docs-site run check"
   },
   "engines": {
     "node": ">=22.14.0"

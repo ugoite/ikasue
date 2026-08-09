@@ -1,1 +1,192 @@
-@import "./catalog/catalog.css";
+:root {
+  --ikasue-surface: #ffffff;
+  --ikasue-ink: #171717;
+  --ikasue-line: #b8b8b8;
+  --ikasue-selection: #dfeeff;
+  --ikasue-motion-duration: 160ms;
+  color: var(--ikasue-ink);
+  background: var(--ikasue-surface);
+  font-family: system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--ikasue-surface);
+  color: var(--ikasue-ink);
+}
+.ikasue-flex,
+.ikasue-stack,
+.ikasue-grid,
+.ikasue-split-view {
+  min-width: 0;
+  min-height: 0;
+}
+.ikasue-flex,
+.ikasue-stack {
+  display: flex;
+  gap: var(--ikasue-layout-gap, 0);
+}
+.ikasue-grid {
+  display: grid;
+  gap: var(--ikasue-layout-gap, 0);
+  grid-template-columns: var(--ikasue-grid-columns, none);
+  grid-template-rows: var(--ikasue-grid-rows, none);
+}
+.ikasue-scroll-area {
+  min-width: 0;
+  min-height: 0;
+}
+.ikasue-separator {
+  flex: 0 0 auto;
+  background: var(--ikasue-line);
+}
+.ikasue-separator[data-orientation="horizontal"] {
+  inline-size: 100%;
+  block-size: 1px;
+}
+.ikasue-separator[data-orientation="vertical"] {
+  inline-size: 1px;
+  block-size: 100%;
+}
+.ikasue-split-view {
+  display: flex;
+  flex-direction: row;
+  gap: 0.75rem;
+}
+.ikasue-split-view[data-orientation="vertical"] {
+  flex-direction: column;
+}
+.ikasue-split-view > [data-pane-id] {
+  min-width: 0;
+  min-height: 0;
+  border-inline-start: 1px solid var(--ikasue-line);
+  padding: 0.75rem;
+}
+.ikasue-split-view > [data-collapsed="true"] {
+  flex: 0 0 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+.ikasue-split-view > [data-pane-divider] {
+  flex: 0 0 auto;
+  background: var(--ikasue-line);
+  outline: none;
+}
+.ikasue-split-view[data-orientation="horizontal"] > [data-pane-divider] {
+  width: 1px;
+  cursor: col-resize;
+}
+.ikasue-split-view[data-orientation="vertical"] > [data-pane-divider] {
+  height: 1px;
+  cursor: row-resize;
+}
+.ikasue-split-view[data-responsive-orientation="vertical"]
+  > [data-pane-divider] {
+  width: auto;
+  height: 1px;
+  cursor: row-resize;
+}
+.ikasue-side-panel,
+.ikasue-bottom-panel {
+  border-block-start: 1px solid var(--ikasue-line);
+  padding: 0.75rem;
+}
+.ikasue-loading-region {
+  position: relative;
+}
+.ikasue-catalog {
+  min-height: 100vh;
+  background: var(--ikasue-surface);
+}
+.ikasue-header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--ikasue-line);
+}
+.ikasue-header nav {
+  display: flex;
+  gap: 1rem;
+}
+.ikasue-main {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2rem 1rem 5rem;
+}
+.ikasue-component-page {
+  display: grid;
+  gap: 1rem;
+}
+.ikasue-demo {
+  display: grid;
+  gap: 1rem;
+  container-type: inline-size;
+  border: 1px solid var(--ikasue-line);
+  padding: 1rem;
+  background: var(--ikasue-surface);
+}
+.ikasue-layout-container {
+  min-width: 0;
+  min-height: 0;
+}
+.ikasue-demo-label {
+  color: var(--ikasue-ink);
+  font-size: 0.875rem;
+}
+[data-selected="true"] {
+  background: var(--ikasue-selection);
+}
+[data-motion-origin="start"] {
+  transform-origin: left center;
+}
+[data-motion-origin="end"] {
+  transform-origin: right center;
+}
+[data-motion-origin="top"] {
+  transform-origin: center top;
+}
+[data-motion-origin="bottom"] {
+  transform-origin: center bottom;
+}
+
+@container (max-width: 600px) {
+  .ikasue-flex,
+  .ikasue-stack {
+    gap: 0.5rem !important;
+  }
+  .ikasue-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .ikasue-split-view[data-orientation="horizontal"] {
+    flex-direction: column;
+  }
+  .ikasue-split-view[data-orientation="horizontal"] > [data-pane-id] {
+    min-width: 0;
+    min-height: var(--ikasue-pane-min-size, 0);
+  }
+  .ikasue-split-view[data-orientation="horizontal"] > [data-pane-divider] {
+    width: auto;
+    height: 1px;
+    cursor: row-resize;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ikasue-motion-duration: 0ms;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
