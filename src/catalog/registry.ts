@@ -367,18 +367,18 @@ export const COMPONENT_COPY = {
     "developer-model": {
       category: "思想と契約",
       summary:
-        "開発者は子の順序、軸、適応方針を宣言し、ランタイムは同じ平面で空間を解決する。",
+        "開発者は再帰するregion tree、軸、意味あるfocus pathを宣言し、ランタイムは同じ平面で空間を解決する。",
       philosophy:
-        "ikasueのcomponentは見た目の箱ではなく、情報、操作、配置要求を一つの契約として持つ。近いplane ownerが要求を解決し、子は親の実装詳細を知らない。",
+        "ikasueのcomponentは見た目の箱ではなく、情報、操作、配置要求を一つの契約として持つ。developerはbranchとleafだけを宣言し、runtimeがfocus pathの祖先へ面積とnavigationを配る。",
       useWhen: "情報の表示、編集、配置を同じplane modelで組み立てたいとき。",
       avoidWhen:
         "framework固有のwidget階層や、装飾だけのwrapperを新しい公開componentとして増やしたいとき。",
       implementation:
-        "まず意味のあるcomponent contractを選び、`vertical`または`horizontal`で順序を宣言する。必要な空間は`resolvePlane`の結果として扱い、DOMの重なりで隠さない。",
+        "まず意味のあるcomponent contractを選び、`FocusBranch`と`FocusLeaf`でtreeを宣言する。`resolveFocusPlane`のregions、rect、navigation、`EdgeRegion`を描画へ反映し、bottomの一時rowも同じplaneへ追加する。DOMの重なりや座標計算で隠さない。",
       keyboard:
-        "DOMの読み順をplaneの順序と一致させる。各widgetのTab、矢印、Escape、Enterの意味を、配置の都合で上書きしない。",
+        "DOMの読み順をplane treeの順序と一致させる。生成されたEdgeNav/ElasticTabsは直接の兄弟だけを順に移動し、focus request後もTab、矢印、Escape、Enterの意味を保つ。",
       accessibility:
-        "planeはsemantic landmarkの代わりではない。見出し、label、role、状態名をcomponent contract側で公開し、構造を支援技術にも伝える。",
+        "planeはsemantic landmarkの代わりではない。leafのlabel、branchのaxis、focus状態、生成navigationのroleを公開し、構造を支援技術にも伝える。",
       goodFor: "情報密度の高い業務画面、編集と配置の組み合わせ",
       avoidFor: "装飾用container、自由な重なり、framework依存の状態管理",
       interaction:
@@ -724,19 +724,19 @@ export const COMPONENT_COPY = {
     "developer-model": {
       category: "Philosophy & contracts",
       summary:
-        "The developer declares child order, axis, and fit policy; the runtime resolves space on one shared plane.",
+        "The developer declares a recursive region tree, axes, and a semantic focus path; the runtime resolves space on one shared plane.",
       philosophy:
-        "An ikasue component is a contract for information, interaction, and placement—not a visual box. The nearest plane owner resolves allocation while children stay independent of parent implementation details.",
+        "An ikasue component is a contract for information, interaction, and placement—not a visual box. The developer declares branches and leaves; the runtime gives area and navigation to the focused path and its ancestors.",
       useWhen:
         "You want information, editing, and placement to share one plane model.",
       avoidWhen:
         "You are adding a decorative wrapper or replacing a framework-specific widget and state model.",
       implementation:
-        "Choose a meaningful component contract, declare order with `vertical` or `horizontal`, and treat `resolvePlane` output as layout data. Do not hide the result with overlapping DOM.",
+        "Choose a meaningful component contract, declare a `FocusBranch`/`FocusLeaf` tree, and render `resolveFocusPlane` regions, rectangles, navigation, and `EdgeRegion` allocations. A temporary bottom row remains inside the same plane; do not hide the result with overlap or renderer-owned coordinates.",
       keyboard:
-        "Keep DOM reading order aligned with plane order. Do not override each widget’s Tab, arrow, Escape, or Enter contract for layout convenience.",
+        "Keep DOM reading order aligned with the plane tree. Generated EdgeNav and ElasticTabs move through direct siblings while preserving each widget’s Tab, arrow, Escape, and Enter contract.",
       accessibility:
-        "A plane is not a semantic landmark. Components still expose headings, labels, roles, and state names so assistive technology can understand the structure.",
+        "A plane is not a semantic landmark. Expose leaf labels, branch axes, focus state, and navigation roles so assistive technology can understand the structure.",
       goodFor:
         "Information-dense workspaces combining data, editing, and placement",
       avoidFor:
@@ -1133,14 +1133,17 @@ export const COMPONENT_SOURCE_RECIPES: Record<
   SourceRecipe
 > = {
   "developer-model": {
-    axis: "vertical",
+    axis: "horizontal",
     children:
-      '[{ id: "filters", basis: 2, min: 1 }, { id: "results", basis: 5, min: 2 }]',
-    planeOptions: '{ fit: "elastic", gap: 1, available: 8 }',
-    componentProps: "{}",
+      '[{ kind: "branch", id: "work", axis: "horizontal", edgeRegions: [{ id: "tools", edge: "right", basis: 12, min: 6, temporary: true, restoreFocus: "work/beta/detail" }, { id: "decision", edge: "bottom", basis: 8, min: 4, temporary: true, restoreFocus: "work/beta/detail" }], children: [{ kind: "leaf", id: "alpha" }, { kind: "branch", id: "beta", axis: "vertical", children: [{ kind: "leaf", id: "detail" }] }] }]',
+    planeOptions:
+      '{ viewport: { inline: 100, block: 48 }, focus: "work/beta/detail", collapse: "sliver" }',
+    componentProps:
+      '{ focus: "work/beta/detail", navigation: "runtime-owned", edges: ["right", "bottom"] }',
     ownership:
-      "The nearest plane owner resolves allocation; children own only their local contract.",
-    rustState: 'owner: "workspace-plane", child_state: "local component only"',
+      "The developer owns semantic tree order; the runtime owns rectangles, focus-path propagation, and generated navigation.",
+    rustState:
+      'focus: "work/beta/detail", collapse: Collapse::Sliver, navigation: Navigation::Runtime',
   },
   "theme-root": {
     axis: "vertical",
@@ -1304,6 +1307,43 @@ function javascriptSource(
   id: CatalogComponentId,
   recipe: SourceRecipe,
 ): string {
+  if (id === "developer-model") {
+    return `import { resolveFocusPlane } from "@ugoite/ikasue";
+
+const plane = {
+  root: {
+    kind: "branch",
+    id: "work",
+    axis: "horizontal",
+    navigation: true,
+    edgeRegions: [
+      { id: "tools", edge: "right", basis: 12, min: 6, temporary: true, restoreFocus: "work/beta/detail" },
+      { id: "decision", edge: "bottom", basis: 8, min: 4, temporary: true, restoreFocus: "work/beta/detail" },
+    ],
+    children: [
+      { kind: "leaf", id: "alpha", basis: 40, min: 2 },
+      {
+        kind: "branch",
+        id: "beta",
+        axis: "vertical",
+        navigation: true,
+        children: [
+          { kind: "leaf", id: "overview", basis: 20, min: 2 },
+          { kind: "leaf", id: "detail", basis: 20, min: 2 },
+        ],
+      },
+    ],
+  },
+  viewport: { inline: 100, block: 48 },
+  focus: "work/beta/detail",
+  collapse: "sliver",
+};
+
+const resolved = resolveFocusPlane(plane);
+const component = { id: "developer-model" };
+// Render resolved regions and runtime-owned EdgeNav/ElasticTabs metadata.
+renderFocusWindow({ component, plane, resolved });`;
+  }
   const constructor = recipe.axis;
   return `import { horizontal, resolvePlane, vertical } from "@ugoite/ikasue";
 
@@ -1332,6 +1372,50 @@ renderPlane({ contract, resolved });
 }
 
 function rustSource(id: CatalogComponentId, recipe: SourceRecipe): string {
+  if (id === "developer-model") {
+    return `#[derive(Debug)]
+enum Node<'a> {
+    Leaf { id: &'a str, basis: f32, min: f32 },
+    Branch { id: &'a str, axis: Axis, edge_regions: Vec<EdgeRegion<'a>>, children: Vec<Node<'a>> },
+}
+
+enum Edge { Left, Right, Top, Bottom }
+
+struct EdgeRegion<'a> {
+    id: &'a str,
+    edge: Edge,
+    basis: f32,
+    min: f32,
+    temporary: bool,
+    restore_focus: Option<&'a str>,
+}
+
+let plane = FocusPlane {
+    root: Node::Branch {
+        id: "work",
+        axis: Axis::Horizontal,
+        edge_regions: vec![
+            EdgeRegion { id: "tools", edge: Edge::Right, basis: 12.0, min: 6.0, temporary: true, restore_focus: Some("work/beta/detail") },
+            EdgeRegion { id: "decision", edge: Edge::Bottom, basis: 8.0, min: 4.0, temporary: true, restore_focus: Some("work/beta/detail") },
+        ],
+        children: vec![
+            Node::Leaf { id: "alpha", basis: 40.0, min: 2.0 },
+            Node::Branch {
+                id: "beta",
+                axis: Axis::Vertical,
+                edge_regions: vec![],
+                children: vec![Node::Leaf { id: "detail", basis: 20.0, min: 2.0 }],
+            },
+        ],
+    },
+    viewport: Viewport { inline: 100.0, block: 48.0 },
+    focus: Some("work/beta/detail"),
+    collapse: Collapse::Sliver,
+};
+let resolved = resolve_focus_plane(&plane);
+let component_contract = ComponentContract { component: "developer-model" };
+// Render resolved rectangles and generated navigation without an overlay.`;
+  }
   const axis =
     recipe.axis === "vertical" ? "Axis::Vertical" : "Axis::Horizontal";
   const children: readonly [string, string] =
@@ -1381,7 +1465,7 @@ export function componentSource(id: CatalogComponentId): {
 
 const COMPONENT_PAGE_DESCRIPTIONS: Record<CatalogComponentId, string> = {
   "developer-model":
-    "Information, editable capability, and negotiated layout as one contract.",
+    "Recursive region topology, focus-path requests, and negotiated layout as one contract.",
   "theme-root":
     "Document-level density, motion, selection, and structural tokens.",
   text: "Readable information with an optional editing capability.",
