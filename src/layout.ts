@@ -38,7 +38,8 @@ const splitBasis = new RegExp(
   `^(?:auto|0|${number}(?:px|rem|em|ch|vw|vh|%|fr))$`,
 );
 const trackAtom = `(?:auto|none|0|${number}(?:px|rem|em|ch|vw|vh|%|fr))`;
-const trackMinMax = `minmax\\(${trackAtom}\\s*,\\s*${trackAtom}\\)`;
+const minTrackAtom = `(?:auto|none|0|${number}(?:px|rem|em|ch|vw|vh|%))`;
+const trackMinMax = `minmax\\(${minTrackAtom}\\s*,\\s*${trackAtom}\\)`;
 const trackRepeat = `repeat\\((?:[1-9][0-9]*|auto-fit|auto-fill)\\s*,\\s*(?:${trackAtom}|${trackMinMax})\\)`;
 const track = new RegExp(
   `^(?:${trackAtom}|${trackMinMax}|${trackRepeat}|fit-content\\((?:0|${number}(?:px|rem|em|ch|vw|%))\\))$`,
