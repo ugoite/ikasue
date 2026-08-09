@@ -1,11 +1,18 @@
 ---
 import { CATALOG_COMPONENTS } from "../../../src/catalog/registry";
+const locale = Astro.currentLocale === "en" ? "en" : "ja";
 ---
 
 <section class="component-matrix">
-  <h1>Components</h1>
-  <p>Standard layout, input, data, feedback, and workspace primitives.</p>
+  <h2>{locale === "ja" ? "コンポーネント一覧" : "Components"}</h2>
+  <p>
+    {locale === "ja"
+      ? "標準レイアウト、入力、データ、フィードバック、Workspaceのプリミティブ。"
+      : "Standard layout, input, data, feedback, and workspace primitives."}
+  </p>
   <ul>
-    {CATALOG_COMPONENTS.map((entry) => <li><a href={`../components/${entry.id}/`}>{entry.title.en}</a></li>)}
+    {CATALOG_COMPONENTS.map((entry) => (
+      <li><a href={`../components/${entry.id}/`}>{entry.title[locale]}</a></li>
+    ))}
   </ul>
 </section>

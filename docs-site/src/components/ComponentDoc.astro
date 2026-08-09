@@ -5,42 +5,66 @@ import type { CatalogComponentId, CatalogLocale } from "../../../src/catalog/typ
 interface Props { id: CatalogComponentId; locale?: CatalogLocale }
 const { id, locale = "ja" } = Astro.props as Props;
 const entry = findRegistryEntry(id);
-const title = entry?.title[locale] ?? id;
 const summary = entry?.summary[locale] ?? "";
 const componentEntry = entry?.kind === "component" ? entry : undefined;
-const propertiesHeading = locale === "ja" ? "プロパティ" : "Properties";
-const sourceHeading = locale === "ja" ? "使用例" : "Usage";
+const copy =
+  locale === "ja"
+    ? {
+        contract: "契約",
+        contractText:
+          "用途に合う標準Webプリミティブを使います。レイアウトはCSS、インタラクションは明示的なstateが担います。",
+        properties: "プロパティ",
+        source: "使用例",
+        name: "名前",
+        type: "型",
+        defaultValue: "既定値",
+        empty: "—",
+      }
+    : {
+        contract: "Contract",
+        contractText:
+          "Use the standard web primitive that matches this component. CSS owns layout and explicit state owns interaction.",
+        properties: "Properties",
+        source: "Usage",
+        name: "Name",
+        type: "Type",
+        defaultValue: "Default",
+        empty: "—",
+      };
 ---
 
 <article class="docs-component" data-kind={id}>
   <p class="eyebrow">{entry?.group ?? "component"}</p>
-  <h1>{title}</h1>
   <p>{summary}</p>
   <section aria-labelledby={`${id}-contract`}>
-    <h2 id={`${id}-contract`}>Contract</h2>
-    <p>Use the standard web primitive that matches this component. Layout belongs to CSS; interaction belongs to explicit state.</p>
+    <h2 id={`${id}-contract`}>{copy.contract}</h2>
+    <p>{copy.contractText}</p>
   </section>
   {componentEntry && (
     <>
       <section aria-labelledby={`${id}-properties`}>
-        <h2 id={`${id}-properties`}>{propertiesHeading}</h2>
+        <h2 id={`${id}-properties`}>{copy.properties}</h2>
         <table>
           <thead>
-            <tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Default</th></tr>
+            <tr>
+              <th scope="col">{copy.name}</th>
+              <th scope="col">{copy.type}</th>
+              <th scope="col">{copy.defaultValue}</th>
+            </tr>
           </thead>
           <tbody>
             {componentEntry.properties.map((property) => (
               <tr>
                 <th scope="row"><code>{property.name}</code></th>
                 <td><code>{property.type}</code></td>
-                <td>{property.default === undefined ? "—" : String(property.default)}</td>
+                <td>{property.default === undefined ? copy.empty : String(property.default)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </section>
       <section aria-labelledby={`${id}-source`}>
-        <h2 id={`${id}-source`}>{sourceHeading}</h2>
+        <h2 id={`${id}-source`}>{copy.source}</h2>
         <pre><code>{componentEntry.source.typescript}</code></pre>
       </section>
     </>

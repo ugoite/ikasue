@@ -352,6 +352,12 @@ function renderDataGrid(
     rowNode.id = rowId;
     rowNode.setAttribute("role", "row");
     rowNode.setAttribute("aria-rowindex", String(rowNumber + 2));
+    const rowHeader = element(document, "span", row.label ?? row.id);
+    const rowHeaderId = allocator.allocate("row-header", row.id, rowNumber + 1);
+    rowHeader.id = rowHeaderId;
+    rowHeader.setAttribute("role", "rowheader");
+    rowHeader.setAttribute("aria-rowindex", String(rowNumber + 2));
+    rowNode.append(rowHeader);
     spec.columns.forEach((column, columnNumber) => {
       const cell = cells.get(keyFor(row.id, column.id));
       const cellId = allocator.allocate(
@@ -366,7 +372,12 @@ function renderDataGrid(
       cellNode.setAttribute("aria-rowindex", String(rowNumber + 2));
       cellNode.setAttribute("aria-colindex", String(columnNumber + 1));
       const headerId = columnIds.get(column.id);
-      if (headerId) cellNode.setAttribute("aria-labelledby", headerId);
+      cellNode.setAttribute(
+        "aria-labelledby",
+        [rowHeaderId, headerId]
+          .filter((value): value is string => Boolean(value))
+          .join(" "),
+      );
       const key = keyFor(row.id, column.id);
       cellNodes.set(key, cellNode);
       cellNode.addEventListener("click", () => {
@@ -470,22 +481,32 @@ function renderDataGrid(
     const value = clipboardValue();
     const selection = validSelection(selected) ? selected : undefined;
     if (value === undefined || !selection || !event.clipboardData) return;
-    event.preventDefault();
     const token = ++operation;
-    try {
-      event.clipboardData.setData("text/plain", value);
-    } catch {
-      return;
-    }
     let result: boolean | Promise<boolean> = true;
     try {
       if (spec.onCopy) result = spec.onCopy(selection);
     } catch {
       result = false;
     }
+    if (typeof result === "boolean") {
+      if (!result) return;
+      event.preventDefault();
+      try {
+        event.clipboardData.setData("text/plain", value);
+      } catch {
+        return;
+      }
+      return;
+    }
+    event.preventDefault();
     void Promise.resolve(result)
       .then((accepted) => {
         if (token !== operation || !accepted) return;
+        try {
+          event.clipboardData?.setData("text/plain", value);
+        } catch {
+          // A rejected clipboard write leaves the browser clipboard unchanged.
+        }
       })
       .catch(() => undefined);
   });
