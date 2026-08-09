@@ -59,6 +59,18 @@ describe("workspace state", () => {
     expect(setPaneCollapsed(state, "disabled", true)).toBe(state);
   });
 
+  it("only collapses panes that explicitly opt in", () => {
+    const state = createSplitViewState([
+      { id: "fixed", content: "fixed" },
+      { id: "collapsible", content: "collapsible", collapsible: true },
+    ]);
+    expect(setPaneCollapsed(state, "fixed", true)).toBe(state);
+    expect(setPaneCollapsed(state, "collapsible", true).collapsed).toEqual({
+      fixed: false,
+      collapsible: true,
+    });
+  });
+
   it("updates a state restored without allocator metadata", () => {
     const restored = {
       sizes: ["1fr", "1fr"],

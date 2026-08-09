@@ -104,6 +104,9 @@ describe("public contract", () => {
         fields: [{ id: "name", label: "Name", initialValue: "  Ada  " }],
       }).values.name,
     ).toBe("  Ada  ");
+    expect(
+      api.form({ fields: [{ id: "toString", label: "Name" }] }).values,
+    ).toEqual({ toString: "" });
     expect(api.defaultProps("text")).not.toBe(api.defaultProps("text"));
   });
 

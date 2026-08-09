@@ -1,6 +1,6 @@
 import { CATALOG_REGISTRY, isCatalogPageId } from "./registry";
 import { parseComponentSelection } from "./state";
-import { clear, element } from "./dom";
+import { clear, element, type Cleanup } from "./dom";
 import { normalizeBase, routesForBase } from "./routes";
 import { createDomAllocator, renderCatalogComponent } from "./renderer";
 import type { CatalogLocale, CatalogMount, CatalogMountOptions } from "./types";
@@ -48,7 +48,7 @@ function render(
   target: HTMLElement,
   pathname: string,
   options: Required<Pick<CatalogMountOptions, "locale" | "base">>,
-): void {
+): Cleanup | undefined {
   const document = target.ownerDocument;
   const allocator = createDomAllocator();
   clear(target);
@@ -93,8 +93,9 @@ function render(
   const main = element(document, "main");
   main.className = "ikasue-main";
   const component = parseComponentSelection(pathname, "/", options.locale);
+  let cleanup: Cleanup | undefined;
   if (component) {
-    renderCatalogComponent(
+    cleanup = renderCatalogComponent(
       document,
       main,
       component,
@@ -116,6 +117,7 @@ function render(
     main.append(page);
   }
   target.append(main);
+  return cleanup;
 }
 
 export function mountCatalog(
@@ -128,6 +130,7 @@ export function mountCatalog(
   };
   let current = rootPath(options.locale);
   let disposed = false;
+  let pageCleanup: Cleanup | undefined;
   const update = (path?: string): void => {
     if (disposed) return;
     const normalized = normalizePath(
@@ -138,7 +141,8 @@ export function mountCatalog(
     );
     const changed = normalized.relative !== current;
     current = normalized.relative;
-    render(target, current, options);
+    pageCleanup?.();
+    pageCleanup = render(target, current, options);
     if (changed && normalized.valid)
       input.onPathChange?.(
         `${options.base === "/" ? "" : options.base.slice(0, -1)}${current}`,
@@ -161,6 +165,8 @@ export function mountCatalog(
         "popstate",
         onPopState,
       );
+      pageCleanup?.();
+      pageCleanup = undefined;
       clear(target);
     },
   };
