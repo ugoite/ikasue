@@ -1,7 +1,7 @@
 ---
-title: Usage
+title: 使い方
 ---
 
-# Usage
+# 使い方
 
-Use Flex for one-dimensional layout, Stack for a column, Grid for two-dimensional tracks, and ScrollArea for deliberate overflow.
+一次元layoutにはFlex、columnにはStack、二次元trackにはGrid、意図したoverflowにはScrollAreaを使います。

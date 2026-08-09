@@ -19,7 +19,7 @@
   },
   "scripts": {
     "check": "prettier --check . && eslint . && tsc --noEmit && vitest run && npm run contract:check",
-    "build": "tsc --noEmit && vite build && tsc -p tsconfig.build.json && npm run contract:check",
+    "build": "tsc --noEmit && vite build && tsc -p tsconfig.build.json && node scripts/fix-declaration-imports.mjs && npm run contract:check",
     "contract:check": "node scripts/forbidden-vocabulary.mjs",
     "docs:build": "npm --prefix docs-site run build && node scripts/check-docs-build.mjs && npm run contract:check",
     "docs:check": "node scripts/check-docs-sync.mjs && npm --prefix docs-site run check"

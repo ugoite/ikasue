@@ -1,7 +1,7 @@
 ---
-title: Behavioral Contracts
+title: 振る舞いの契約
 ---
 
-# Behavioral Contracts
+# 振る舞いの契約
 
-CSS owns sizing and responsive layout. Components own explicit selection, editing, loading, and feedback state.
+CSSはsizingとresponsive layoutを所有します。componentはselection、editing、loading、feedbackの明示的なstateを所有します。

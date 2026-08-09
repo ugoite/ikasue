@@ -1,7 +1,7 @@
 ---
-title: Integration
+title: 統合
 ---
 
-# Integration
+# 統合
 
-Import the standard factories from the package root and keep application state separate from keyboard focus and CSS geometry.
+package rootからstandard factoryをimportし、application stateをkeyboard focusとCSS geometryから分離します。
