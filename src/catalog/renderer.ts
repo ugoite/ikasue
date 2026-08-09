@@ -47,6 +47,7 @@ import type {
   SidePanelSpec,
   SplitViewSpec,
   TabsSpec,
+  DataGridCell,
 } from "../types";
 import type { CatalogComponentId, CatalogLocale } from "./types";
 import { findRegistryEntry } from "./registry";
@@ -275,18 +276,27 @@ function renderDataGrid(
     spec.columns.map((column, index) => [column.id, index]),
   );
   let selected = spec.selection;
-  let editing: { readonly key: string; readonly original: string } | undefined;
+  let editing:
+    | {
+        readonly key: string;
+        readonly original: string;
+        readonly originalCell: DataGridCell;
+      }
+    | undefined;
   let operation = 0;
   const keyFor = (row: string, column: string): string =>
     `${row}\u0000${column}`;
   const cancelEdit = (): void => {
-    if (!editing) return;
-    const node = cellNodes.get(editing.key);
+    const current = editing;
+    if (!current) return;
+    const node = cellNodes.get(current.key);
     if (node) {
-      node.textContent = editing.original;
+      node.textContent = current.original;
       node.contentEditable = "false";
     }
+    cells.set(current.key, current.originalCell);
     editing = undefined;
+    operation += 1;
   };
   const validSelection = (
     value: { readonly row: string; readonly column: string } | undefined,
@@ -325,7 +335,11 @@ function renderDataGrid(
     const cell =
       cells.get(key) ?? ({ row, column, value: "", status: "clean" } as const);
     cells.set(key, cell);
-    editing = { key: keyFor(row, column), original: cell.value };
+    editing = {
+      key: keyFor(row, column),
+      original: cell.value,
+      originalCell: cell,
+    };
     node.contentEditable = "true";
     node.focus();
   };
@@ -335,6 +349,7 @@ function renderDataGrid(
     const next = node.textContent || "";
     node.contentEditable = "false";
     editing = undefined;
+    operation += 1;
     const cell = cells.get(current.key);
     if (!cell || cell.value === next) return;
     cells.set(current.key, { ...cell, value: next, status: "dirty" });
@@ -412,9 +427,8 @@ function renderDataGrid(
           return;
         }
         if (event.key === "Escape" && editing?.key === key) {
-          cellNode.textContent = editing.original;
-          cellNode.contentEditable = "false";
-          editing = undefined;
+          event.preventDefault();
+          cancelEdit();
           return;
         }
         if (
@@ -493,7 +507,8 @@ function renderDataGrid(
   });
   const clipboardValue = (): string | undefined => {
     if (!validSelection(selected)) return undefined;
-    return cells.get(keyFor(selected.row, selected.column))?.value ?? "";
+    const key = keyFor(selected.row, selected.column);
+    return cellNodes.get(key)?.textContent ?? cells.get(key)?.value ?? "";
   };
   target.addEventListener("copy", (event) => {
     const value = clipboardValue();
