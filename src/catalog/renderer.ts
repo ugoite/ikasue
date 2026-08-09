@@ -388,6 +388,9 @@ function renderDataGrid(
       );
       const key = keyFor(row.id, column.id);
       cellNodes.set(key, cellNode);
+      cellNode.addEventListener("focus", () => {
+        updateSelection({ row: row.id, column: column.id });
+      });
       cellNode.addEventListener("click", () => {
         updateSelection({ row: row.id, column: column.id });
         cellNode.focus();

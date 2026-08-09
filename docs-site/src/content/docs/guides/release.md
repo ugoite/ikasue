@@ -1,7 +1,7 @@
 ---
-title: Release
+title: リリース
 ---
 
-# Release
+# リリース
 
-The package is pre-v1. The public surface follows the current standard component contract directly.
+packageはpre-v1です。公開surfaceは現在のstandard component contractを直接反映します。

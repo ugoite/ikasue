@@ -1,7 +1,7 @@
 ---
-title: Accessibility
+title: アクセシビリティ
 ---
 
-# Accessibility
+# アクセシビリティ
 
-Prefer native controls, visible labels, stable relationships, readable status text, and DOM order that matches keyboard order.
+native control、見えるlabel、安定したrelationship、読みやすいstatus text、keyboard orderと一致するDOM orderを優先します。
