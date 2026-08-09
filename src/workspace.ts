@@ -174,15 +174,23 @@ const metaByState = new WeakMap<
     readonly disabled: ReadonlySet<string>;
   }
 >();
+const hasPane = (state: SplitViewState, id: string): boolean => {
+  const meta = metaByState.get(state);
+  if (meta) return meta.paneIds.includes(id);
+  const collapsed = state?.collapsed;
+  return (
+    typeof collapsed === "object" &&
+    collapsed !== null &&
+    Object.prototype.hasOwnProperty.call(collapsed, id)
+  );
+};
+const isDisabled = (state: SplitViewState, id: string): boolean =>
+  metaByState.get(state)?.disabled.has(id) === true;
 export function setActivePane(
   state: SplitViewState,
   id: string,
 ): SplitViewState {
-  if (
-    !metaByState.get(state)?.paneIds.includes(id) ||
-    metaByState.get(state)?.disabled.has(id) ||
-    state.activePane === id
-  )
+  if (!hasPane(state, id) || isDisabled(state, id) || state.activePane === id)
     return state;
   const next = Object.freeze({ ...state, activePane: id });
   const meta = metaByState.get(state);
@@ -215,8 +223,8 @@ export function setPaneCollapsed(
   value: boolean,
 ): SplitViewState {
   if (
-    !metaByState.get(state)?.paneIds.includes(id) ||
-    metaByState.get(state)?.disabled.has(id) ||
+    !hasPane(state, id) ||
+    isDisabled(state, id) ||
     typeof value !== "boolean" ||
     state.collapsed[id] === value
   )

@@ -159,7 +159,11 @@ export function commitDataGridCell(
     (cell) => cell.row === row && cell.column === column,
   );
   const current = index >= 0 ? state.cells[index] : undefined;
-  if (!current || current.value === value) return state;
+  if (!current) {
+    const cells = state.cells.concat({ row, column, value, status: "dirty" });
+    return Object.freeze({ ...state, cells: Object.freeze(cells) });
+  }
+  if (current.value === value) return state;
   const cells = state.cells.slice();
   cells[index] = { ...current, value, status: "dirty" };
   return Object.freeze({ ...state, cells: Object.freeze(cells) });
