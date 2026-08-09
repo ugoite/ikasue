@@ -24,6 +24,13 @@ const record = (value: unknown): Record<string, unknown> | undefined =>
     : undefined;
 const booleanMap = (): Record<string, boolean> =>
   Object.create(null) as Record<string, boolean>;
+const explicitlyCollapsed = (
+  value: Readonly<Record<string, boolean>> | undefined,
+  id: string,
+): boolean =>
+  value !== undefined &&
+  Object.prototype.hasOwnProperty.call(value, id) &&
+  value[id] === true;
 const validPane = (value: unknown): SplitPane | undefined => {
   const pane = record(value);
   if (
@@ -100,7 +107,8 @@ export function splitView(
   normalized.forEach((pane) => {
     collapsed[pane.id] = pane.disabled
       ? false
-      : pane.collapsible === true && Boolean(input?.collapsed?.[pane.id]);
+      : pane.collapsible === true &&
+        explicitlyCollapsed(input?.collapsed, pane.id);
   });
   const motionOrigin =
     input?.motionOrigin === "start" ||
@@ -152,7 +160,8 @@ export function createSplitViewState(
   normalized.forEach((pane) => {
     collapsed[pane.id] = pane.disabled
       ? false
-      : pane.collapsible === true && Boolean(initial?.collapsed?.[pane.id]);
+      : pane.collapsible === true &&
+        explicitlyCollapsed(initial?.collapsed, pane.id);
   });
   const state: { -readonly [K in keyof SplitViewState]: SplitViewState[K] } = {
     sizes: initialSizes,

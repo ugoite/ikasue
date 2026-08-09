@@ -81,11 +81,15 @@ describe("workspace state", () => {
   });
 
   it("treats reserved object names as ordinary pane IDs", () => {
-    const state = createSplitViewState([
-      { id: "__proto__", content: "content", collapsible: true },
-    ]);
+    const panes = [{ id: "__proto__", content: "content", collapsible: true }];
+    const state = createSplitViewState(panes, { collapsed: {} });
 
     expect(state.collapsed["__proto__"]).toBe(false);
+    expect(
+      splitView(panes, { orientation: "horizontal", collapsed: {} }).collapsed[
+        "__proto__"
+      ],
+    ).toBe(false);
     expect(
       setPaneCollapsed(state, "__proto__", true).collapsed["__proto__"],
     ).toBe(true);
