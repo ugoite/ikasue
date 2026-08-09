@@ -308,7 +308,10 @@ export function form(options?: FormOptions): FormSpec {
     if (source?.required === true) field.required = true;
     return [field];
   });
-  const values: Record<string, string> = {};
+  const values: Record<string, string> = Object.create(null) as Record<
+    string,
+    string
+  >;
   const suppliedValues = record(options?.values);
   for (const field of fields) {
     const supplied = suppliedValues?.[field.id];

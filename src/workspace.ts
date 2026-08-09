@@ -22,6 +22,8 @@ const record = (value: unknown): Record<string, unknown> | undefined =>
   typeof value === "object" && value !== null
     ? (value as Record<string, unknown>)
     : undefined;
+const booleanMap = (): Record<string, boolean> =>
+  Object.create(null) as Record<string, boolean>;
 const validPane = (value: unknown): SplitPane | undefined => {
   const pane = record(value);
   if (
@@ -94,7 +96,7 @@ export function splitView(
     normalized.some((pane) => pane.id === input.activePane && !pane.disabled)
       ? input.activePane
       : undefined;
-  const collapsed: Record<string, boolean> = {};
+  const collapsed = booleanMap();
   normalized.forEach((pane) => {
     collapsed[pane.id] = pane.disabled
       ? false
@@ -146,7 +148,7 @@ export function createSplitViewState(
     !normalized.find((pane) => pane.id === initial.activePane)?.disabled
       ? initial.activePane
       : undefined;
-  const collapsed: Record<string, boolean> = {};
+  const collapsed = booleanMap();
   normalized.forEach((pane) => {
     collapsed[pane.id] = pane.disabled
       ? false
