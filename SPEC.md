@@ -2,90 +2,23 @@
 
 ## Product intent
 
-ikasue is a plane-centered adaptive UI component system for information-dense work. Every region shares one canvas. New information enters from the edge where it belongs and reallocates existing space; the system does not depend on floating card taxonomies, overlay drawers, shadow hierarchies, or evidence-obscuring modals.
+ikasue applies a planar visual and interaction language to ordinary web layout. It keeps information readable during work, gives selected work area, matches motion to the direction of appearance, and prefers in-flow regions over floating surfaces.
 
-## Current public component inventory
+## Public layers
 
-The public runtime inventory is exactly 17 components. The catalog metadata and bilingual documentation use this same list:
+Layout primitives are Flex, Stack, Grid, ScrollArea, and Separator. Interactive components are Tabs, Sidebar, Toolbar, IconButton, Text, TextField, EditableText, Checkbox, RadioGroup, SegmentedControl, Field, Form, DataGrid, StatusIndicator, Alert, Progress, Dialog, and HistoryTimeline. Workspace patterns are SplitView, SidePanel, BottomPanel, and LoadingRegion. ThemeRoot owns the visual tokens.
 
-- `developer-model`
-- `theme-root`
-- `text`
-- `rule`
-- `status-icon`
-- `vertical`
-- `horizontal`
-- `icon-action`
-- `action-strip`
-- `boolean-text`
-- `choice-group`
-- `form-list`
-- `data-table`
-- `history-gutter`
-- `progress-region`
-- `message-region`
-- `bottom-dialog`
+CSS resolves grow, shrink, basis, wrap, gap, alignment, overflow, and responsive container behavior. The package descriptors never calculate offsets, extents, available units, collapse replacement, or generated navigation.
 
-The separate conceptual page is the design philosophy. It is not an additional runtime component.
+## Behavioral principles
 
-## Plane API
+- Flat surfaces and semantic color keep the canvas readable.
+- A selected work area can receive more space without adding a card hierarchy.
+- Loading preserves the original content and adds busy/progress semantics.
+- SidePanel and BottomPanel are in-flow; Dialog is reserved for a truly modal decision.
+- Keyboard order follows DOM order and reduced motion removes transition duration.
+- Tabs, DataGrid, ScrollArea, and SplitView each own their distinct interaction or overflow behavior.
 
-The package exposes a small framework-neutral plane model:
+## Documentation
 
-- `vertical(children, options)` creates an ordered vertical `PlaneSpec`.
-- `horizontal(children, options)` creates an ordered horizontal `PlaneSpec`.
-- `resolvePlane(input, available?)` normalizes a plane and returns deterministic child positions.
-- `PlaneChild` contains an `id`, optional preferred `basis`, and optional elastic `min`.
-- `PlaneSpec` contains `axis`, `fit`, `gap`, optional `available` and `focus`, a `navigation` flag, and ordered `children`.
-- `fit` is `elastic` or `wrap`. Resolved output reports `offset`, `size`, `line`, child `state` (`focused`, `visible`, or `collapsed`), navigation bounds, `extent`, and `overflow`. When a navigable plane cannot fit its requested extent, both policies keep the focused child readable and collapse the rest; the owning rail provides previous/next and direct region selection instead of plane scrolling.
-
-The developer declares order, axis, and adaptation policy. The plane owner resolves available space. Child components do not need a parent reference or a public layout event to participate.
-
-## Recursive focus window API
-
-The v1 package also exposes `normalizeFocusPlane`, `resolveFocusPlane`, and
-`requestFocus` for a finite window over a recursive document plane. A
-`FocusBranch` owns one axis and ordered `FocusNode` children; a `FocusLeaf`
-owns semantic content. The developer supplies a slash-separated focus path
-such as `work/beta/detail/editor` and a viewport `{ inline, block }`.
-
-`resolveFocusPlane` returns normalized focus-path propagation, abstract
-`x`/`y`/`width`/`height` rectangles, semantic region state, direct sibling
-navigation, and edge allocations. Horizontal branches generate `edge-nav`
-metadata when constrained; vertical branches generate `elastic-tabs`
-metadata. A focus path gives area to the leaf and every ancestor, while
-off-path siblings are compressed or collapsed according to the declared
-policy. Edge regions, including a temporary bottom row, consume their owned
-space inside the parent plane and never overlay it. `restoreFocusAfterEdgeDismissal`
-returns the declared opener focus when a temporary edge region closes. Pass a
-resolved edge path such as `work/@edge/decision`; a local edge id is accepted
-only when it is unambiguous.
-
-The resolver uses abstract units. Renderers own pixel rounding and visual
-motion; semantic tests assert order, containment, non-overlap, focus, and
-navigation rather than screenshots.
-
-## State ownership and behavioral contracts
-
-- Properties update live and can be reset to documented defaults.
-- `Text` is readable by default and gains editing capability only when needed. Confirmed values return through normal state updates; the public API does not require custom event names.
-- `FormList` owns values, validation status, and confirmed results. Child focus and draft are local editing state; blur, Enter, and Tab do not commit them. An explicit external-send action applies all drafts together, then clears the child draft affordance. A draft that returns to its original value remains clean when sent, and local draft styling is neutral rather than a created/modified source-status color.
-- `Vertical` and `Horizontal` preserve ordered children while applying their declared fit and focus/navigation policy. A constrained navigable plane keeps the focused child readable and collapses the other children for rail selection.
-- Selection, status, and progress use semantic color plus a non-color cue.
-- `DataTable` treats the cell as the task unit and keeps selection, peer context, clipboard behavior, and editing explicit.
-- Temporary bottom decisions add a row inside the plane and return focus to their opener when closed.
-- Native semantics, keyboard behavior, text zoom, narrow layouts, and reduced motion remain available.
-
-## Documentation contract
-
-`docs-site/` is an Astro + Starlight site. The root Japanese locale and the `/en/` English locale are independent, manually authored documents. No machine translation or translation service is used, and no documentation content is transferred to an external service. Every markdown or MDX file under the root docs tree has the same relative path under `src/content/docs/en/`; `npm run docs:sync` checks path parity, requires both locale files in every local or CI change set, and rejects root-absolute internal links. A commit may not update only one side of a Japanese/English pair.
-
-Every public component has a mirrored page, a property table, philosophy/use/avoid guidance, interaction and keyboard behavior, accessibility notes, and JavaScript implementation/usage plus Rust implementation source tabs. Starlight `Tabs` and `TabItem` are used for those source views.
-
-Astro-generated links use `sitePath` so local builds and project GitHub Pages builds include the configured base path. Content-authored internal links remain relative.
-
-## Deployment boundaries
-
-- GitHub Pages is the only documentation host. The Pages workflow builds the Astro + Starlight site, embedding each component’s interactive demo in its component page, with `actions/configure-pages`, `actions/upload-pages-artifact`, and `actions/deploy-pages`. The Astro base is derived from `GITHUB_REPOSITORY` for project Pages sites.
-- GitHub Packages is the package distribution boundary. The package workflow publishes only `@ugoite/ikasue` to `https://npm.pkg.github.com` on `v*` tags with `GITHUB_TOKEN` and `packages: write`.
-- Pages deployment and GitHub Packages publishing are separate workflows and targets. The documentation phase does not change generated build output or package version.
+Japanese and English docs are authored as fixed mirrored source pages. The route inventory is stored in scripts/catalog-routes.json and checked without directory discovery. The package is pre-v1, so the current public contract is intentionally direct.
