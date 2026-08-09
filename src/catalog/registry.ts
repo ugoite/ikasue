@@ -447,7 +447,8 @@ const componentDefaults: Record<
 };
 export const defaultProps = (
   id: CatalogComponentId,
-): Readonly<Record<string, string | boolean>> => componentDefaults[id];
+): Readonly<Record<string, string | boolean>> =>
+  Object.freeze({ ...componentDefaults[id] });
 export const componentDocumentationCopy = (
   id: CatalogComponentId,
   locale: "ja" | "en" = "ja",

@@ -238,7 +238,7 @@ export function setPaneCollapsed(
   return next;
 }
 
-export function sidePanel(options: SidePanelOptions): SidePanelSpec {
+export function sidePanel(options?: SidePanelOptions): SidePanelSpec {
   const result: { -readonly [K in keyof SidePanelSpec]: SidePanelSpec[K] } = {
     kind: "side-panel",
     title: clean(options?.title),
@@ -250,7 +250,7 @@ export function sidePanel(options: SidePanelOptions): SidePanelSpec {
   if (typeof options?.onClose === "function") result.onClose = options.onClose;
   return Object.freeze(result);
 }
-export function bottomPanel(options: BottomPanelOptions): BottomPanelSpec {
+export function bottomPanel(options?: BottomPanelOptions): BottomPanelSpec {
   const result: { -readonly [K in keyof BottomPanelSpec]: BottomPanelSpec[K] } =
     {
       kind: "bottom-panel",
@@ -263,7 +263,7 @@ export function bottomPanel(options: BottomPanelOptions): BottomPanelSpec {
   return Object.freeze(result);
 }
 export function loadingRegion(
-  options: LoadingRegionOptions,
+  options?: LoadingRegionOptions,
 ): LoadingRegionSpec {
   const result: {
     -readonly [K in keyof LoadingRegionSpec]: LoadingRegionSpec[K];
@@ -283,7 +283,7 @@ export function loadingRegion(
     result.progress = options.progress;
   return Object.freeze(result);
 }
-export function dialog(options: DialogOptions): DialogSpec {
+export function dialog(options?: DialogOptions): DialogSpec {
   const result: { -readonly [K in keyof DialogSpec]: DialogSpec[K] } = {
     kind: "dialog",
     title: clean(options?.title),

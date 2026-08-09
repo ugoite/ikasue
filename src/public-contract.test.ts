@@ -85,11 +85,26 @@ describe("public contract", () => {
   it("exports the standard factories and focused state utilities", () => {
     expect(api.flex(["a"]).kind).toBe("flex");
     expect(api.stack(["a"]).direction).toBe("column");
+    expect(api.tabs().items).toEqual([]);
+    expect(api.separator().orientation).toBe("horizontal");
     expect(api.loadingRegion({ busy: true }).busy).toBe(true);
     expect(api.dialog({ modal: true }).modal).toBe(true);
     expect(
       api.setDataGridClipboard(api.createDataGridState([]), "error").clipboard,
     ).toBe("error");
+  });
+
+  it("preserves whitespace in controlled and displayed values", () => {
+    expect(
+      api.textField({ id: "name", label: "Name", value: "  Ada  " }).value,
+    ).toBe("  Ada  ");
+    expect(api.editableText({ value: "  note  " }).value).toBe("  note  ");
+    expect(
+      api.form({
+        fields: [{ id: "name", label: "Name", initialValue: "  Ada  " }],
+      }).values.name,
+    ).toBe("  Ada  ");
+    expect(api.defaultProps("text")).not.toBe(api.defaultProps("text"));
   });
 
   it("keeps the visual contract in CSS", () => {

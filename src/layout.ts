@@ -200,8 +200,8 @@ export function scrollArea(
   });
 }
 
-export function separator(options: SeparatorOptions): SeparatorSpec {
-  const input = options as SeparatorOptions | undefined;
+export function separator(options?: SeparatorOptions): SeparatorSpec {
+  const input = options;
   const result: { -readonly [K in keyof SeparatorSpec]: SeparatorSpec[K] } = {
     kind: "separator",
     orientation: input?.orientation === "vertical" ? "vertical" : "horizontal",
