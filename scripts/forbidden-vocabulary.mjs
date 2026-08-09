@@ -11,8 +11,6 @@ const excluded = [
   ".git/",
   "node_modules/",
   "/node_modules/",
-  "dist/",
-  "docs-site/dist/",
   "package-lock.json",
   "docs-site/package-lock.json",
   manifest,
@@ -174,6 +172,7 @@ const forbiddenAliases = [
   "@/catalog",
   "@/catalog-types",
 ];
+const forbiddenRoutes = ["/catalog/", "/overview/"];
 function filesIn(directory) {
   const result = [];
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
@@ -187,7 +186,15 @@ function filesIn(directory) {
     )
       continue;
     if (entry.isDirectory()) result.push(...filesIn(absolute));
-    else if (entry.isFile()) result.push({ absolute, relative });
+    else if (
+      entry.isFile() &&
+      (!relative.startsWith("dist/") ||
+        relative === "dist/ikasue.es.js" ||
+        relative === "dist/ikasue.css" ||
+        relative.endsWith(".d.ts")) &&
+      (!relative.startsWith("docs-site/dist/") || relative.endsWith(".html"))
+    )
+      result.push({ absolute, relative });
   }
   return result;
 }
@@ -205,6 +212,12 @@ const checks = [
   ]),
   ...forbiddenMarkers.map((value) => [value, new RegExp(escape(value))]),
   ...forbiddenAliases.map((value) => [value, new RegExp(escape(value))]),
+  ...forbiddenRoutes.map((value) => [
+    value,
+    new RegExp(
+      `(?:^|[\"'` + "`" + `])${escape(value)}(?:$|[\\s\"'` + "`" + `])`,
+    ),
+  ]),
   ["old call", /\b(?:horizontal|vertical)\s*\(/],
   [
     "old component selection",

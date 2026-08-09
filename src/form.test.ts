@@ -38,4 +38,21 @@ describe("form state", () => {
     expect(errored.status).toBe("error");
     expect(setFormStatus(errored, "success").status).toBe("success");
   });
+
+  it("uses supplied initial values before field defaults and filters errors", () => {
+    const state = createFormState(
+      [
+        { id: "name", label: "Name", initialValue: "field" },
+        { id: "team", label: "Team", initialValue: "team" },
+      ],
+      { name: "supplied" },
+    );
+    expect(state.initialValues).toEqual({ name: "supplied", team: "team" });
+    const errored = setFormErrors(state, {
+      name: "Invalid",
+      unknown: "ignored",
+    });
+    expect(errored.errors).toEqual({ name: "Invalid" });
+    expect(setFormErrors(errored, {}).status).toBe("clean");
+  });
 });

@@ -7,6 +7,9 @@ const { id, locale = "ja" } = Astro.props as Props;
 const entry = findRegistryEntry(id);
 const title = entry?.title[locale] ?? id;
 const summary = entry?.summary[locale] ?? "";
+const componentEntry = entry?.kind === "component" ? entry : undefined;
+const propertiesHeading = locale === "ja" ? "プロパティ" : "Properties";
+const sourceHeading = locale === "ja" ? "使用例" : "Usage";
 ---
 
 <article class="docs-component" data-kind={id}>
@@ -17,4 +20,29 @@ const summary = entry?.summary[locale] ?? "";
     <h2 id={`${id}-contract`}>Contract</h2>
     <p>Use the standard web primitive that matches this component. Layout belongs to CSS; interaction belongs to explicit state.</p>
   </section>
+  {componentEntry && (
+    <>
+      <section aria-labelledby={`${id}-properties`}>
+        <h2 id={`${id}-properties`}>{propertiesHeading}</h2>
+        <table>
+          <thead>
+            <tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Default</th></tr>
+          </thead>
+          <tbody>
+            {componentEntry.properties.map((property) => (
+              <tr>
+                <th scope="row"><code>{property.name}</code></th>
+                <td><code>{property.type}</code></td>
+                <td>{property.default === undefined ? "—" : String(property.default)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+      <section aria-labelledby={`${id}-source`}>
+        <h2 id={`${id}-source`}>{sourceHeading}</h2>
+        <pre><code>{componentEntry.source.typescript}</code></pre>
+      </section>
+    </>
+  )}
 </article>

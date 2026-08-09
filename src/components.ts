@@ -1,8 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-condition */
+
 import type {
   AlertOptions,
   AlertSpec,
   CheckboxOptions,
   CheckboxSpec,
+  DataGridCell,
+  DataGridSelection,
   DataGridOptions,
   DataGridSpec,
   EditableTextOptions,
@@ -87,7 +91,7 @@ const choices = (value: unknown): NormalizedChoiceOption[] => {
     const source = record(item);
     const id = typeof source?.id === "string" ? source.id.trim() : "";
     const label = typeof source?.label === "string" ? source.label.trim() : "";
-    if (!id || !label || ids.has(id)) return [];
+    if (!id || !label || !label.trim() || ids.has(id)) return [];
     ids.add(id);
     return [{ id, label, disabled: source?.disabled === true }];
   });
@@ -107,7 +111,7 @@ export function themeRoot(options?: ThemeRootOptions): ThemeRootSpec {
         : "default",
   });
 }
-export function tabs(options?: TabsOptions): TabsSpec {
+export function tabs(options: TabsOptions): TabsSpec {
   const normalized = items(options?.items);
   const result: Mutable<TabsSpec> = {
     kind: "tabs",
@@ -118,10 +122,11 @@ export function tabs(options?: TabsOptions): TabsSpec {
   };
   const active = selected(normalized, options?.activeId);
   if (active) result.activeId = active;
-  if (options?.onActiveChange) result.onActiveChange = options.onActiveChange;
+  if (typeof options?.onActiveChange === "function")
+    result.onActiveChange = options.onActiveChange;
   return Object.freeze(result);
 }
-export function sidebar(options?: SidebarOptions): SidebarSpec {
+export function sidebar(options: SidebarOptions): SidebarSpec {
   const normalized = items(options?.items);
   const result: Mutable<SidebarSpec> = {
     kind: "sidebar",
@@ -130,14 +135,16 @@ export function sidebar(options?: SidebarOptions): SidebarSpec {
   };
   const active = selected(normalized, options?.activeId);
   if (active) result.activeId = active;
-  if (options?.onActiveChange) result.onActiveChange = options.onActiveChange;
+  if (typeof options?.onActiveChange === "function")
+    result.onActiveChange = options.onActiveChange;
   return Object.freeze(result);
 }
-export function toolbar(options?: ToolbarOptions): ToolbarSpec {
+export function toolbar(options: ToolbarOptions): ToolbarSpec {
   const used = new Set<string>();
-  const normalized = (options?.items ?? []).flatMap((item) => {
+  const normalized = list(options?.items).flatMap((value) => {
+    const item = record(value);
     if (
-      typeof item.id !== "string" ||
+      typeof item?.id !== "string" ||
       !item.id.trim() ||
       typeof item.label !== "string" ||
       !item.label.trim() ||
@@ -151,7 +158,8 @@ export function toolbar(options?: ToolbarOptions): ToolbarSpec {
       label: item.label.trim(),
       disabled: item.disabled === true,
     };
-    if (item.onSelect) result.onSelect = item.onSelect;
+    if (typeof item.onSelect === "function")
+      result.onSelect = item.onSelect as () => void;
     return [result];
   });
   return Object.freeze({
@@ -160,7 +168,7 @@ export function toolbar(options?: ToolbarOptions): ToolbarSpec {
     overflow: options?.overflow === "menu" ? "menu" : "none",
   });
 }
-export function iconButton(options?: IconButtonOptions): IconButtonSpec {
+export function iconButton(options: IconButtonOptions): IconButtonSpec {
   const result: Mutable<IconButtonSpec> = {
     kind: "icon-button",
     label: text(options?.label),
@@ -173,10 +181,10 @@ export function iconButton(options?: IconButtonOptions): IconButtonSpec {
   };
   if (text(options?.id)) result.id = text(options?.id);
   if (text(options?.icon)) result.icon = text(options?.icon);
-  if (options?.onClick) result.onClick = options.onClick;
+  if (typeof options?.onClick === "function") result.onClick = options.onClick;
   return Object.freeze(result);
 }
-export function textComponent(options?: TextOptions): TextSpec {
+export function textComponent(options: TextOptions): TextSpec {
   return Object.freeze({
     kind: "text",
     content: text(options?.content),
@@ -189,7 +197,7 @@ export function textComponent(options?: TextOptions): TextSpec {
     selectable: options?.selectable !== false,
   });
 }
-export function textField(options?: TextFieldOptions): TextFieldSpec {
+export function textField(options: TextFieldOptions): TextFieldSpec {
   const result: Mutable<TextFieldSpec> = {
     kind: "text-field",
     id: text(options?.id),
@@ -202,21 +210,23 @@ export function textField(options?: TextFieldOptions): TextFieldSpec {
   if (text(options?.description))
     result.description = text(options?.description);
   if (text(options?.error)) result.error = text(options?.error);
-  if (options?.onInput) result.onInput = options.onInput;
+  if (typeof options?.onInput === "function") result.onInput = options.onInput;
   return Object.freeze(result);
 }
-export function editableText(options?: EditableTextOptions): EditableTextSpec {
+export function editableText(options: EditableTextOptions): EditableTextSpec {
   const result: Mutable<EditableTextSpec> = {
     kind: "editable-text",
     value: text(options?.value),
     disabled: options?.disabled === true,
   };
   if (text(options?.id)) result.id = text(options?.id);
-  if (options?.onCommit) result.onCommit = options.onCommit;
-  if (options?.onCancel) result.onCancel = options.onCancel;
+  if (typeof options?.onCommit === "function")
+    result.onCommit = options.onCommit;
+  if (typeof options?.onCancel === "function")
+    result.onCancel = options.onCancel;
   return Object.freeze(result);
 }
-export function checkbox(options?: CheckboxOptions): CheckboxSpec {
+export function checkbox(options: CheckboxOptions): CheckboxSpec {
   const result: Mutable<CheckboxSpec> = {
     kind: "checkbox",
     id: text(options?.id),
@@ -224,7 +234,8 @@ export function checkbox(options?: CheckboxOptions): CheckboxSpec {
     checked: options?.checked === true,
     disabled: options?.disabled === true,
   };
-  if (options?.onChange) result.onChange = options.onChange;
+  if (typeof options?.onChange === "function")
+    result.onChange = options.onChange;
   return Object.freeze(result);
 }
 const choiceResult = (
@@ -242,7 +253,8 @@ const choiceResult = (
     };
     if (value) result.value = value;
     if (id) result.id = id;
-    if (options?.onChange) result.onChange = options.onChange;
+    if (typeof options?.onChange === "function")
+      result.onChange = options.onChange;
     return Object.freeze(result);
   }
   const result: Mutable<SegmentedControlSpec> = {
@@ -256,18 +268,19 @@ const choiceResult = (
   };
   if (value) result.value = value;
   if (id) result.id = id;
-  if (options?.onChange) result.onChange = options.onChange;
+  if (typeof options?.onChange === "function")
+    result.onChange = options.onChange;
   return Object.freeze(result);
 };
-export function radioGroup(options?: RadioGroupOptions): RadioGroupSpec {
+export function radioGroup(options: RadioGroupOptions): RadioGroupSpec {
   return choiceResult("radio-group", options) as RadioGroupSpec;
 }
 export function segmentedControl(
-  options?: SegmentedControlOptions,
+  options: SegmentedControlOptions,
 ): SegmentedControlSpec {
   return choiceResult("segmented-control", options) as SegmentedControlSpec;
 }
-export function field(options?: FieldOptions): FieldSpec {
+export function field(options: FieldOptions): FieldSpec {
   const result: Mutable<FieldSpec> = {
     kind: "field",
     id: text(options?.id),
@@ -280,13 +293,19 @@ export function field(options?: FieldOptions): FieldSpec {
   if (text(options?.error)) result.error = text(options?.error);
   return Object.freeze(result);
 }
-export function form(options?: FormOptions): FormSpec {
+export function form(options: FormOptions): FormSpec {
   const ids = new Set<string>();
-  const fields = (options?.fields ?? []).filter((field) => {
-    const id = field.id.trim();
-    if (!id || ids.has(id)) return false;
+  const fields = list(options?.fields).flatMap((value) => {
+    const source = record(value);
+    const id = typeof source?.id === "string" ? source.id.trim() : "";
+    const label = typeof source?.label === "string" ? source.label.trim() : "";
+    if (!id || !label || !label.trim() || ids.has(id)) return [];
     ids.add(id);
-    return true;
+    const field: Mutable<FormSpec["fields"][number]> = { id, label };
+    if (typeof source?.initialValue === "string")
+      field.initialValue = source.initialValue;
+    if (source?.required === true) field.required = true;
+    return [field];
   });
   const values: Record<string, string> = {};
   for (const field of fields)
@@ -296,35 +315,117 @@ export function form(options?: FormOptions): FormSpec {
     kind: "form",
     fields,
     values,
-    status: options?.status ?? "idle",
+    status:
+      options?.status === "clean" ||
+      options?.status === "dirty" ||
+      options?.status === "submitting" ||
+      options?.status === "success" ||
+      options?.status === "error"
+        ? options.status
+        : "idle",
   };
-  if (options?.onSubmit) result.onSubmit = options.onSubmit;
+  if (typeof options?.onSubmit === "function")
+    result.onSubmit = options.onSubmit;
   return Object.freeze(result);
 }
-export function dataGrid(options?: DataGridOptions): DataGridSpec {
-  const columnsProvided = options?.columns !== undefined;
-  const rowsProvided = options?.rows !== undefined;
-  const columns = options?.columns ?? [];
-  const rows = options?.rows ?? [];
-  const cells = options?.cells ?? [];
+export function dataGrid(options: DataGridOptions): DataGridSpec {
+  const sourceOptions = record(options);
+  const columnsProvided = Boolean(sourceOptions && "columns" in sourceOptions);
+  const rowsProvided = Boolean(sourceOptions && "rows" in sourceOptions);
+  const columnIds = new Set<string>();
+  const columns = list(options?.columns).flatMap((value) => {
+    const source = record(value);
+    const id = typeof source?.id === "string" ? source.id.trim() : "";
+    const label = typeof source?.label === "string" ? source.label.trim() : "";
+    if (!id || !label || columnIds.has(id)) return [];
+    columnIds.add(id);
+    return [{ id, label }];
+  });
+  const rowIds = new Set<string>();
+  const rows = list(options?.rows).flatMap((value) => {
+    const source = record(value);
+    const id = typeof source?.id === "string" ? source.id.trim() : "";
+    if (!id || rowIds.has(id)) return [];
+    rowIds.add(id);
+    return [
+      typeof source?.label === "string"
+        ? { id, label: source.label.trim() }
+        : { id },
+    ];
+  });
+  const coordinates = new Set<string>();
+  const normalizedCells = list(options?.cells).flatMap((value) => {
+    const source = record(value);
+    const row = typeof source?.row === "string" ? source.row.trim() : "";
+    const column =
+      typeof source?.column === "string" ? source.column.trim() : "";
+    const cellValue =
+      typeof source?.value === "string" ? source.value : undefined;
+    if (
+      !row ||
+      !column ||
+      cellValue === undefined ||
+      coordinates.has(`${row}\u0000${column}`)
+    )
+      return [];
+    coordinates.add(`${row}\u0000${column}`);
+    const status: DataGridCell["status"] =
+      source?.status === "dirty" || source?.status === "error"
+        ? source.status
+        : "clean";
+    return [{ row, column, value: cellValue, status }];
+  });
+  const materializedColumns = columnsProvided
+    ? columns
+    : Array.from(new Set(normalizedCells.map((cell) => cell.column))).map(
+        (id) => ({ id, label: id }),
+      );
+  const materializedRows = rowsProvided
+    ? rows
+    : Array.from(new Set(normalizedCells.map((cell) => cell.row))).map(
+        (id) => ({
+          id,
+          label: id,
+        }),
+      );
+  const validColumnIds = new Set(
+    materializedColumns.map((column) => column.id),
+  );
+  const validRowIds = new Set(materializedRows.map((row) => row.id));
+  const cells = normalizedCells.filter(
+    (cell) => validColumnIds.has(cell.column) && validRowIds.has(cell.row),
+  );
+  const normalizeTarget = (value: unknown): DataGridSelection | undefined => {
+    const target = record(value);
+    const row = typeof target?.row === "string" ? target.row.trim() : "";
+    const column =
+      typeof target?.column === "string" ? target.column.trim() : "";
+    return row && column && validRowIds.has(row) && validColumnIds.has(column)
+      ? { row, column }
+      : undefined;
+  };
   const result: Mutable<DataGridSpec> = {
     kind: "data-grid",
-    columns,
-    rows,
+    columns: materializedColumns,
+    rows: materializedRows,
     columnsProvided,
     rowsProvided,
     cells,
   };
-  if (options?.selection) result.selection = options.selection;
-  if (options?.editing) result.editing = options.editing;
-  if (options?.onSelect) result.onSelect = options.onSelect;
-  if (options?.onEdit) result.onEdit = options.onEdit;
-  if (options?.onCopy) result.onCopy = options.onCopy;
-  if (options?.onPaste) result.onPaste = options.onPaste;
+  const selection = normalizeTarget(options?.selection);
+  const editing = normalizeTarget(options?.editing);
+  if (selection)
+    result.selection = { row: selection.row, column: selection.column };
+  if (editing) result.editing = { row: editing.row, column: editing.column };
+  if (typeof options?.onSelect === "function")
+    result.onSelect = options.onSelect;
+  if (typeof options?.onEdit === "function") result.onEdit = options.onEdit;
+  if (typeof options?.onCopy === "function") result.onCopy = options.onCopy;
+  if (typeof options?.onPaste === "function") result.onPaste = options.onPaste;
   return Object.freeze(result);
 }
 export function statusIndicator(
-  options?: StatusIndicatorOptions,
+  options: StatusIndicatorOptions,
 ): StatusIndicatorSpec {
   const result: Mutable<StatusIndicatorSpec> = {
     kind: "status-indicator",
@@ -342,7 +443,7 @@ export function statusIndicator(
   if (text(options?.targetId)) result.targetId = text(options?.targetId);
   return Object.freeze(result);
 }
-export function alert(options?: AlertOptions): AlertSpec {
+export function alert(options: AlertOptions): AlertSpec {
   const result: Mutable<AlertSpec> = {
     kind: "alert",
     message: text(options?.message),
@@ -355,10 +456,11 @@ export function alert(options?: AlertOptions): AlertSpec {
     dismissible: options?.dismissible === true,
   };
   if (text(options?.id)) result.id = text(options?.id);
-  if (options?.onDismiss) result.onDismiss = options.onDismiss;
+  if (typeof options?.onDismiss === "function")
+    result.onDismiss = options.onDismiss;
   return Object.freeze(result);
 }
-export function progress(options?: ProgressOptions): ProgressSpec {
+export function progress(options: ProgressOptions): ProgressSpec {
   const max =
     typeof options?.max === "number" &&
     Number.isFinite(options.max) &&
@@ -380,7 +482,7 @@ export function progress(options?: ProgressOptions): ProgressSpec {
   return Object.freeze(result);
 }
 export function historyTimeline(
-  options?: HistoryTimelineOptions,
+  options: HistoryTimelineOptions,
 ): HistoryTimelineSpec {
   const ids = new Set<string>();
   const entries = list(options?.entries).flatMap((value) => {

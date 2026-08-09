@@ -39,4 +39,14 @@ describe("workspace state", () => {
     expect(collapsed.collapsed.list).toBe(true);
     expect(setActivePane(state, "missing")).toBe(state);
   });
+
+  it("keeps disabled panes mounted but rejects their state transitions", () => {
+    const state = createSplitViewState([
+      { id: "disabled", content: "hidden", disabled: true },
+      { id: "active", content: "shown" },
+    ]);
+    expect(state).not.toHaveProperty("paneIds");
+    expect(setActivePane(state, "disabled")).toBe(state);
+    expect(setPaneCollapsed(state, "disabled", true)).toBe(state);
+  });
 });

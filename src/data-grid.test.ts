@@ -5,6 +5,7 @@ import {
   setDataGridClipboard,
   setDataGridSelection,
 } from "./data-grid";
+import { dataGrid } from "./components";
 
 describe("data grid state", () => {
   it("keeps row/column domains and selection separate from cell status", () => {
@@ -28,5 +29,22 @@ describe("data grid state", () => {
     expect(failed.selection).toEqual(state.selection);
     expect(failed.cells).toEqual(state.cells);
     expect(setDataGridClipboard(failed, "idle").clipboard).toBe("idle");
+  });
+
+  it("distinguishes omitted domains from explicit empty domains", () => {
+    const derived = dataGrid({
+      cells: [{ row: "r", column: "c", value: "x" }],
+    });
+    expect(derived.columnsProvided).toBe(false);
+    expect(derived.rowsProvided).toBe(false);
+    expect(derived.columns).toEqual([{ id: "c", label: "c" }]);
+    const empty = dataGrid({
+      columns: [],
+      rows: [],
+      cells: [{ row: "r", column: "c", value: "x" }],
+    });
+    expect(empty.columnsProvided).toBe(true);
+    expect(empty.rowsProvided).toBe(true);
+    expect(empty.cells).toEqual([]);
   });
 });

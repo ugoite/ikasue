@@ -1,5 +1,6 @@
 import starlight from "@astrojs/starlight";
 import { defineConfig } from "astro/config";
+import routeData from "../scripts/catalog-routes.json" with { type: "json" };
 
 const repository = process.env.GITHUB_REPOSITORY?.split("/");
 const base =
@@ -10,36 +11,7 @@ const base =
 const normalizedBase =
   base === "/" ? "/" : `/${base.replace(/^\/+|\/+$/g, "")}/`;
 
-const components = [
-  "theme-root",
-  "text",
-  "editable-text",
-  "flex",
-  "stack",
-  "grid",
-  "scroll-area",
-  "separator",
-  "tabs",
-  "sidebar",
-  "toolbar",
-  "icon-button",
-  "text-field",
-  "checkbox",
-  "radio-group",
-  "segmented-control",
-  "field",
-  "form",
-  "data-grid",
-  "status-indicator",
-  "alert",
-  "progress",
-  "dialog",
-  "split-view",
-  "side-panel",
-  "bottom-panel",
-  "loading-region",
-  "history-timeline",
-];
+const components = routeData.componentIds;
 const componentItems = components.map((id) => ({
   label: id,
   link: `components/${id}/`,

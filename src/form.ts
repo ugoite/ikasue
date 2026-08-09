@@ -1,12 +1,15 @@
 import type { FormField, FormState, FormStateStatus } from "./types";
 
-const validFields = (
-  fields: readonly FormField[] | null | undefined,
-): FormField[] => {
+const record = (value: unknown): Record<string, unknown> | undefined =>
+  typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : undefined;
+const validFields = (fields: unknown): FormField[] => {
   const ids = new Set<string>();
-  return (fields ?? []).flatMap((field) => {
+  return (Array.isArray(fields) ? fields : []).flatMap((value) => {
+    const field = record(value);
     if (
-      typeof field.id !== "string" ||
+      typeof field?.id !== "string" ||
       !field.id.trim() ||
       typeof field.label !== "string" ||
       ids.has(field.id.trim())
@@ -50,7 +53,7 @@ const without = (
   Object.fromEntries(Object.entries(value).filter(([key]) => key !== id));
 
 export function createFormState(
-  fields: readonly FormField[] = [],
+  fields: readonly FormField[],
   initial?: Readonly<Record<string, string>>,
 ): FormState {
   const normalized = validFields(fields);
@@ -102,7 +105,7 @@ export function setFormErrors(
 ): FormState {
   const ids = new Set(state.fields.map((field) => field.id));
   const filtered: Record<string, string> = {};
-  for (const [id, value] of Object.entries(errors))
+  for (const [id, value] of Object.entries(record(errors) ?? {}))
     if ((id === "form" || ids.has(id)) && typeof value === "string" && value)
       filtered[id] = value;
   if (mapEqual(filtered, state.errors)) return state;
@@ -117,6 +120,16 @@ export function setFormStatus(
   state: FormState,
   status: FormStateStatus,
 ): FormState {
+  const requested: unknown = status;
+  if (
+    requested !== "idle" &&
+    requested !== "clean" &&
+    requested !== "dirty" &&
+    requested !== "submitting" &&
+    requested !== "success" &&
+    requested !== "error"
+  )
+    return state;
   return state.status === status ? state : Object.freeze({ ...state, status });
 }
 export function commitFormFields(
@@ -127,7 +140,7 @@ export function commitFormFields(
   const nextValues = { ...state.values };
   let drafts = { ...state.drafts };
   let changed = false;
-  for (const [id, value] of Object.entries(values)) {
+  for (const [id, value] of Object.entries(record(values) ?? {})) {
     if (!ids.has(id) || typeof value !== "string") continue;
     if (nextValues[id] !== value) {
       nextValues[id] = value;

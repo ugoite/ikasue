@@ -64,25 +64,25 @@ const factor = (value: unknown): number | undefined =>
     ? value
     : undefined;
 
-const child = (value: LayoutChild): LayoutChild | undefined => {
+const child = (value: unknown): LayoutChild | undefined => {
   if (typeof value === "string") return value;
-  if (typeof value.id !== "string" || !value.id.trim()) return undefined;
+  if (typeof value !== "object" || value === null) return undefined;
+  const source = value as Record<string, unknown>;
+  if (typeof source.id !== "string" || !source.id.trim()) return undefined;
   const result: { id: string; grow?: number; shrink?: number; basis?: string } =
     {
-      id: value.id.trim(),
+      id: source.id.trim(),
     };
-  const grow = factor(value.grow);
-  const shrink = factor(value.shrink);
+  const grow = factor(source.grow);
+  const shrink = factor(source.shrink);
   if (grow !== undefined) result.grow = grow;
   if (shrink !== undefined) result.shrink = shrink;
-  if (typeof value.basis === "string" && isFlexBasis(value.basis))
-    result.basis = value.basis.trim();
+  if (typeof source.basis === "string" && isFlexBasis(source.basis))
+    result.basis = source.basis.trim();
   return result;
 };
 
-const normalizedChildren = (
-  children: readonly LayoutChild[] | null | undefined,
-) =>
+const normalizedChildren = (children: unknown) =>
   Array.isArray(children)
     ? children
         .map(child)
@@ -107,7 +107,7 @@ const common = (
 });
 
 export function flex(
-  children: readonly LayoutChild[] = [],
+  children: readonly LayoutChild[],
   options?: FlexOptions,
 ): FlexSpec {
   return Object.freeze({
@@ -123,7 +123,7 @@ export function flex(
 }
 
 export function stack(
-  children: readonly LayoutChild[] = [],
+  children: readonly LayoutChild[],
   options?: Omit<FlexOptions, "direction">,
 ): FlexSpec {
   return Object.freeze({
@@ -143,11 +143,13 @@ const trackList = (value: unknown): string => {
 };
 
 export function grid(
-  children: readonly string[] = [],
+  children: readonly string[],
   options?: GridOptions,
 ): GridSpec {
   const values = Array.isArray(children)
-    ? children.filter((value): value is string => typeof value === "string")
+    ? (children as readonly unknown[]).filter(
+        (value): value is string => typeof value === "string",
+      )
     : [];
   return Object.freeze({
     kind: "grid",
@@ -165,7 +167,7 @@ export function grid(
 }
 
 export function scrollArea(
-  content = "",
+  content: string,
   options?: ScrollAreaOptions,
 ): ScrollAreaSpec {
   return Object.freeze({
@@ -177,12 +179,12 @@ export function scrollArea(
   });
 }
 
-export function separator(options?: SeparatorOptions): SeparatorSpec {
+export function separator(options: SeparatorOptions): SeparatorSpec {
+  const input = options as SeparatorOptions | undefined;
   const result: { -readonly [K in keyof SeparatorSpec]: SeparatorSpec[K] } = {
     kind: "separator",
-    orientation:
-      options?.orientation === "vertical" ? "vertical" : "horizontal",
+    orientation: input?.orientation === "vertical" ? "vertical" : "horizontal",
   };
-  if (options?.role === "separator") result.role = "separator";
+  if (input?.role === "separator") result.role = "separator";
   return Object.freeze(result);
 }
