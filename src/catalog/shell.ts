@@ -144,7 +144,9 @@ export function mountCatalog(
         `${options.base === "/" ? "" : options.base.slice(0, -1)}${current}`,
       );
   };
-  update(input.initialPath);
+  update(
+    input.initialPath ?? target.ownerDocument.defaultView?.location.pathname,
+  );
   const onPopState = (): void => {
     update(target.ownerDocument.defaultView?.location.pathname);
   };
