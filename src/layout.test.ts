@@ -19,6 +19,12 @@ describe("standard layout descriptors", () => {
     expect(grid([], { columns: "minmax(0, 1fr) 2fr" }).columns).toBe(
       "minmax(0, 1fr) 2fr",
     );
+    expect(
+      grid([], { columns: "repeat(auto-fit, minmax(12rem, 1fr))" }).columns,
+    ).toBe("repeat(auto-fit, minmax(12rem, 1fr))");
+    expect(flex([{ id: "body", basis: "1fr" }]).children).toEqual([
+      { id: "body" },
+    ]);
   });
 
   it("normalizes malformed values to small defaults", () => {

@@ -120,7 +120,8 @@ function renderFlex(
   target.style.display = "flex";
   target.style.flexDirection = spec.direction;
   target.style.flexWrap = spec.wrap;
-  target.style.gap = spec.gap;
+  target.style.removeProperty("gap");
+  target.style.setProperty("--ikasue-layout-gap", spec.gap);
   target.style.alignItems = align(spec.align);
   target.style.justifyContent = justify(spec.justify);
   spec.children.forEach((child, index) => {
@@ -150,9 +151,12 @@ function renderGrid(
   target.className = "ikasue-grid";
   target.dataset.kind = spec.kind;
   target.style.display = "grid";
-  target.style.gridTemplateColumns = spec.columns;
-  target.style.gridTemplateRows = spec.rows;
-  target.style.gap = spec.gap;
+  target.style.removeProperty("grid-template-columns");
+  target.style.removeProperty("grid-template-rows");
+  target.style.removeProperty("gap");
+  target.style.setProperty("--ikasue-grid-columns", spec.columns);
+  target.style.setProperty("--ikasue-grid-rows", spec.rows);
+  target.style.setProperty("--ikasue-layout-gap", spec.gap);
   target.style.alignItems = align(spec.align);
   target.style.justifyItems = justify(spec.justify);
   spec.children.forEach((child, index) => {
@@ -267,6 +271,15 @@ function renderDataGrid(
   let operation = 0;
   const keyFor = (row: string, column: string): string =>
     `${row}\u0000${column}`;
+  const cancelEdit = (): void => {
+    if (!editing) return;
+    const node = cellNodes.get(editing.key);
+    if (node) {
+      node.textContent = editing.original;
+      node.contentEditable = "false";
+    }
+    editing = undefined;
+  };
   const validSelection = (
     value: { readonly row: string; readonly column: string } | undefined,
   ): value is { readonly row: string; readonly column: string } =>
@@ -283,7 +296,7 @@ function renderDataGrid(
       selected.row !== value.row ||
       selected.column !== value.column;
     selected = value;
-    editing = undefined;
+    cancelEdit();
     operation += 1;
     cellNodes.forEach((node, key) => {
       node.dataset.selected = String(key === keyFor(value.row, value.column));
@@ -298,6 +311,7 @@ function renderDataGrid(
   };
   const beginEdit = (node: HTMLElement, row: string, column: string): void => {
     const key = keyFor(row, column);
+    if (editing?.key !== key) cancelEdit();
     const cell =
       cells.get(key) ?? ({ row, column, value: "", status: "clean" } as const);
     cells.set(key, cell);
@@ -531,6 +545,9 @@ function renderSplitView(
   controls.className = "ikasue-split-controls";
   let activePane = spec.activePane;
   let sizes = [...spec.sizes];
+  let responsiveColumn = false;
+  const layoutOrientation = (): "horizontal" | "vertical" =>
+    responsiveColumn ? "vertical" : spec.orientation;
   const collapsed = { ...spec.collapsed };
   const paneNodes = new Map<string, HTMLElement>();
   const applyTrack = (node: HTMLElement, track: string): void => {
@@ -555,14 +572,36 @@ function renderSplitView(
     applyTrack(node, sizes[index] ?? pane.basis ?? "1fr");
     if (pane.grow !== undefined) node.style.flexGrow = String(pane.grow);
     if (pane.shrink !== undefined) node.style.flexShrink = String(pane.shrink);
+    node.style.minWidth = "";
+    node.style.minHeight = "";
     if (pane.minSize) {
       setStyle(
         node,
-        spec.orientation === "horizontal" ? "min-width" : "min-height",
+        layoutOrientation() === "horizontal" ? "min-width" : "min-height",
         pane.minSize,
       );
       node.style.setProperty("--ikasue-pane-min-size", pane.minSize);
     }
+  };
+  target.dataset.responsiveOrientation = layoutOrientation();
+  const updateResponsive = (): void => {
+    const container = target.parentElement ?? target;
+    const width = container.getBoundingClientRect().width;
+    if (!Number.isFinite(width) || width <= 0) return;
+    const next = spec.orientation === "horizontal" && width <= 600;
+    if (next === responsiveColumn) return;
+    responsiveColumn = next;
+    target.dataset.responsiveOrientation = layoutOrientation();
+    spec.panes.forEach((pane, index) => {
+      const node = paneNodes.get(pane.id);
+      if (node && collapsed[pane.id] !== true)
+        applyPaneStyle(pane, index, node);
+    });
+    target
+      .querySelectorAll<HTMLElement>("[data-pane-divider]")
+      .forEach((divider) => {
+        divider.setAttribute("aria-orientation", layoutOrientation());
+      });
   };
   const setCollapsed = (pane: HTMLElement, value: boolean): void => {
     pane.dataset.collapsed = String(value);
@@ -613,7 +652,7 @@ function renderSplitView(
     if (value.endsWith("px"))
       return Number.isFinite(pixels) && pixels >= 0 ? pixels : 0;
     const property =
-      spec.orientation === "horizontal" ? "min-width" : "min-height";
+      layoutOrientation() === "horizontal" ? "min-width" : "min-height";
     const computed = document.defaultView?.getComputedStyle(node);
     const computedValue = computed?.getPropertyValue(property) ?? "";
     const resolved = Number.parseFloat(computedValue);
@@ -642,7 +681,7 @@ function renderSplitView(
     return 0;
   };
   const mainPixels = (rect: DOMRect): number =>
-    spec.orientation === "horizontal" ? rect.width : rect.height;
+    layoutOrientation() === "horizontal" ? rect.width : rect.height;
   const resizePair = (
     firstIndex: number,
     secondIndex: number,
@@ -734,7 +773,7 @@ function renderSplitView(
       const divider = element(document, "div");
       divider.dataset.paneDivider = `${pane.id}:${nextPane?.id ?? ""}`;
       divider.setAttribute("role", "separator");
-      divider.setAttribute("aria-orientation", spec.orientation);
+      divider.setAttribute("aria-orientation", layoutOrientation());
       divider.tabIndex = 0;
       const canResize =
         !pane.disabled && nextPane !== undefined && !nextPane.disabled;
@@ -749,7 +788,7 @@ function renderSplitView(
         | undefined;
       let token = 0;
       const coordinate = (event: PointerEvent): number =>
-        spec.orientation === "horizontal" ? event.clientX : event.clientY;
+        layoutOrientation() === "horizontal" ? event.clientX : event.clientY;
       divider.addEventListener("pointerdown", (event) => {
         if (!canResize) return;
         const firstRect = paneNode.getBoundingClientRect();
@@ -820,9 +859,9 @@ function renderSplitView(
       });
       divider.addEventListener("keydown", (event) => {
         const negative =
-          spec.orientation === "horizontal" ? "ArrowLeft" : "ArrowUp";
+          layoutOrientation() === "horizontal" ? "ArrowLeft" : "ArrowUp";
         const positive =
-          spec.orientation === "horizontal" ? "ArrowRight" : "ArrowDown";
+          layoutOrientation() === "horizontal" ? "ArrowRight" : "ArrowDown";
         if (!canResize || (event.key !== negative && event.key !== positive))
           return;
         const secondNode = paneNodes.get(nextPane.id);
@@ -840,6 +879,10 @@ function renderSplitView(
     }
   });
   target.prepend(controls);
+  updateResponsive();
+  const observed = target.parentElement ?? target;
+  if (typeof ResizeObserver !== "undefined")
+    new ResizeObserver(updateResponsive).observe(observed);
 }
 
 function renderField(

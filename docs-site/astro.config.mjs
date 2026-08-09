@@ -85,6 +85,48 @@ export default defineConfig({
           ],
         },
         {
+          label: "Guides",
+          translations: { ja: "ガイド" },
+          items: [
+            {
+              label: "Behavioral Contracts",
+              translations: { ja: "振る舞いの契約" },
+              link: "guides/behavioral-contracts/",
+            },
+            {
+              label: "Usage",
+              translations: { ja: "使い方" },
+              link: "guides/usage/",
+            },
+            {
+              label: "Integration",
+              translations: { ja: "統合" },
+              link: "guides/integration/",
+            },
+            {
+              label: "Accessibility",
+              translations: { ja: "アクセシビリティ" },
+              link: "guides/accessibility/",
+            },
+            {
+              label: "Release",
+              translations: { ja: "リリース" },
+              link: "guides/release/",
+            },
+          ],
+        },
+        {
+          label: "Examples",
+          translations: { ja: "例" },
+          items: [
+            {
+              label: "Composition examples",
+              translations: { ja: "構成例" },
+              link: "examples/",
+            },
+          ],
+        },
+        {
           label: "Component inventory",
           translations: { ja: "一覧" },
           items: componentItems,

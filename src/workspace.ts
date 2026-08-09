@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 
-import { isFlexBasis, isMinSize } from "./layout";
+import { isMinSize, isSplitBasis } from "./layout";
 import type {
   BottomPanelOptions,
   BottomPanelSpec,
@@ -35,11 +35,11 @@ const validPane = (value: unknown): SplitPane | undefined => {
     content: pane.content,
   };
   if (typeof pane.label === "string") result.label = pane.label.trim();
-  if (typeof pane.size === "string" && isFlexBasis(pane.size))
+  if (typeof pane.size === "string" && isSplitBasis(pane.size))
     result.size = pane.size.trim();
   if (typeof pane.minSize === "string" && isMinSize(pane.minSize))
     result.minSize = pane.minSize.trim();
-  if (typeof pane.basis === "string" && isFlexBasis(pane.basis))
+  if (typeof pane.basis === "string" && isSplitBasis(pane.basis))
     result.basis = pane.basis.trim();
   if (
     typeof pane.grow === "number" &&
@@ -75,7 +75,7 @@ const sizes = (
   if (
     Array.isArray(requested) &&
     requested.length === panes.length &&
-    requested.every(isFlexBasis)
+    requested.every(isSplitBasis)
   )
     return requested.map((value) => value.trim());
   return panes.map((pane) => pane.size ?? pane.basis ?? "1fr");
@@ -137,7 +137,7 @@ export function createSplitViewState(
   const initialSizes =
     Array.isArray(initial?.sizes) &&
     initial.sizes.length === paneIds.length &&
-    initial.sizes.every(isFlexBasis)
+    initial.sizes.every(isSplitBasis)
       ? initial.sizes.map((value) => value.trim())
       : normalized.map((pane) => pane.size ?? pane.basis ?? "1fr");
   const activePane =
@@ -205,7 +205,7 @@ export function setPaneSizes(
     !Array.isArray(value) ||
     value.length !==
       (metaByState.get(state)?.paneIds.length ?? state.sizes.length) ||
-    !value.every(isFlexBasis) ||
+    !value.every(isSplitBasis) ||
     value.every((item, i) => same(item, state.sizes[i]))
   )
     return state;
