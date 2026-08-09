@@ -1,5 +1,9 @@
-import { CATALOG_REGISTRY, isCatalogPageId } from "./registry";
-import { parseComponentSelection } from "./state";
+import {
+  CATALOG_COMPONENTS,
+  CATALOG_REGISTRY,
+  isCatalogPageId,
+} from "./registry";
+import { parseComponentSelection, serializeComponentSelection } from "./state";
 import { clear, element, type Cleanup } from "./dom";
 import { normalizeBase, routesForBase } from "./routes";
 import { createDomAllocator, renderCatalogComponent } from "./renderer";
@@ -114,6 +118,26 @@ function render(
       element(document, "p", entry.summary[options.locale]),
     );
     page.dataset.page = entry.id;
+    if (entry.id === "components") {
+      const list = element(document, "ul");
+      list.setAttribute(
+        "aria-label",
+        options.locale === "en" ? "Components" : "コンポーネント",
+      );
+      CATALOG_COMPONENTS.forEach((component) => {
+        if (component.kind !== "component") return;
+        const item = element(document, "li");
+        const link = element(document, "a", component.title[options.locale]);
+        link.href = serializeComponentSelection(
+          component.id,
+          options.base,
+          options.locale,
+        );
+        item.append(link);
+        list.append(item);
+      });
+      page.append(list);
+    }
     main.append(page);
   }
   target.append(main);

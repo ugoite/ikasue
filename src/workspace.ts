@@ -103,11 +103,13 @@ export function splitView(
     normalized.some((pane) => pane.id === input.activePane && !pane.disabled)
       ? input.activePane
       : undefined;
+  const collapsible = input?.collapsible === true;
   const collapsed = booleanMap();
   normalized.forEach((pane) => {
     collapsed[pane.id] = pane.disabled
       ? false
-      : pane.collapsible === true &&
+      : collapsible &&
+        pane.collapsible === true &&
         explicitlyCollapsed(input?.collapsed, pane.id);
   });
   const motionOrigin =
@@ -124,7 +126,7 @@ export function splitView(
     orientation,
     panes: normalized,
     sizes: sizes(normalized, input?.sizes),
-    collapsible: Boolean(input?.collapsible),
+    collapsible,
     collapsed,
     motionOrigin,
   };

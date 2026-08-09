@@ -71,6 +71,16 @@ describe("workspace state", () => {
     });
   });
 
+  it("does not hide panes when the SplitView is not collapsible", () => {
+    const spec = splitView(
+      [{ id: "detail", content: "detail", collapsible: true }],
+      { orientation: "horizontal", collapsed: { detail: true } },
+    );
+
+    expect(spec.collapsible).toBe(false);
+    expect(spec.collapsed.detail).toBe(false);
+  });
+
   it("updates a state restored without allocator metadata", () => {
     const restored = {
       sizes: ["1fr", "1fr"],
