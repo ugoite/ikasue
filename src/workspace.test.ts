@@ -79,4 +79,15 @@ describe("workspace state", () => {
     expect(setActivePane(restored, "detail").activePane).toBe("detail");
     expect(setPaneCollapsed(restored, "list", true).collapsed.list).toBe(true);
   });
+
+  it("treats reserved object names as ordinary pane IDs", () => {
+    const state = createSplitViewState([
+      { id: "__proto__", content: "content", collapsible: true },
+    ]);
+
+    expect(state.collapsed["__proto__"]).toBe(false);
+    expect(
+      setPaneCollapsed(state, "__proto__", true).collapsed["__proto__"],
+    ).toBe(true);
+  });
 });

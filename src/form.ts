@@ -45,21 +45,33 @@ const statusFor = (state: FormState): FormStateStatus =>
   )
     ? "dirty"
     : "clean";
+const mutableClone = (
+  value: Readonly<Record<string, string>>,
+): Record<string, string> =>
+  Object.assign(Object.create(null) as Record<string, string>, value);
 const clone = (value: Readonly<Record<string, string>>) =>
-  Object.freeze({ ...value });
+  Object.freeze(mutableClone(value));
 const without = (
   value: Readonly<Record<string, string>>,
   id: string,
 ): Record<string, string> =>
-  Object.fromEntries(Object.entries(value).filter(([key]) => key !== id));
+  mutableClone(
+    Object.fromEntries(Object.entries(value).filter(([key]) => key !== id)),
+  );
 
 export function createFormState(
   fields: readonly FormField[],
   initial?: Readonly<Record<string, string>>,
 ): FormState {
   const normalized = validFields(fields);
-  const initialValues: Record<string, string> = {};
-  const values: Record<string, string> = {};
+  const initialValues: Record<string, string> = Object.create(null) as Record<
+    string,
+    string
+  >;
+  const values: Record<string, string> = Object.create(null) as Record<
+    string,
+    string
+  >;
   for (const field of normalized) {
     const provided = initial?.[field.id];
     const value =
@@ -71,9 +83,9 @@ export function createFormState(
     fields: Object.freeze(normalized),
     initialValues: clone(initialValues),
     values: clone(values),
-    drafts: Object.freeze({}),
+    drafts: clone({}),
     status: "idle" as const,
-    errors: Object.freeze({}),
+    errors: clone({}),
   });
 }
 export function getFormField(
@@ -88,7 +100,7 @@ export function setFormDraft(
   value: string,
 ): FormState {
   if (!getFormField(state, id) || typeof value !== "string") return state;
-  let drafts = { ...state.drafts };
+  let drafts = mutableClone(state.drafts);
   if (value === state.values[id]) drafts = without(drafts, id);
   else drafts[id] = value;
   if (mapEqual(drafts, state.drafts)) return state;
@@ -105,7 +117,7 @@ export function setFormErrors(
   errors: Readonly<Record<string, string>>,
 ): FormState {
   const ids = new Set(state.fields.map((field) => field.id));
-  const filtered: Record<string, string> = {};
+  const filtered: Record<string, string> = mutableClone({});
   for (const [id, value] of Object.entries(record(errors) ?? {}))
     if ((id === "form" || ids.has(id)) && typeof value === "string" && value)
       filtered[id] = value;
@@ -138,8 +150,8 @@ export function commitFormFields(
   values: Readonly<Record<string, string>>,
 ): FormState {
   const ids = new Set(state.fields.map((field) => field.id));
-  const nextValues = { ...state.values };
-  let drafts = { ...state.drafts };
+  const nextValues = mutableClone(state.values);
+  let drafts = mutableClone(state.drafts);
   let changed = false;
   for (const [id, value] of Object.entries(record(values) ?? {})) {
     if (!ids.has(id) || typeof value !== "string") continue;

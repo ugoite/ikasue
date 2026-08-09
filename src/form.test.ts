@@ -55,4 +55,19 @@ describe("form state", () => {
     expect(errored.errors).toEqual({ name: "Invalid" });
     expect(setFormErrors(errored, {}).status).toBe("clean");
   });
+
+  it("treats reserved object names as ordinary field IDs", () => {
+    const state = createFormState([
+      { id: "__proto__", label: "Prototype", initialValue: "A" },
+    ]);
+    const draft = setFormDraft(state, "__proto__", "B");
+    const errored = setFormErrors(
+      draft,
+      Object.fromEntries([["__proto__", "Invalid"]]),
+    );
+
+    expect(state.values["__proto__"]).toBe("A");
+    expect(draft.drafts["__proto__"]).toBe("B");
+    expect(errored.errors["__proto__"]).toBe("Invalid");
+  });
 });

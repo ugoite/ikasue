@@ -307,7 +307,9 @@ function renderDataGrid(
     cancelEdit();
     operation += 1;
     cellNodes.forEach((node, key) => {
-      node.dataset.selected = String(key === keyFor(value.row, value.column));
+      const isSelected = key === keyFor(value.row, value.column);
+      node.dataset.selected = String(isSelected);
+      node.setAttribute("aria-selected", String(isSelected));
     });
     if (changed && typeof spec.onSelect === "function") {
       try {
@@ -379,6 +381,10 @@ function renderDataGrid(
       cellNode.setAttribute("role", "gridcell");
       cellNode.setAttribute("aria-rowindex", String(rowNumber + 2));
       cellNode.setAttribute("aria-colindex", String(columnNumber + 1));
+      cellNode.setAttribute(
+        "aria-selected",
+        String(selected?.row === row.id && selected.column === column.id),
+      );
       const headerId = columnIds.get(column.id);
       cellNode.setAttribute(
         "aria-labelledby",
@@ -566,7 +572,10 @@ function renderSplitView(
   let responsiveColumn = false;
   const layoutOrientation = (): "horizontal" | "vertical" =>
     responsiveColumn ? "vertical" : spec.orientation;
-  const collapsed = { ...spec.collapsed };
+  const collapsed = Object.assign(
+    Object.create(null) as Record<string, boolean>,
+    spec.collapsed,
+  );
   const paneNodes = new Map<string, HTMLElement>();
   const collapseButtons = new Map<string, HTMLButtonElement>();
   const applyTrack = (node: HTMLElement, track: string): void => {
@@ -805,15 +814,15 @@ function renderSplitView(
     target.append(paneNode);
     if (index < spec.panes.length - 1) {
       const nextPane = spec.panes[index + 1];
+      if (!nextPane) return;
       const divider = element(document, "div");
-      divider.dataset.paneDivider = `${pane.id}:${nextPane?.id ?? ""}`;
+      divider.dataset.paneDivider = `${pane.id}:${nextPane.id}`;
       divider.setAttribute("role", "separator");
       divider.setAttribute("aria-orientation", layoutOrientation());
       divider.tabIndex = 0;
-      const canResize =
+      const canResize = (): boolean =>
         !pane.disabled &&
         collapsed[pane.id] !== true &&
-        nextPane !== undefined &&
         !nextPane.disabled &&
         collapsed[nextPane.id] !== true;
       let pointer:
@@ -829,7 +838,7 @@ function renderSplitView(
       const coordinate = (event: PointerEvent): number =>
         layoutOrientation() === "horizontal" ? event.clientX : event.clientY;
       divider.addEventListener("pointerdown", (event) => {
-        if (!canResize) return;
+        if (!canResize()) return;
         const firstRect = paneNode.getBoundingClientRect();
         const secondNode = paneNodes.get(nextPane.id);
         const secondRect = secondNode?.getBoundingClientRect();
@@ -901,7 +910,7 @@ function renderSplitView(
           layoutOrientation() === "horizontal" ? "ArrowLeft" : "ArrowUp";
         const positive =
           layoutOrientation() === "horizontal" ? "ArrowRight" : "ArrowDown";
-        if (!canResize || (event.key !== negative && event.key !== positive))
+        if (!canResize() || (event.key !== negative && event.key !== positive))
           return;
         const secondNode = paneNodes.get(nextPane.id);
         if (!secondNode) return;
