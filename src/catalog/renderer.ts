@@ -420,6 +420,7 @@ function renderDataGrid(
           beginEdit(cellNode, row.id, column.id);
           return;
         }
+        if (editing?.key === key) return;
         if (
           ![
             "ArrowUp",
@@ -715,7 +716,15 @@ function renderSplitView(
   ): void => {
     const first = spec.panes[firstIndex];
     const second = spec.panes[secondIndex];
-    if (!first || !second || first.disabled || second.disabled) return;
+    if (
+      !first ||
+      !second ||
+      first.disabled ||
+      second.disabled ||
+      collapsed[first.id] === true ||
+      collapsed[second.id] === true
+    )
+      return;
     const firstNode = paneNodes.get(first.id);
     const secondNode = paneNodes.get(second.id);
     if (!firstNode || !secondNode) return;
@@ -773,7 +782,7 @@ function renderSplitView(
     const label = element(document, "h3", pane.label ?? pane.id);
     label.id = labelId;
     paneNode.append(label, element(document, "p", pane.content));
-    if (pane.collapsible && !pane.disabled) {
+    if (spec.collapsible && pane.collapsible && !pane.disabled) {
       const collapse = element(document, "button", "Collapse");
       collapse.type = "button";
       collapse.dataset.paneCollapse = pane.id;
@@ -802,7 +811,11 @@ function renderSplitView(
       divider.setAttribute("aria-orientation", layoutOrientation());
       divider.tabIndex = 0;
       const canResize =
-        !pane.disabled && nextPane !== undefined && !nextPane.disabled;
+        !pane.disabled &&
+        collapsed[pane.id] !== true &&
+        nextPane !== undefined &&
+        !nextPane.disabled &&
+        collapsed[nextPane.id] !== true;
       let pointer:
         | {
             readonly id: number;
