@@ -33,12 +33,13 @@ const justifies: readonly FlexJustify[] = [
 ];
 const number = "(?:0|[0-9]+(?:\\.[0-9]+)?)";
 const length = new RegExp(`^(?:0|${number}(?:px|rem|em|ch|vw|vh|%))$`);
-const flexBasis = new RegExp(
-  `^(?:auto|0|${number}(?:px|rem|em|ch|vw|vh|%|fr))$`,
-);
-const trackUnit = `(?:auto|none|0|${number}(?:px|rem|em|ch|vw|vh|%|fr))`;
+const flexBasis = new RegExp(`^(?:auto|0|${number}(?:px|rem|em|ch|vw|vh|%))$`);
+const splitBasis = new RegExp(`^(?:auto|0|${number}(?:px|rem|em|ch|vw|%|fr))$`);
+const trackAtom = `(?:auto|none|0|${number}(?:px|rem|em|ch|vw|vh|%|fr))`;
+const trackMinMax = `minmax\\(${trackAtom}\\s*,\\s*${trackAtom}\\)`;
+const trackRepeat = `repeat\\((?:[1-9][0-9]*|auto-fit|auto-fill)\\s*,\\s*(?:${trackAtom}|${trackMinMax})\\)`;
 const track = new RegExp(
-  `^(?:${trackUnit}|minmax\\(${trackUnit}\\s*,\\s*${trackUnit}\\)|repeat\\([1-9][0-9]*\\s*,\\s*${trackUnit}\\)|fit-content\\((?:0|${number}(?:px|rem|em|ch|vw|vh|%))\\))$`,
+  `^(?:${trackAtom}|${trackMinMax}|${trackRepeat}|fit-content\\((?:0|${number}(?:px|rem|em|ch|vw|%))\\))$`,
 );
 const gap = (value: unknown): string => {
   if (typeof value !== "string") return "0";
@@ -56,6 +57,9 @@ export const isTrack = (value: unknown): value is string =>
 
 export const isFlexBasis = (value: unknown): value is string =>
   typeof value === "string" && flexBasis.test(value.trim());
+
+export const isSplitBasis = (value: unknown): value is string =>
+  typeof value === "string" && splitBasis.test(value.trim());
 
 export const isMinSize = (value: unknown): value is string =>
   typeof value === "string" && length.test(value.trim());

@@ -40,6 +40,15 @@ describe("workspace state", () => {
     expect(setActivePane(state, "missing")).toBe(state);
   });
 
+  it("keeps fractional tracks in SplitView without accepting them as flex bases", () => {
+    expect(splitView(panes, { orientation: "horizontal" }).sizes).toEqual([
+      "1fr",
+      "2fr",
+    ]);
+    const updated = setPaneSizes(createSplitViewState(panes), ["1fr", "2fr"]);
+    expect(updated.sizes).toEqual(["1fr", "2fr"]);
+  });
+
   it("keeps disabled panes mounted but rejects their state transitions", () => {
     const state = createSplitViewState([
       { id: "disabled", content: "hidden", disabled: true },
