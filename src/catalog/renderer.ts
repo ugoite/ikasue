@@ -992,7 +992,7 @@ function renderComponentDemo(
     }
     case "separator": {
       const spec = separator({ orientation: "horizontal", role: "separator" });
-      const node = element(document, "div");
+      const node = element(document, "div", "ikasue-separator");
       node.setAttribute("role", spec.role ?? "separator");
       node.dataset.orientation = spec.orientation;
       target.append(node);

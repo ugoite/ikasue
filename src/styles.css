@@ -40,6 +40,18 @@ body {
   min-width: 0;
   min-height: 0;
 }
+.ikasue-separator {
+  flex: 0 0 auto;
+  background: var(--ikasue-line);
+}
+.ikasue-separator[data-orientation="horizontal"] {
+  inline-size: 100%;
+  block-size: 1px;
+}
+.ikasue-separator[data-orientation="vertical"] {
+  inline-size: 1px;
+  block-size: 100%;
+}
 .ikasue-split-view {
   display: flex;
   flex-direction: row;

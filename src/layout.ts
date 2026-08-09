@@ -34,7 +34,9 @@ const justifies: readonly FlexJustify[] = [
 const number = "(?:0|[0-9]+(?:\\.[0-9]+)?)";
 const length = new RegExp(`^(?:0|${number}(?:px|rem|em|ch|vw|vh|%))$`);
 const flexBasis = new RegExp(`^(?:auto|0|${number}(?:px|rem|em|ch|vw|vh|%))$`);
-const splitBasis = new RegExp(`^(?:auto|0|${number}(?:px|rem|em|ch|vw|%|fr))$`);
+const splitBasis = new RegExp(
+  `^(?:auto|0|${number}(?:px|rem|em|ch|vw|vh|%|fr))$`,
+);
 const trackAtom = `(?:auto|none|0|${number}(?:px|rem|em|ch|vw|vh|%|fr))`;
 const trackMinMax = `minmax\\(${trackAtom}\\s*,\\s*${trackAtom}\\)`;
 const trackRepeat = `repeat\\((?:[1-9][0-9]*|auto-fit|auto-fill)\\s*,\\s*(?:${trackAtom}|${trackMinMax})\\)`;
