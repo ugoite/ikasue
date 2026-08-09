@@ -1,42 +1,8 @@
 ---
+title: Principles
+description: A planar visual and interaction language for standard web layout.
 ---
 
-import Principles from "../../components/Principles.astro";
+# Principles
 
-ikasueは「新しい情報は、同じplaneのどこに入るべきか」という問いから始まります。右側のdetailは右から、下端の判断領域は下から入り、既存の情報は隠されずに再配分されます。edgeはmotionの起点であるだけでなく、情報の所属を示します。
-
-これは装飾を嫌うための規則ではありません。actionと、そのactionを理解するためのevidenceの関係を保つための規則です。
-
-<Principles />
-
-## systemの読み方
-
-### Planeは共有された作業面
-
-componentをZ軸へ重ねる代わりに、planeの中で順序と面積を調整します。開発者は`PlaneSpec`のaxis、fit、gap、focus、navigation、childrenを宣言し、`resolvePlane`は各childのoffset、size、line、stateとnavigation boundsを返します。
-
-### Axisは一度に一つ
-
-`vertical`と`horizontal`は子の順序を公開する小さなprimitiveです。収まる間は順序を保ち、必要になったときだけ`elastic`、`wrap`、`focus`、`navigation`の契約へ適応します。狭いplaneではfocus中のchildを読みやすく残し、他のchildはcollapsed stateとしてrailから選べます。layout ownerはchildの内容を所有しませんが、planeのfocus/navigationを解決します。
-
-### fitは実演でも明示する
-
-component pageのfit tabsでは`elastic`と`wrap`を明示的に選びます。`elastic`はfocus中のchildへ面積を優先し、収まらないときは他のchildをcollapsedにして一つのplaneを保ちます。`wrap`はbasisを保ったまま、verticalなら横方向、horizontalなら下方向へlineを増やします。実演のrailにはprevious/nextとregion selectionを置き、collapsed itemも順序を失わず選べるようにします。各要素には`size`、`offset`、`line`、stateと、全体のresolved resultを表示します。
-
-### 情報が先、編集が後
-
-`Text`は読む状態が標準です。editable capabilityを追加したときだけeditorを出し、確定値とdraftを区別します。`FormList`ではvaluesとstatusをFormListが所有し、childのfocus/draftは元データをrecolorしません。
-
-### Selectionは面積を持つ
-
-選択は薄いunderlineや濃いborderだけではなく、静かな面積として示します。状態色は意味のあるstatusだけに使い、黒は構造に使います。
-
-### Card taxonomyを作らない
-
-分類のために箱を増やしません。余白、順序、`Rule`、semantic headingで意味を分けます。新しい領域は既存のevidenceを覆わずに、所属するedgeから同じplaneへ入ります。
-
-## 設計レビューの問い
-
-- 判断の根拠を、現在のworkspaceの中で読み続けられるか。
-- 新しい情報は所属するedgeから入り、既存の内容に場所を譲っているか。
-- keyboard、text zoom、narrow width、reduced motionでも同じ関係が理解できるか。
+Standard web layout owns geometry. ikasue keeps information readable, gives selected work area, and keeps motion aligned with the direction of appearance.

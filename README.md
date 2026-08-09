@@ -1,35 +1,24 @@
 # ikasue
 
-Planar adaptive UI components for information-dense workspaces.
+ikasue is a small standard-web component library for information-dense workspaces.
 
-This repository contains the distributable `@ugoite/ikasue` package and a Starlight documentation site with page-local interactive component demos. The visual direction is intentionally flat: regions negotiate space on one plane, and additions push existing content instead of floating above it.
-
-- [Documentation source](docs-site/src/content/docs/overview.md)
-- [Component matrix](docs-site/src/content/docs/components/index.mdx)
-- Standalone interactive runtime surface (`npm run catalog`)
+The public API uses familiar Flex, Stack, Grid, ScrollArea, Tabs, Sidebar, Toolbar, native inputs, DataGrid, Dialog, and a small set of workspace patterns. CSS and the browser own layout geometry. TypeScript owns explicit state and interaction.
 
 ## Development
 
 ```sh
-mise run setup
-mise run dev
-mise run check
-npm run docs:dev
+npm install
+npm run check
+npm run build
+npm run docs:check
+npm run docs:build
 ```
 
-The standalone runtime surface is served by `npm run catalog`. GitHub Pages serves one component page per component, with its explanation and matching interactive demo in the same `/components/<id>/` page; all docs links follow Astro’s configured base path.
-
-Useful documentation commands are `npm run docs:build` and `npm run docs:check`. From a clean checkout, install both lockfiles with `npm install` and `npm --prefix docs-site install`. Component links point to the component pages that own their demos, while `npm run catalog` keeps the standalone Vite runtime surface working locally.
-
-The English docs locale is manually authored and kept in sync with the root locale by `npm run docs:sync`. Do not use external machine-translation services when adding or updating documentation.
+The docs site is an Astro + Starlight site with manually mirrored Japanese and English pages. The visual language stays flat, readable during work, directional, and keyboard-first. Selected work receives area; loading keeps its content mounted; panels remain in flow.
 
 ## Publishing
 
-- Documentation is deployed to GitHub Pages by `.github/workflows/pages.yml`.
-- The npm package is published to GitHub Packages by `.github/workflows/package.yml`.
-- The Pages project path is derived from `GITHUB_REPOSITORY`; no repository-specific credential or hard-coded deployment URL is required.
-
-No third-party hosting is configured.
+Documentation is deployed to GitHub Pages and the package is published to GitHub Packages by the existing workflows.
 
 ## License
 

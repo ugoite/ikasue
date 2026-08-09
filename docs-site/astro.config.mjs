@@ -1,162 +1,121 @@
 import starlight from "@astrojs/starlight";
 import { defineConfig } from "astro/config";
 
-const [repositoryOwner, repositoryName] = (
-  process.env.GITHUB_REPOSITORY ?? ""
-).split("/");
-const projectBase = repositoryName ? `/${repositoryName}` : "/";
-const projectSite =
-  repositoryOwner && repositoryName
-    ? `https://${repositoryOwner}.github.io`
-    : "https://ugoite.github.io";
+const repository = process.env.GITHUB_REPOSITORY?.split("/");
+const base =
+  process.env.ASTRO_BASE?.trim() ||
+  (process.env.GITHUB_ACTIONS === "true" && repository?.[1]
+    ? `/${repository[1]}/`
+    : "/");
+const normalizedBase =
+  base === "/" ? "/" : `/${base.replace(/^\/+|\/+$/g, "")}/`;
+
+const components = [
+  "theme-root",
+  "text",
+  "editable-text",
+  "flex",
+  "stack",
+  "grid",
+  "scroll-area",
+  "separator",
+  "tabs",
+  "sidebar",
+  "toolbar",
+  "icon-button",
+  "text-field",
+  "checkbox",
+  "radio-group",
+  "segmented-control",
+  "field",
+  "form",
+  "data-grid",
+  "status-indicator",
+  "alert",
+  "progress",
+  "dialog",
+  "split-view",
+  "side-panel",
+  "bottom-panel",
+  "loading-region",
+  "history-timeline",
+];
+const componentItems = components.map((id) => ({
+  label: id,
+  link: `components/${id}/`,
+}));
 
 export default defineConfig({
-  site: projectSite,
-  base: projectBase,
+  site: "https://ugoite.github.io",
+  base: normalizedBase,
   integrations: [
     starlight({
       title: "ikasue",
       description:
-        "Planar adaptive UI components for information-dense workspaces.",
+        "Standard web components with a planar interaction language.",
       favicon: "favicon.svg",
       locales: {
         root: { label: "日本語", lang: "ja" },
-        en: { label: "English", lang: "en" },
+        en: { label: "English" },
       },
       defaultLocale: "root",
       customCss: ["./src/styles/custom.css"],
-      components: {
-        PageFrame: "./src/components/IkasuePageFrame.astro",
-      },
+      components: { PageFrame: "./src/components/IkasuePageFrame.astro" },
       sidebar: [
         {
-          label: "思想",
-          translations: { en: "Philosophy" },
-          items: [
-            {
-              label: "概要",
-              translations: { en: "Overview" },
-              link: "overview/",
-            },
-            {
-              label: "平面適応UIの思想",
-              translations: { en: "Design philosophy" },
-              link: "philosophy/",
-            },
-            {
-              label: "コンポーネント契約",
-              translations: { en: "Developer model" },
-              link: "components/developer-model/",
-            },
-          ],
+          label: "Getting Started",
+          translations: { ja: "はじめに" },
+          items: [{ label: "Start", translations: { ja: "開始" }, link: "" }],
         },
         {
-          label: "契約",
-          translations: { en: "Contracts" },
+          label: "Layout",
+          translations: { ja: "レイアウト" },
           items: [
             {
-              label: "振る舞いの契約",
-              translations: { en: "Behavioral contracts" },
-              link: "guides/behavioral-contracts/",
-            },
-            {
-              label: "使い方",
-              translations: { en: "Usage" },
-              link: "guides/usage/",
-            },
-            {
-              label: "統合",
-              translations: { en: "Integration" },
-              link: "guides/integration/",
-            },
-            {
-              label: "アクセシビリティ",
-              translations: { en: "Accessibility" },
-              link: "guides/accessibility/",
-            },
-            {
-              label: "リリース",
-              translations: { en: "Release" },
-              link: "guides/release/",
-            },
-          ],
-        },
-        {
-          label: "コンポーネント",
-          translations: { en: "Components" },
-          items: [
-            {
-              label: "コンポーネント一覧",
-              translations: { en: "Component matrix" },
+              label: "Components",
+              translations: { ja: "コンポーネント" },
               link: "components/",
             },
+          ],
+        },
+        {
+          label: "Navigation",
+          translations: { ja: "ナビゲーション" },
+          items: [
             {
-              label: "基盤",
-              translations: { en: "Foundation" },
-              items: [
-                { label: "ThemeRoot", link: "components/theme-root/" },
-                { label: "Text", link: "components/text/" },
-                { label: "Rule", link: "components/rule/" },
-                { label: "StatusIcon", link: "components/status-icon/" },
-              ],
-            },
-            {
-              label: "配置",
-              translations: { en: "Layout" },
-              items: [
-                { label: "Vertical", link: "components/vertical/" },
-                { label: "Horizontal", link: "components/horizontal/" },
-              ],
-            },
-            {
-              label: "操作",
-              translations: { en: "Actions" },
-              items: [
-                { label: "IconAction", link: "components/icon-action/" },
-                { label: "ActionStrip", link: "components/action-strip/" },
-              ],
-            },
-            {
-              label: "情報と入力",
-              translations: { en: "Information & input" },
-              items: [
-                { label: "BooleanText", link: "components/boolean-text/" },
-                { label: "ChoiceGroup", link: "components/choice-group/" },
-                { label: "FormList", link: "components/form-list/" },
-              ],
-            },
-            {
-              label: "データ",
-              translations: { en: "Data" },
-              items: [
-                { label: "DataTable", link: "components/data-table/" },
-                { label: "HistoryGutter", link: "components/history-gutter/" },
-              ],
-            },
-            {
-              label: "フィードバック",
-              translations: { en: "Feedback" },
-              items: [
-                {
-                  label: "ProgressRegion",
-                  link: "components/progress-region/",
-                },
-                { label: "MessageRegion", link: "components/message-region/" },
-                { label: "BottomDialog", link: "components/bottom-dialog/" },
-              ],
+              label: "Tabs and Sidebar",
+              translations: { ja: "TabsとSidebar" },
+              link: "components/tabs/",
             },
           ],
         },
         {
-          label: "例",
-          translations: { en: "Examples" },
+          label: "Workspace",
+          translations: { ja: "Workspace" },
           items: [
+            { label: "SplitView", link: "components/split-view/" },
             {
-              label: "配置の例",
-              translations: { en: "Simple arrangements" },
-              link: "examples/",
+              label: "Panels",
+              translations: { ja: "Panel" },
+              link: "components/bottom-panel/",
             },
           ],
+        },
+        {
+          label: "Principles",
+          translations: { ja: "原則" },
+          items: [
+            {
+              label: "Philosophy",
+              translations: { ja: "思想" },
+              link: "philosophy/",
+            },
+          ],
+        },
+        {
+          label: "Component inventory",
+          translations: { ja: "一覧" },
+          items: componentItems,
         },
       ],
     }),
