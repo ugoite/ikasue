@@ -12,6 +12,7 @@ const validFields = (fields: unknown): FormField[] => {
       typeof field?.id !== "string" ||
       !field.id.trim() ||
       typeof field.label !== "string" ||
+      !field.label.trim() ||
       ids.has(field.id.trim())
     )
       return [];

@@ -158,7 +158,15 @@ function renderGrid(
   target.style.setProperty("--ikasue-grid-rows", spec.rows);
   target.style.setProperty("--ikasue-layout-gap", spec.gap);
   target.style.alignItems = align(spec.align);
-  target.style.justifyItems = justify(spec.justify);
+  target.style.justifyContent = justify(spec.justify);
+  target.style.justifyItems =
+    spec.justify === "start"
+      ? "start"
+      : spec.justify === "end"
+        ? "end"
+        : spec.justify === "center"
+          ? "center"
+          : "stretch";
   spec.children.forEach((child, index) => {
     const node = element(document, "div", child);
     node.id = `ikasue-grid-child-${String(index + 1)}`;
@@ -481,34 +489,19 @@ function renderDataGrid(
     const value = clipboardValue();
     const selection = validSelection(selected) ? selected : undefined;
     if (value === undefined || !selection || !event.clipboardData) return;
-    const token = ++operation;
-    let result: boolean | Promise<boolean> = true;
+    let result: unknown = true;
     try {
       if (spec.onCopy) result = spec.onCopy(selection);
     } catch {
-      result = false;
-    }
-    if (typeof result === "boolean") {
-      if (!result) return;
-      event.preventDefault();
-      try {
-        event.clipboardData.setData("text/plain", value);
-      } catch {
-        return;
-      }
       return;
     }
+    if (result !== true) return;
     event.preventDefault();
-    void Promise.resolve(result)
-      .then((accepted) => {
-        if (token !== operation || !accepted) return;
-        try {
-          event.clipboardData?.setData("text/plain", value);
-        } catch {
-          // A rejected clipboard write leaves the browser clipboard unchanged.
-        }
-      })
-      .catch(() => undefined);
+    try {
+      event.clipboardData.setData("text/plain", value);
+    } catch {
+      return;
+    }
   });
   target.addEventListener("paste", (event) => {
     const selection = validSelection(selected) ? selected : undefined;
@@ -1026,7 +1019,8 @@ function renderComponentDemo(
     }
     case "separator": {
       const spec = separator({ orientation: "horizontal", role: "separator" });
-      const node = element(document, "div", "ikasue-separator");
+      const node = element(document, "div");
+      node.className = "ikasue-separator";
       node.setAttribute("role", spec.role ?? "separator");
       node.dataset.orientation = spec.orientation;
       target.append(node);

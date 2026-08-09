@@ -486,9 +486,7 @@ export interface DataGridState {
 
 type GridColumn = { readonly id: string; readonly label: string };
 type GridRow = { readonly id: string; readonly label?: string };
-type ClipboardHandler = (
-  selection: DataGridSelection,
-) => boolean | Promise<boolean>;
+type ClipboardHandler = (selection: DataGridSelection) => boolean;
 type PasteHandler = (
   selection: DataGridSelection,
   value: string,
