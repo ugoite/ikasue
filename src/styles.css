@@ -33,6 +33,7 @@ body {
 }
 .ikasue-grid {
   display: grid;
+  gap: var(--ikasue-layout-gap, 0);
   grid-template-columns: var(--ikasue-grid-columns, none);
   grid-template-rows: var(--ikasue-grid-rows, none);
 }

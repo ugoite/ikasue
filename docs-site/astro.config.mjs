@@ -3,13 +3,19 @@ import { defineConfig } from "astro/config";
 import routeData from "../scripts/catalog-routes.json" with { type: "json" };
 
 const repository = process.env.GITHUB_REPOSITORY?.split("/");
+const repositoryOwner = repository?.[0];
+const repositoryName = repository?.[1];
 const base =
   process.env.ASTRO_BASE?.trim() ||
-  (process.env.GITHUB_ACTIONS === "true" && repository?.[1]
-    ? `/${repository[1]}/`
+  (process.env.GITHUB_ACTIONS === "true" && repositoryName
+    ? `/${repositoryName}/`
     : "/");
 const normalizedBase =
   base === "/" ? "/" : `/${base.replace(/^\/+|\/+$/g, "")}/`;
+const projectSite =
+  repositoryOwner && repositoryName
+    ? `https://${repositoryOwner}.github.io`
+    : "https://ugoite.github.io";
 
 const components = routeData.componentIds;
 const componentItems = components.map((id) => ({
@@ -18,7 +24,7 @@ const componentItems = components.map((id) => ({
 }));
 
 export default defineConfig({
-  site: "https://ugoite.github.io",
+  site: projectSite,
   base: normalizedBase,
   integrations: [
     starlight({
