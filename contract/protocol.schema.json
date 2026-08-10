@@ -24,25 +24,90 @@
         }
       ]
     },
+    "jsonRecord": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/jsonValue" }
+    },
+    "dataGridRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "cells"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "cells": { "$ref": "#/$defs/jsonRecord" }
+      }
+    },
+    "rowRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "limit"],
+      "properties": {
+        "start": { "type": "integer", "minimum": 0 },
+        "limit": { "type": "integer", "minimum": 1 },
+        "sort": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["column", "direction"],
+            "properties": {
+              "column": { "type": "string", "minLength": 1 },
+              "direction": { "enum": ["asc", "desc"] }
+            }
+          }
+        },
+        "filter": { "type": "string" }
+      }
+    },
+    "rowPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rows"],
+      "properties": {
+        "rows": { "type": "array", "items": { "$ref": "#/$defs/dataGridRow" } },
+        "total": { "type": "integer", "minimum": 0 }
+      }
+    },
     "base": {
       "type": "object",
       "required": ["version"],
       "properties": { "version": { "$ref": "#/$defs/version" } }
     },
     "request": {
-      "allOf": [
-        { "$ref": "#/$defs/base" },
+      "oneOf": [
         {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["version", "type", "id", "operation", "payload"],
-          "properties": {
-            "version": { "$ref": "#/$defs/version" },
-            "type": { "const": "request" },
-            "id": { "type": "integer", "minimum": 1 },
-            "operation": { "enum": ["rows", "update"] },
-            "payload": { "$ref": "#/$defs/jsonValue" }
-          }
+          "allOf": [
+            { "$ref": "#/$defs/base" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["version", "type", "id", "operation", "payload"],
+              "properties": {
+                "version": { "$ref": "#/$defs/version" },
+                "type": { "const": "request" },
+                "id": { "type": "integer", "minimum": 1 },
+                "operation": { "const": "rows" },
+                "payload": { "$ref": "#/$defs/rowRequest" }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            { "$ref": "#/$defs/base" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["version", "type", "id", "operation", "payload"],
+              "properties": {
+                "version": { "$ref": "#/$defs/version" },
+                "type": { "const": "request" },
+                "id": { "type": "integer", "minimum": 1 },
+                "operation": { "const": "update" },
+                "payload": { "$ref": "#/$defs/jsonRecord" }
+              }
+            }
+          ]
         }
       ]
     },
@@ -64,7 +129,12 @@
         "version": { "$ref": "#/$defs/version" },
         "type": { "const": "response" },
         "id": { "type": "integer", "minimum": 1 },
-        "result": { "$ref": "#/$defs/jsonValue" }
+        "result": {
+          "anyOf": [
+            { "$ref": "#/$defs/rowPage" },
+            { "$ref": "#/$defs/jsonRecord" }
+          ]
+        }
       }
     },
     "error": {
@@ -95,7 +165,7 @@
         "version": { "$ref": "#/$defs/version" },
         "type": { "const": "event" },
         "event": { "type": "string", "minLength": 1 },
-        "payload": { "$ref": "#/$defs/jsonValue" }
+        "payload": { "$ref": "#/$defs/jsonRecord" }
       }
     }
   }

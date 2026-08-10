@@ -6,4 +6,4 @@ if (!target) {
   throw new Error("The development shell requires an #app element.");
 }
 
-mountCatalog(target, { label: "ikasue component catalog" });
+mountCatalog(target);

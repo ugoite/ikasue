@@ -18,47 +18,120 @@ export type IkaJsonRecord = { readonly [key: string]: IkaJsonValue };
 export type IkaViewKind =
   | "theme-root"
   | "text"
-  | "rule"
-  | "status-icon"
-  | "vertical"
-  | "horizontal"
-  | "icon-action"
-  | "action-strip"
-  | "boolean-text"
-  | "choice-group"
-  | "form-list"
-  | "data-grid"
-  | "data-table"
-  | "history-gutter"
-  | "history-timeline"
-  | "progress-region"
-  | "message-region"
-  | "bottom-dialog"
+  | "editable-text"
+  | "text-field"
+  | "flex"
+  | "stack"
+  | "grid"
+  | "scroll-area"
+  | "separator"
   | "tabs"
-  | "split-view";
+  | "sidebar"
+  | "toolbar"
+  | "icon-button"
+  | "checkbox"
+  | "radio-group"
+  | "segmented-control"
+  | "field"
+  | "form"
+  | "data-grid"
+  | "history-timeline"
+  | "split-view"
+  | "side-panel"
+  | "bottom-panel"
+  | "loading-region"
+  | "dialog"
+  | "status-indicator"
+  | "alert"
+  | "progress";
 
 export const IKA_VIEW_KINDS: readonly IkaViewKind[] = [
   "theme-root",
   "text",
-  "rule",
-  "status-icon",
-  "vertical",
-  "horizontal",
-  "icon-action",
-  "action-strip",
-  "boolean-text",
-  "choice-group",
-  "form-list",
-  "data-grid",
-  "data-table",
-  "history-gutter",
-  "history-timeline",
-  "progress-region",
-  "message-region",
-  "bottom-dialog",
+  "editable-text",
+  "text-field",
+  "flex",
+  "stack",
+  "grid",
+  "scroll-area",
+  "separator",
   "tabs",
+  "sidebar",
+  "toolbar",
+  "icon-button",
+  "checkbox",
+  "radio-group",
+  "segmented-control",
+  "field",
+  "form",
+  "data-grid",
+  "history-timeline",
   "split-view",
+  "side-panel",
+  "bottom-panel",
+  "loading-region",
+  "dialog",
+  "status-indicator",
+  "alert",
+  "progress",
 ] as const;
+
+const IKA_VIEW_PROPERTY_KEYS = new Set([
+  "tokens",
+  "variant",
+  "content",
+  "density",
+  "tone",
+  "selectable",
+  "id",
+  "value",
+  "disabled",
+  "label",
+  "placeholder",
+  "required",
+  "description",
+  "error",
+  "direction",
+  "wrap",
+  "gap",
+  "align",
+  "justify",
+  "children",
+  "columns",
+  "rows",
+  "axis",
+  "overscroll",
+  "orientation",
+  "role",
+  "items",
+  "activeId",
+  "collapsed",
+  "overflow",
+  "icon",
+  "type",
+  "pressed",
+  "checked",
+  "options",
+  "fields",
+  "values",
+  "status",
+  "selection",
+  "editable",
+  "entries",
+  "panes",
+  "sizes",
+  "collapsible",
+  "motionOrigin",
+  "title",
+  "open",
+  "side",
+  "busy",
+  "message",
+  "severity",
+  "dismissible",
+  "loading",
+  "max",
+]);
 
 export interface IkaView {
   readonly version: typeof IKASUE_ABI_VERSION;
@@ -134,13 +207,61 @@ export interface IkaRowPage {
   readonly total?: number;
 }
 
+export function isIkaRowRequest(value: unknown): value is IkaRowRequest {
+  if (!isIkaJsonRecord(value)) return false;
+  if (!hasOnlyKeys(value, ["start", "limit", "sort", "filter"])) return false;
+  if (
+    typeof value.start !== "number" ||
+    !Number.isInteger(value.start) ||
+    value.start < 0 ||
+    typeof value.limit !== "number" ||
+    !Number.isInteger(value.limit) ||
+    value.limit <= 0
+  )
+    return false;
+  if (value.filter !== undefined && typeof value.filter !== "string")
+    return false;
+  if (value.sort === undefined) return true;
+  return (
+    Array.isArray(value.sort) &&
+    value.sort.every(
+      (item) =>
+        isIkaJsonRecord(item) &&
+        hasOnlyKeys(item, ["column", "direction"]) &&
+        typeof item.column === "string" &&
+        item.column.length > 0 &&
+        (item.direction === "asc" || item.direction === "desc"),
+    )
+  );
+}
+
+export function isIkaRowPage(value: unknown): value is IkaRowPage {
+  if (!isIkaJsonRecord(value) || !hasOnlyKeys(value, ["rows", "total"]))
+    return false;
+  return (
+    Array.isArray(value.rows) &&
+    value.rows.every(isIkaDataGridRow) &&
+    (value.total === undefined ||
+      (typeof value.total === "number" &&
+        Number.isInteger(value.total) &&
+        value.total >= 0))
+  );
+}
+
 export type IkaMessage =
   | {
       readonly version: typeof IKASUE_ABI_VERSION;
       readonly type: "request";
       readonly id: number;
-      readonly operation: "rows" | "update";
-      readonly payload: IkaJsonValue;
+      readonly operation: "rows";
+      readonly payload: IkaRowRequest;
+    }
+  | {
+      readonly version: typeof IKASUE_ABI_VERSION;
+      readonly type: "request";
+      readonly id: number;
+      readonly operation: "update";
+      readonly payload: IkaJsonRecord;
     }
   | {
       readonly version: typeof IKASUE_ABI_VERSION;
@@ -151,7 +272,7 @@ export type IkaMessage =
       readonly version: typeof IKASUE_ABI_VERSION;
       readonly type: "response";
       readonly id: number;
-      readonly result: IkaJsonValue;
+      readonly result: IkaJsonRecord;
     }
   | {
       readonly version: typeof IKASUE_ABI_VERSION;
@@ -163,7 +284,7 @@ export type IkaMessage =
       readonly version: typeof IKASUE_ABI_VERSION;
       readonly type: "event";
       readonly event: string;
-      readonly payload: IkaJsonValue;
+      readonly payload: IkaJsonRecord;
     };
 
 export function isIkaJsonValue(value: unknown): value is IkaJsonValue {
@@ -214,7 +335,12 @@ export function isIkaView(value: unknown): value is IkaView {
   )
     return false;
   if (!(IKA_VIEW_KINDS as readonly string[]).includes(value.kind)) return false;
-  if (value.props !== undefined && !isIkaJsonRecord(value.props)) return false;
+  if (
+    value.props !== undefined &&
+    (!isIkaJsonRecord(value.props) ||
+      Object.keys(value.props).some((key) => !IKA_VIEW_PROPERTY_KEYS.has(key)))
+  )
+    return false;
   if (
     value.children !== undefined &&
     (!Array.isArray(value.children) || !value.children.every(isIkaView))
@@ -267,7 +393,8 @@ export function isIkaMessage(value: unknown): value is IkaMessage {
       Number.isInteger(value.id) &&
       value.id > 0 &&
       (value.operation === "rows" || value.operation === "update") &&
-      isIkaJsonValue(value.payload)
+      ((value.operation === "rows" && isIkaRowRequest(value.payload)) ||
+        (value.operation === "update" && isIkaJsonRecord(value.payload)))
     );
   if (value.type === "cancel")
     return (
@@ -282,7 +409,7 @@ export function isIkaMessage(value: unknown): value is IkaMessage {
       typeof value.id === "number" &&
       Number.isInteger(value.id) &&
       value.id > 0 &&
-      isIkaJsonValue(value.result)
+      isIkaJsonRecord(value.result)
     );
   if (value.type === "error")
     return (
@@ -297,7 +424,7 @@ export function isIkaMessage(value: unknown): value is IkaMessage {
     hasOnlyKeys(value, ["version", "type", "event", "payload"]) &&
     typeof value.event === "string" &&
     value.event.length > 0 &&
-    isIkaJsonValue(value.payload)
+    isIkaJsonRecord(value.payload)
   );
 }
 

@@ -2,11 +2,7 @@
   "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
     "allowJs": true,
-    "baseUrl": ".",
-    "paths": {
-      "@ikasue/catalog": ["../src/catalog/metadata.ts"],
-      "@ikasue/catalog-types": ["../src/catalog/types.ts"]
-    }
+    "baseUrl": "."
   },
   "include": [".astro/types.d.ts", "**/*"],
   "exclude": ["dist"]
