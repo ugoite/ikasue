@@ -82,6 +82,49 @@ import type {
   ResolvedPlaneChild,
   ResolvedPlaneChildState,
 } from "./plane";
+export {
+  defineIkaSue,
+  IKA_ELEMENT_TAGS,
+  IKA_TAG_BY_KIND,
+  IkaDataGridElement,
+  IkaElement,
+  IkaHistoryTimelineElement,
+  IkaSplitViewElement,
+  IkaTabsElement,
+  tagNameForKind,
+} from "./elements";
+export { renderIkaView } from "./view";
+export { IkaSueError } from "./errors";
+export { createDataGridPortModel } from "./transport";
+export {
+  IKASUE_ABI_VERSION,
+  IKA_VIEW_KINDS,
+  isIkaDataGridSelection,
+  isIkaJsonRecord,
+  isIkaJsonValue,
+  isIkaView,
+} from "./contract";
+export type {
+  IkaDataGridColumn,
+  IkaDataGridRow,
+  IkaDataGridSelection,
+  IkaDataGridSpec,
+  IkaSplitViewPane,
+  IkaSplitViewSpec,
+  IkaTabsItem,
+  IkaTabsSpec,
+  IkaError,
+  IkaJsonPrimitive,
+  IkaJsonRecord,
+  IkaJsonValue,
+  IkaMessage,
+  IkaRowPage,
+  IkaRowRequest,
+  IkaView,
+  IkaViewKind,
+} from "./contract";
+export type { IkaDataGridModel, IkaDataGridModelEvent } from "./transport";
+export type { IkaElementTagName, IkaSueRegistry } from "./elements";
 import type {
   EdgeRegion,
   FocusBranch,

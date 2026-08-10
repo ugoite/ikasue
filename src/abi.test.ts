@@ -1,0 +1,162 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+
+import {
+  IKA_ELEMENT_TAGS,
+  IkaDataGridElement,
+  defineIkaSue,
+  tagNameForKind,
+} from "./elements";
+import {
+  IKASUE_ABI_VERSION,
+  isIkaView,
+  isIkaJsonRecord,
+  isIkaJsonValue,
+  type IkaView,
+} from "./contract";
+import { renderIkaView } from "./view";
+
+class RegistryStub {
+  readonly definitions = new Map<string, CustomElementConstructor>();
+
+  define(name: string, constructor: CustomElementConstructor): void {
+    this.definitions.set(name, constructor);
+  }
+
+  get(name: string): CustomElementConstructor | undefined {
+    return this.definitions.get(name);
+  }
+}
+
+interface FakeNode {
+  readonly localName: string;
+  readonly ownerDocument: FakeDocument;
+  readonly creationRegistry?: CustomElementRegistry;
+  readonly attributes: Record<string, string>;
+  readonly children: FakeNode[];
+  props?: unknown;
+  setAttribute(name: string, value: string): void;
+  append(...children: FakeNode[]): void;
+}
+
+interface FakeDocument {
+  readonly defaultView: { readonly customElements: CustomElementRegistry };
+  createElement(name: string, options?: ElementCreationOptions): FakeNode;
+}
+
+function fakeDocument(registry: CustomElementRegistry): FakeDocument {
+  const document: FakeDocument = {
+    defaultView: { customElements: registry },
+    createElement(name, options) {
+      const node: FakeNode = {
+        localName: name,
+        ownerDocument: document,
+        ...(options?.customElementRegistry
+          ? { creationRegistry: options.customElementRegistry }
+          : {}),
+        attributes: {},
+        children: [],
+        setAttribute(attribute, value) {
+          this.attributes[attribute] = value;
+        },
+        append(...children) {
+          this.children.push(...children);
+        },
+      };
+      return node;
+    },
+  };
+  return document;
+}
+
+describe("ikasue Web ABI", () => {
+  it("registers the canonical elements idempotently and rejects conflicts", () => {
+    const stub = new RegistryStub();
+    const registry = stub as unknown as CustomElementRegistry;
+    const first = defineIkaSue(registry);
+    const second = defineIkaSue(registry);
+
+    expect(first.version).toBe(IKASUE_ABI_VERSION);
+    expect(second.tags).toEqual(IKA_ELEMENT_TAGS);
+    expect(stub.definitions.get("ika-data-grid")).toBe(IkaDataGridElement);
+
+    class ConflictConstructor {
+      readonly conflict = true;
+    }
+    stub.definitions.set(
+      "ika-text",
+      ConflictConstructor as unknown as CustomElementConstructor,
+    );
+    expect(() => defineIkaSue(registry)).toThrow("already registered");
+  });
+
+  it("keeps contract values JSON-safe", () => {
+    expect(isIkaJsonValue({ ok: [true, 1, "text", null] })).toBe(true);
+    expect(isIkaJsonRecord({ ok: "yes" })).toBe(true);
+    expect(isIkaJsonValue(Number.NaN)).toBe(false);
+    expect(isIkaJsonValue(new Date())).toBe(false);
+    expect(isIkaJsonValue(() => undefined)).toBe(false);
+    const cyclic: Record<string, unknown> = {};
+    cyclic.self = cyclic;
+    expect(isIkaJsonValue(cyclic)).toBe(false);
+    expect(
+      isIkaView({
+        version: IKASUE_ABI_VERSION,
+        kind: "data-grid",
+        props: { editable: true },
+      }),
+    ).toBe(true);
+    expect(
+      isIkaView({
+        version: IKASUE_ABI_VERSION,
+        kind: "data-grid",
+        props: new Date(),
+      }),
+    ).toBe(false);
+  });
+
+  it("lowers a serializable view to canonical element names", () => {
+    const registry = new RegistryStub() as unknown as CustomElementRegistry;
+    const document = fakeDocument(registry);
+    const root = document.createElement("main");
+    const view: IkaView = {
+      version: IKASUE_ABI_VERSION,
+      kind: "data-table",
+      props: { editable: true, columns: [] },
+      children: [{ version: IKASUE_ABI_VERSION, kind: "text", text: "A row" }],
+    };
+
+    const node = renderIkaView(
+      root as unknown as HTMLElement,
+      view,
+      registry,
+    ) as unknown as FakeNode;
+
+    expect(node.localName).toBe("ika-data-grid");
+    expect(node.attributes.editable).toBe("");
+    expect(node.children[0]?.localName).toBe("ika-text");
+    expect(node.children[0]?.creationRegistry).toBe(registry);
+    expect(tagNameForKind("split-view")).toBe("ika-split-view");
+  });
+
+  it("keeps the schemas parseable and versioned", () => {
+    for (const name of [
+      "common",
+      "data-grid",
+      "tabs",
+      "split-view",
+      "protocol",
+      "view",
+    ]) {
+      const source = readFileSync(
+        new URL(`../contract/${name}.schema.json`, import.meta.url),
+        "utf8",
+      );
+      const schema = JSON.parse(source) as { $schema?: string; $id?: string };
+      expect(schema.$schema).toBe(
+        "https://json-schema.org/draft/2020-12/schema",
+      );
+      expect(schema.$id).toContain("ikasue");
+    }
+  });
+});

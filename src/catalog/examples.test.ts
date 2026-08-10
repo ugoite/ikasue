@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -72,15 +72,7 @@ describe("shared example catalog", () => {
     }
   });
 
-  it("keeps Examples on the shared native plane DOM contract", () => {
-    const demosSource = readFileSync(
-      new URL("./demos.ts", import.meta.url),
-      "utf8",
-    );
-    const exampleRendererSource = readFileSync(
-      new URL("./example-renderer.ts", import.meta.url),
-      "utf8",
-    );
+  it("uses the public element ABI for docs examples", () => {
     const surfaceSource = readFileSync(
       new URL(
         "../../docs-site/src/components/ExampleSurface.astro",
@@ -88,23 +80,14 @@ describe("shared example catalog", () => {
       ),
       "utf8",
     );
-
-    for (const className of [
-      "plane-demo",
-      "plane-viewport",
-      "plane-item",
-      "plane-navigation",
-    ]) {
-      expect(demosSource).toContain(`"${className}"`);
-    }
-    expect(exampleRendererSource).toContain("renderPlaneComposition");
-    expect(exampleRendererSource).toContain("children: plane.regions");
-    expect(exampleRendererSource).toContain("example-${kind}-${plane.id}");
-    expect(exampleRendererSource).not.toContain("example-plane");
-    expect(exampleRendererSource).not.toMatch(/fit[^\n]*scroll/i);
-    expect(surfaceSource).toContain("data-native-plane-mount");
-    expect(surfaceSource).not.toContain("example-plane");
-    expect(surfaceSource).not.toContain("example-region");
+    expect(existsSync(new URL("./example-renderer.ts", import.meta.url))).toBe(
+      false,
+    );
+    expect(surfaceSource).toContain("defineIkaSue");
+    expect(surfaceSource).toContain('"ika-data-grid"');
+    expect(surfaceSource).toContain("set:html");
+    expect(surfaceSource).not.toContain("mountExampleSurfaces");
+    expect(surfaceSource).not.toContain("data-native-plane-mount");
   });
 
   it("keeps the bilingual example key sets aligned", () => {

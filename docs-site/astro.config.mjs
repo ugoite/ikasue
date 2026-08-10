@@ -70,6 +70,11 @@ export default defineConfig({
               link: "guides/integration/",
             },
             {
+              label: "ホスト環境",
+              translations: { en: "Host environments" },
+              link: "guides/hosts/",
+            },
+            {
               label: "アクセシビリティ",
               translations: { en: "Accessibility" },
               link: "guides/accessibility/",

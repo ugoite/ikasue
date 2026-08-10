@@ -13,33 +13,29 @@ npm install @ugoite/ikasue --registry=https://npm.pkg.github.com
 
 認証情報はこのdocsへ書かず、組織が管理するGitHub Packagesの通常の設定を使います。
 
-## mountとplane API
+## Web ABIとplane API
 
 ```js
 import {
   horizontal,
-  mountCatalog,
   resolvePlane,
   vertical,
 } from "@ugoite/ikasue";
+import { defineIkaSue } from "@ugoite/ikasue/elements";
 import "@ugoite/ikasue/style.css";
 
-const target = document.querySelector("#workspace");
-const handle = target
-  ? mountCatalog(target, {
-      label: "Operations workspace",
-      component: "data-table",
-    })
-  : undefined;
+defineIkaSue();
+const grid = document.querySelector<HTMLElement & {
+  rows: readonly { id: string; cells: Record<string, string> }[];
+}>("ika-data-grid");
+if (grid) grid.rows = [{ id: "42", cells: { name: "ika" } }];
 
 const header = horizontal(["title", "actions"], { fit: "elastic", gap: 1 });
 const body = vertical(["filters", "table"], { fit: "elastic", gap: 1 });
 const layout = resolvePlane(vertical(["header", "body"], { gap: 1 }));
-
-handle?.dispose();
 ```
 
-`mountCatalog` owns listeners and the generated catalog subtree for its target. `dispose()`をroute teardownで呼びます。`vertical`、`horizontal`、`resolvePlane`はDOM frameworkから独立したserializableなplane contractです。
+elementのproperties、events、methodsがWeb ABIです。`vertical`、`horizontal`、`resolvePlane`はDOM frameworkから独立したserializableなplane contractです。[ホスト環境から使う](hosts/)では、同じelementを各言語環境から操作する方法を説明しています。
 
 ## state ownership
 

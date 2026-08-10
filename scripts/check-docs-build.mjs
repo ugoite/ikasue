@@ -47,12 +47,16 @@ for (const locale of ["ja", "en"]) {
     for (const [marker, expected] of [
       ["data-has-sidebar", 1],
       ['class="page ', 1],
-      ["data-component-demo", 1],
       [`data-component=\"${id}\"`, 1],
+      ["data-element-kind", 1],
       [expectedComponentHref, 1],
     ]) {
       if (count(source, marker) !== expected)
         errors.push(`${relativePath} must contain ${marker} exactly once`);
+    }
+    for (const marker of ["data-component-demo", "ika-"]) {
+      if (!source.includes(marker))
+        errors.push(`${relativePath} must contain ${marker}`);
     }
     for (const marker of [
       "app-shell",
@@ -62,6 +66,10 @@ for (const locale of ["ja", "en"]) {
       'target="_blank"',
       "?component=",
       "catalogPath",
+      "mountCatalog",
+      "renderDemo",
+      "renderNativePlane",
+      "example-renderer",
     ]) {
       if (source.includes(marker))
         errors.push(`${relativePath} contains forbidden ${marker}`);

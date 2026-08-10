@@ -1307,149 +1307,59 @@ function javascriptSource(
   id: CatalogComponentId,
   recipe: SourceRecipe,
 ): string {
-  if (id === "developer-model") {
-    return `import { resolveFocusPlane } from "@ugoite/ikasue";
-
-const plane = {
-  root: {
-    kind: "branch",
-    id: "work",
-    axis: "horizontal",
-    navigation: true,
-    edgeRegions: [
-      { id: "tools", edge: "right", basis: 12, min: 6, temporary: true, restoreFocus: "work/beta/detail" },
-      { id: "decision", edge: "bottom", basis: 8, min: 4, temporary: true, restoreFocus: "work/beta/detail" },
-    ],
-    children: [
-      { kind: "leaf", id: "alpha", basis: 40, min: 2 },
-      {
-        kind: "branch",
-        id: "beta",
-        axis: "vertical",
-        navigation: true,
-        children: [
-          { kind: "leaf", id: "overview", basis: 20, min: 2 },
-          { kind: "leaf", id: "detail", basis: 20, min: 2 },
-        ],
-      },
-    ],
-  },
-  viewport: { inline: 100, block: 48 },
-  focus: "work/beta/detail",
-  collapse: "sliver",
-};
-
-const resolved = resolveFocusPlane(plane);
-const component = { id: "developer-model" };
-// Render resolved regions and runtime-owned EdgeNav/ElasticTabs metadata.
-renderFocusWindow({ component, plane, resolved });`;
-  }
-  const constructor = recipe.axis;
-  return `import { horizontal, resolvePlane, vertical } from "@ugoite/ikasue";
-
-const plane = ${constructor}(${recipe.children}, ${recipe.planeOptions});
-const resolved = resolvePlane(plane);
-
-const component = {
-  id: "${id}",
-  props: ${recipe.componentProps},
-};
-
-const contract = {
-  component,
-  plane: {
-    axis: plane.axis,
-    fit: plane.fit,
-    gap: plane.gap,
-    focus: plane.focus,
-    navigation: plane.navigation,
-  },
-  ownership: ${JSON.stringify(recipe.ownership)},
-};
-
-renderPlane({ contract, resolved });
-// resolved.children provides stable index, offset, size, and line values.`;
+  void recipe;
+  const tag =
+    id === "data-table"
+      ? "ika-data-grid"
+      : id === "developer-model"
+        ? "ika-text"
+        : "ika-" + id;
+  const interaction =
+    id === "data-table"
+      ? [
+          'element.columns = [{ id: "id", label: "ID" }];',
+          'element.rows = [{ id: "row-1", cells: { id: "row-1" } }];',
+          'element.addEventListener("ika-selection-change", (event) => console.log(event.detail));',
+        ]
+      : [
+          'element.props = { id: "' + id + '" };',
+          'element.addEventListener("ika-error", (event) => console.error(event.detail));',
+        ];
+  return [
+    'import { defineIkaSue } from "@ugoite/ikasue/elements";',
+    "",
+    "defineIkaSue();",
+    'const element = document.querySelector("' + tag + '");',
+    'if (!element) throw new Error("' + tag + ' is required");',
+    'element.setAttribute("aria-label", "' + id + '");',
+    ...interaction,
+    "element.focus();",
+  ].join("\n");
 }
 
 function rustSource(id: CatalogComponentId, recipe: SourceRecipe): string {
-  if (id === "developer-model") {
-    return `#[derive(Debug)]
-enum Node<'a> {
-    Leaf { id: &'a str, basis: f32, min: f32 },
-    Branch { id: &'a str, axis: Axis, edge_regions: Vec<EdgeRegion<'a>>, children: Vec<Node<'a>> },
-}
-
-enum Edge { Left, Right, Top, Bottom }
-
-struct EdgeRegion<'a> {
-    id: &'a str,
-    edge: Edge,
-    basis: f32,
-    min: f32,
-    temporary: bool,
-    restore_focus: Option<&'a str>,
-}
-
-let plane = FocusPlane {
-    root: Node::Branch {
-        id: "work",
-        axis: Axis::Horizontal,
-        edge_regions: vec![
-            EdgeRegion { id: "tools", edge: Edge::Right, basis: 12.0, min: 6.0, temporary: true, restore_focus: Some("work/beta/detail") },
-            EdgeRegion { id: "decision", edge: Edge::Bottom, basis: 8.0, min: 4.0, temporary: true, restore_focus: Some("work/beta/detail") },
-        ],
-        children: vec![
-            Node::Leaf { id: "alpha", basis: 40.0, min: 2.0 },
-            Node::Branch {
-                id: "beta",
-                axis: Axis::Vertical,
-                edge_regions: vec![],
-                children: vec![Node::Leaf { id: "detail", basis: 20.0, min: 2.0 }],
-            },
-        ],
-    },
-    viewport: Viewport { inline: 100.0, block: 48.0 },
-    focus: Some("work/beta/detail"),
-    collapse: Collapse::Sliver,
-};
-let resolved = resolve_focus_plane(&plane);
-let component_contract = ComponentContract { component: "developer-model" };
-// Render resolved rectangles and generated navigation without an overlay.`;
-  }
-  const axis =
-    recipe.axis === "vertical" ? "Axis::Vertical" : "Axis::Horizontal";
-  const children: readonly [string, string] =
-    recipe.axis === "vertical" ? ["filters", "results"] : ["save", "history"];
-  return `#[derive(Debug)]
-struct PlaneChild<'a> { id: &'a str, basis: f32, min: f32 }
-
-#[derive(Debug)]
-struct PlaneSpec<'a> {
-    axis: Axis,
-    fit: Fit,
-    gap: f32,
-    focus: Option<&'a str>,
-    navigation: bool,
-    children: Vec<PlaneChild<'a>>,
-}
-
-let plane = PlaneSpec {
-    axis: ${axis},
-    fit: Fit::Elastic,
-    gap: 1.0,
-    focus: Some("filters"),
-    navigation: true,
-    children: vec![
-        PlaneChild { id: "${children[0]}", basis: 2.0, min: 1.0 },
-        PlaneChild { id: "${children[1]}", basis: 4.0, min: 2.0 },
-    ],
-};
-let resolved = resolve_plane(&plane, 8.0);
-let component_contract = ComponentContract {
-    component: "${id}",
-    state: ${JSON.stringify(recipe.rustState)},
-};
-// Render resolved offsets without overlaying the existing plane.`;
+  void recipe;
+  const tag =
+    id === "data-table"
+      ? "ika-data-grid"
+      : id === "developer-model"
+        ? "ika-text"
+        : "ika-" + id;
+  return [
+    "use wasm_bindgen::prelude::*;",
+    "use web_sys::HtmlElement;",
+    "",
+    "// Rust/WASM uses the same HTMLElement ABI; it does not create a second renderer.",
+    'let element: HtmlElement = document().query_selector("' +
+      tag +
+      '")?.ok_or("' +
+      tag +
+      ' is required")?.dyn_into()?;',
+    'element.set_attribute("aria-label", "' + id + '")?;',
+    "// Structured values are JSON-safe properties; commands remain element methods.",
+    "element.focus()?;",
+    "// Listen for the data-only ika-selection-change / ika-error CustomEvents.",
+  ].join("\n");
 }
 
 export function componentSource(id: CatalogComponentId): {

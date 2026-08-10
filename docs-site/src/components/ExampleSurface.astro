@@ -2,6 +2,7 @@
 import "../../../src/styles.css";
 import {
   exampleSurfaceCopy,
+  exampleSpec,
   type ExampleKind,
   type ExampleLocale,
 } from "../../../src/catalog/examples";
@@ -13,7 +14,59 @@ interface Props {
 
 const { kind, locale } = Astro.props as Props;
 const surface = exampleSurfaceCopy(locale, kind);
+const spec = exampleSpec(kind);
 const surfaceId = `example-surface-${kind}`;
+const exampleRows =
+  "rows" in surface
+    ? surface.rows
+    : [{ id: "status", title: surface.title, state: surface.status }];
+const escapeAttribute = (value: string): string =>
+  value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
+const tagFor = (componentId: string): string =>
+  componentId === "data-table"
+    ? "ika-data-grid"
+    : componentId === "developer-model"
+      ? "ika-text"
+      : `ika-${componentId}`;
+const attributesFor = (
+  props: Record<string, string | boolean>,
+  componentId?: string,
+): string =>
+  Object.entries(props)
+    .filter(
+      ([key]) => !(componentId === "data-table" && key === "selection"),
+    )
+    .flatMap(([key, value]) => {
+      if (typeof value === "boolean") return value ? [` ${key}`] : [];
+      return [` ${key}="${escapeAttribute(value)}"`];
+    })
+    .join("");
+const exampleMarkup = spec.planes
+  .map((plane) => {
+    const regions = plane.regions
+      .map((region) => {
+        const tag = tagFor(region.componentId);
+        const markers = [
+          ` data-example-region="${escapeAttribute(region.id)}"`,
+          ...(region.componentId === "data-table"
+            ? [
+                ` data-example-grid="${escapeAttribute(JSON.stringify(exampleRows))}"`,
+              ]
+            : []),
+          ...(region.componentId === "status-icon"
+            ? [" data-example-status"]
+            : []),
+        ].join("");
+        return `<${tag}${markers}${attributesFor(
+          region.props,
+          region.componentId,
+        )}></${tag}>`;
+      })
+      .join("");
+    const planeTag = tagFor(plane.componentId);
+    return `<${planeTag} data-example-layout="${escapeAttribute(plane.id)}">${regions}</${planeTag}>`;
+  })
+  .join("");
 ---
 
 <section
@@ -28,20 +81,52 @@ const surfaceId = `example-surface-${kind}`;
       <span class="surface__kicker">{surface.kicker}</span>
       <h3 id={`${surfaceId}-title`}>{surface.title}</h3>
     </div>
-    <span class="surface__status">
-      <i aria-hidden="true"></i>
-      {surface.status}
-    </span>
+    <span class="surface__status"
+      ><i aria-hidden="true"></i>{surface.status}</span
+    >
     <span class="surface__axis">{surface.axis}</span>
   </header>
 
-  <div class="surface__mount" data-native-plane-mount></div>
+  <div class="surface__mount">
+    <Fragment set:html={exampleMarkup} />
+  </div>
 </section>
 
 <script>
-  import { mountExampleSurfaces } from "../../../src/catalog/example-renderer";
+  import { defineIkaSue } from "../../../src/elements";
 
-  mountExampleSurfaces();
+  defineIkaSue();
+  document
+    .querySelectorAll<HTMLElement>("[data-ikasue-example-surface]")
+    .forEach((surface) => {
+      surface
+        .querySelectorAll<
+          HTMLElement & {
+            dataset: DOMStringMap & { exampleGrid?: string };
+            columns?: readonly { id: string; label: string }[];
+            rows?: readonly { id: string; cells: Record<string, string> }[];
+            selection?: { row: string; column: string };
+          }
+        >("[data-example-grid]")
+        .forEach((grid) => {
+          const sourceRows = JSON.parse(grid.dataset.exampleGrid ?? "[]") as {
+            id: string;
+            title: string;
+            state: string;
+          }[];
+          grid.columns = [
+            { id: "id", label: "ID" },
+            { id: "title", label: "Item" },
+            { id: "state", label: "State" },
+          ];
+          grid.rows = sourceRows.map((row) => ({
+            id: row.id,
+            cells: { id: row.id, title: row.title, state: row.state },
+          }));
+          if (sourceRows[0])
+            grid.selection = { row: sourceRows[0].id, column: "id" };
+        });
+    });
 </script>
 
 <style>
@@ -57,17 +142,14 @@ const surfaceId = `example-surface-${kind}`;
     font-size: 0.78rem;
     line-height: 1.4;
   }
-
   .example-surface :where(*, *::before, *::after) {
     box-sizing: border-box;
   }
-
   .example-surface :where(button, input, select, textarea) {
     border-radius: 0;
     box-shadow: none;
     font: inherit;
   }
-
   .surface__header {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -76,18 +158,13 @@ const surfaceId = `example-surface-${kind}`;
     padding: var(--surface-pad);
     border-block-end: 1px solid var(--line);
   }
-
   .surface__header h3 {
     margin: 0;
     color: var(--ink);
+    font-size: 1.1rem;
     font-weight: 700;
     letter-spacing: -0.02em;
   }
-
-  .surface__header h3 {
-    font-size: 1.1rem;
-  }
-
   .surface__kicker,
   .surface__axis,
   .surface__status {
@@ -97,12 +174,10 @@ const surfaceId = `example-surface-${kind}`;
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
-
   .surface__kicker {
     display: block;
     margin-block-end: 0.2rem;
   }
-
   .surface__status {
     display: inline-flex;
     align-items: center;
@@ -110,31 +185,38 @@ const surfaceId = `example-surface-${kind}`;
     color: var(--muted);
     white-space: nowrap;
   }
-
   .surface__status i {
     inline-size: 0.45rem;
     block-size: 0.45rem;
     background: var(--ink);
   }
-
   .surface__axis {
     grid-column: 1 / -1;
     padding-block-start: 0.45rem;
     border-block-start: 1px solid var(--line);
   }
-
   .surface__mount {
     display: grid;
     gap: 1.25rem;
     padding: var(--surface-pad);
   }
-
-  @media (prefers-reduced-motion: reduce) {
-    .example-surface *,
-    .example-surface *::before,
-    .example-surface *::after {
-      animation-duration: 0.01ms !important;
-      transition-duration: 0.01ms !important;
+  :global(.example-surface ika-horizontal) {
+    display: grid;
+    grid-template-columns: minmax(7rem, 0.35fr) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+  }
+  :global(.example-surface ika-status-icon) {
+    min-block-size: 4rem;
+    padding: 0.75rem;
+    border-block: 1px solid var(--line);
+  }
+  :global(.example-surface ika-data-grid) {
+    min-block-size: 10rem;
+  }
+  @media (max-width: 42rem) {
+    :global(.example-surface ika-horizontal) {
+      grid-template-columns: 1fr;
     }
   }
 </style>

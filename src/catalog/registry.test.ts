@@ -118,13 +118,9 @@ describe("component registry completeness", () => {
       expect(entry.source.rustState.length).toBeGreaterThan(0);
       expect(source.javascript).toContain(entry.id);
       expect(source.rust).toContain(entry.id);
-      if (entry.id === "developer-model") {
-        expect(source.javascript).toContain("resolveFocusPlane");
-        expect(source.rust).toContain("resolve_focus_plane");
-      } else {
-        expect(source.javascript).toContain("resolvePlane");
-        expect(source.rust).toContain("resolve_plane");
-      }
+      expect(source.javascript).toContain("defineIkaSue");
+      expect(source.javascript).toContain("document.querySelector");
+      expect(source.rust).toContain("HTMLElement ABI");
       expect(docsComponentSource(entry.id)).toEqual(source);
       expect(CATALOG_PAGE_COPY[entry.id]).toEqual(entry.page);
       expect(entry.page.ja.title.length).toBeGreaterThan(0);
