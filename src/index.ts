@@ -79,6 +79,42 @@ export {
   serializeComponentSelection,
 } from "./catalog/state";
 
+export {
+  defineIkaSue,
+  IKA_ELEMENT_TAGS,
+  IKA_TAG_BY_KIND,
+  IkaDataGridElement,
+  IkaElement,
+  IkaHistoryTimelineElement,
+  IkaSplitViewElement,
+  IkaTabsElement,
+  tagNameForKind,
+} from "./elements";
+export { renderIkaView } from "./view";
+export { IkaSueError } from "./errors";
+export { IKA_ELEMENT_CONTRACTS } from "./abi";
+export {
+  assertIkaRowPage,
+  createDataGridPortModel,
+  isIkaDataGridModelEvent,
+} from "./transport";
+export {
+  IKASUE_ABI_VERSION,
+  IKA_VIEW_KINDS,
+  isIkaDataGridColumn,
+  isIkaDataGridRow,
+  isIkaDataGridSelection,
+  isIkaError,
+  isIkaJsonRecord,
+  isIkaJsonValue,
+  isIkaMessage,
+  isIkaRowPage,
+  isIkaRowRequest,
+  isIkaSplitViewPane,
+  isIkaTabsItem,
+  isIkaView,
+} from "./contract";
+
 export type {
   AlertOptions,
   AlertSpec,
@@ -144,6 +180,28 @@ export type {
   ProgressOptions,
   ProgressSpec,
 } from "./types";
+export type {
+  IkaDataGridColumn,
+  IkaDataGridRow,
+  IkaDataGridSelection,
+  IkaDataGridSpec,
+  IkaError,
+  IkaJsonPrimitive,
+  IkaJsonRecord,
+  IkaJsonValue,
+  IkaMessage,
+  IkaRowPage,
+  IkaRowRequest,
+  IkaSplitViewPane,
+  IkaSplitViewSpec,
+  IkaTabsItem,
+  IkaTabsSpec,
+  IkaView,
+  IkaViewKind,
+} from "./contract";
+export type { IkaDataGridModel, IkaDataGridModelEvent } from "./transport";
+export type { IkaElementTagName, IkaSueRegistry } from "./elements";
+export type { IkaElementContract, IkaElementPropertyContract } from "./abi";
 export type {
   CatalogComponentId,
   CatalogEntry,

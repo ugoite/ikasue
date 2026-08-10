@@ -19,104 +19,134 @@ body {
   background: var(--ikasue-surface);
   color: var(--ikasue-ink);
 }
-.ikasue-flex,
-.ikasue-stack,
-.ikasue-grid,
-.ikasue-split-view {
+ika-theme-root,
+ika-text,
+ika-editable-text,
+ika-text-field,
+ika-flex,
+ika-stack,
+ika-grid,
+ika-scroll-area,
+ika-sidebar,
+ika-toolbar,
+ika-form,
+ika-data-grid,
+ika-history-timeline,
+ika-tabs,
+ika-split-view,
+ika-side-panel,
+ika-bottom-panel,
+ika-loading-region,
+ika-dialog,
+ika-status-indicator,
+ika-alert,
+ika-progress {
+  display: block;
+}
+ika-flex,
+ika-stack,
+ika-grid,
+ika-split-view {
   min-width: 0;
   min-height: 0;
 }
-.ikasue-flex,
-.ikasue-stack {
+ika-flex,
+ika-stack {
   display: flex;
   gap: var(--ikasue-layout-gap, 0);
+  flex-direction: row;
 }
-.ikasue-grid {
+ika-stack {
+  flex-direction: column;
+}
+ika-grid {
   display: grid;
   gap: var(--ikasue-layout-gap, 0);
   grid-template-columns: var(--ikasue-grid-columns, none);
   grid-template-rows: var(--ikasue-grid-rows, none);
 }
-.ikasue-scroll-area {
+ika-scroll-area {
   min-width: 0;
   min-height: 0;
 }
-.ikasue-separator {
+ika-separator {
   flex: 0 0 auto;
   background: var(--ikasue-line);
 }
-.ikasue-separator[data-orientation="horizontal"] {
+ika-separator[data-orientation="horizontal"] {
   inline-size: 100%;
   block-size: 1px;
 }
-.ikasue-separator[data-orientation="vertical"] {
+ika-separator[data-orientation="vertical"] {
   inline-size: 1px;
   block-size: 100%;
 }
-.ikasue-split-view {
+ika-split-view {
   display: flex;
   flex-direction: row;
   gap: 0.75rem;
 }
-.ikasue-split-view[data-orientation="vertical"] {
+ika-split-view[data-orientation="vertical"] {
   flex-direction: column;
 }
-.ikasue-split-view > [data-pane-id] {
+ika-split-view > [data-pane-id] {
   min-width: 0;
   min-height: 0;
   border-inline-start: 1px solid var(--ikasue-line);
   padding: 0.75rem;
 }
-.ikasue-split-view > [data-collapsed="true"] {
+ika-split-view > [data-collapsed="true"] {
   flex: 0 0 0;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
   padding: 0;
 }
-.ikasue-split-view > [data-pane-divider] {
+ika-split-view > [data-pane-divider] {
   flex: 0 0 auto;
   background: var(--ikasue-line);
   outline: none;
 }
-.ikasue-split-view[data-orientation="horizontal"] > [data-pane-divider] {
+ika-split-view[data-orientation="horizontal"] > [data-pane-divider] {
   width: 1px;
   cursor: col-resize;
 }
-.ikasue-split-view[data-orientation="vertical"] > [data-pane-divider] {
+ika-split-view[data-orientation="vertical"] > [data-pane-divider] {
   height: 1px;
   cursor: row-resize;
 }
-.ikasue-split-view[data-responsive-orientation="vertical"]
-  > [data-pane-divider] {
+ika-split-view[data-responsive-orientation="vertical"] > [data-pane-divider] {
   width: auto;
   height: 1px;
   cursor: row-resize;
 }
-.ikasue-side-panel,
-.ikasue-bottom-panel {
+ika-side-panel,
+ika-bottom-panel {
   border-block-start: 1px solid var(--ikasue-line);
   padding: 0.75rem;
 }
-.ikasue-loading-region {
+ika-loading-region {
   position: relative;
 }
-.ikasue-catalog {
+ika-data-grid[data-density="compact"] {
+  --ikasue-grid-cell-padding: 0.25rem;
+}
+ika-theme-root {
   min-height: 100vh;
   background: var(--ikasue-surface);
 }
-.ikasue-header {
+ika-toolbar.ikasue-header {
   display: flex;
   gap: 1rem;
   align-items: center;
   padding: 1rem;
   border-bottom: 1px solid var(--ikasue-line);
 }
-.ikasue-header nav {
+ika-toolbar.ikasue-header nav {
   display: flex;
   gap: 1rem;
 }
-.ikasue-main {
+ika-scroll-area.ikasue-main {
   max-width: 72rem;
   margin: 0 auto;
   padding: 2rem 1rem 5rem;
@@ -158,21 +188,21 @@ body {
 }
 
 @container (max-width: 600px) {
-  .ikasue-flex,
-  .ikasue-stack {
+  ika-flex,
+  ika-stack {
     gap: 0.5rem !important;
   }
-  .ikasue-grid {
+  ika-grid {
     grid-template-columns: minmax(0, 1fr) !important;
   }
-  .ikasue-split-view[data-orientation="horizontal"] {
+  ika-split-view[data-orientation="horizontal"] {
     flex-direction: column;
   }
-  .ikasue-split-view[data-orientation="horizontal"] > [data-pane-id] {
+  ika-split-view[data-orientation="horizontal"] > [data-pane-id] {
     min-width: 0;
     min-height: var(--ikasue-pane-min-size, 0);
   }
-  .ikasue-split-view[data-orientation="horizontal"] > [data-pane-divider] {
+  ika-split-view[data-orientation="horizontal"] > [data-pane-divider] {
     width: auto;
     height: 1px;
     cursor: row-resize;

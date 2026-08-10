@@ -38,6 +38,7 @@ export type CatalogPageId =
   | "guides/behavioral-contracts"
   | "guides/usage"
   | "guides/integration"
+  | "guides/hosts"
   | "guides/accessibility"
   | "guides/release"
   | CatalogComponentId;

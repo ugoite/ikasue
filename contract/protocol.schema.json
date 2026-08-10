@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ugoite.github.io/ikasue/contract/protocol.schema.json",
+  "title": "ikasue Web ABI MessagePort protocol",
+  "oneOf": [
+    { "$ref": "#/$defs/request" },
+    { "$ref": "#/$defs/cancel" },
+    { "$ref": "#/$defs/response" },
+    { "$ref": "#/$defs/error" },
+    { "$ref": "#/$defs/event" }
+  ],
+  "$defs": {
+    "version": { "const": "ikasue-web/1" },
+    "jsonValue": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "boolean" },
+        { "type": "number" },
+        { "type": "string" },
+        { "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
+        {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/jsonValue" }
+        }
+      ]
+    },
+    "jsonRecord": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/jsonValue" }
+    },
+    "dataGridRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "cells"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "cells": { "$ref": "#/$defs/jsonRecord" }
+      }
+    },
+    "rowRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "limit"],
+      "properties": {
+        "start": { "type": "integer", "minimum": 0 },
+        "limit": { "type": "integer", "minimum": 1 },
+        "sort": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["column", "direction"],
+            "properties": {
+              "column": { "type": "string", "minLength": 1 },
+              "direction": { "enum": ["asc", "desc"] }
+            }
+          }
+        },
+        "filter": { "type": "string" }
+      }
+    },
+    "rowPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rows"],
+      "properties": {
+        "rows": { "type": "array", "items": { "$ref": "#/$defs/dataGridRow" } },
+        "total": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "base": {
+      "type": "object",
+      "required": ["version"],
+      "properties": { "version": { "$ref": "#/$defs/version" } }
+    },
+    "request": {
+      "oneOf": [
+        {
+          "allOf": [
+            { "$ref": "#/$defs/base" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["version", "type", "id", "operation", "payload"],
+              "properties": {
+                "version": { "$ref": "#/$defs/version" },
+                "type": { "const": "request" },
+                "id": { "type": "integer", "minimum": 1 },
+                "operation": { "const": "rows" },
+                "payload": { "$ref": "#/$defs/rowRequest" }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            { "$ref": "#/$defs/base" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["version", "type", "id", "operation", "payload"],
+              "properties": {
+                "version": { "$ref": "#/$defs/version" },
+                "type": { "const": "request" },
+                "id": { "type": "integer", "minimum": 1 },
+                "operation": { "const": "update" },
+                "payload": { "$ref": "#/$defs/jsonRecord" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "cancel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "type", "id"],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "type": { "const": "cancel" },
+        "id": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "type", "id", "result"],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "type": { "const": "response" },
+        "id": { "type": "integer", "minimum": 1 },
+        "result": {
+          "anyOf": [
+            { "$ref": "#/$defs/rowPage" },
+            { "$ref": "#/$defs/jsonRecord" }
+          ]
+        }
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "type", "id", "error"],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "type": { "const": "error" },
+        "id": { "type": "integer", "minimum": 1 },
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code", "message"],
+          "properties": {
+            "code": { "type": "string", "minLength": 1 },
+            "message": { "type": "string", "minLength": 1 },
+            "details": { "$ref": "#/$defs/jsonValue" }
+          }
+        }
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "type", "event", "payload"],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "type": { "const": "event" },
+        "event": { "type": "string", "minLength": 1 },
+        "payload": { "$ref": "#/$defs/jsonRecord" }
+      }
+    }
+  }
+}
