@@ -61,7 +61,7 @@ describe("integrated component documentation routes", () => {
     }
   });
 
-  it("mounts one fixed page-local demo without a second site shell", () => {
+  it("mounts one public element demo without the catalog renderer", () => {
     const componentDoc = read("components/ComponentDoc.astro");
     const config = readFileSync(
       join(repositoryRoot, "docs-site", "astro.config.mjs"),
@@ -69,9 +69,13 @@ describe("integrated component documentation routes", () => {
     );
 
     expect(componentDoc).toContain("data-component-demo");
-    expect(componentDoc).toContain("component,");
-    expect(componentDoc).toContain("embedded: true");
-    expect(componentDoc).toContain("showComponentPicker: false");
+    expect(componentDoc).toContain("defineIkaSue");
+    expect(componentDoc).toContain("document.createElement");
+    expect(componentDoc).toContain("ika-data-grid");
+    expect(componentDoc).not.toContain("mountCatalog");
+    expect(componentDoc).not.toContain("renderDemo");
+    expect(componentDoc).not.toContain("renderNativePlane");
+    expect(componentDoc).not.toContain("example-renderer");
     expect(componentDoc).not.toContain("catalogPath");
     expect(componentDoc).not.toContain('target="_blank"');
     expect(componentDoc).not.toContain("Open interactive catalog");
@@ -80,6 +84,17 @@ describe("integrated component documentation routes", () => {
       'PageFrame: "./src/components/IkasuePageFrame.astro"',
     );
     expect(config).not.toContain('link: "catalog/"');
+  });
+
+  it("keeps the old example renderer out of the docs tree", () => {
+    const components = [
+      read("components/ComponentDoc.astro"),
+      read("components/ExamplePage.astro"),
+      read("components/ExampleSurface.astro"),
+    ].join("\n");
+    expect(components).not.toContain("mountExampleSurfaces");
+    expect(components).not.toContain("mountCatalog");
+    expect(components).toContain("defineIkaSue");
   });
 
   it("keeps component links base-path safe and does not leave catalog-only docs links", () => {

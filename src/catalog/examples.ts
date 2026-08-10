@@ -1117,11 +1117,59 @@ render_incident_console(layout, services, message, progress);`,
   },
 ] as const;
 
+function webAbiExampleSource(example: ExampleSpec): ExampleSource {
+  const components = Array.from(
+    new Set(
+      example.planes.flatMap((plane) => [
+        plane.componentId,
+        ...plane.regions.map((region) => region.componentId),
+      ]),
+    ),
+  );
+  const componentList = JSON.stringify(components);
+  return {
+    javascript: `import { defineIkaSue } from "@ugoite/ikasue/elements";
+
+defineIkaSue();
+const root = document.querySelector("#root");
+if (!root) throw new Error("#root is required");
+const components = ${componentList};
+for (const component of components) {
+  const tag = component === "data-table" ? "ika-data-grid" : \`ika-\${component}\`;
+  const element = document.createElement(tag);
+  element.setAttribute("data-example-component", component);
+  root.append(element);
+}`,
+    rust: `use wasm_bindgen::JsCast;
+use web_sys::HtmlElement;
+
+// Rust/WASM binds the same Custom Elements; it does not create a second renderer.
+let root: HtmlElement = document()
+    .query_selector("#root")?
+    .ok_or("#root is required")?
+    .dyn_into()?;
+let components = ${componentList};
+for component in components {
+    let tag = if component == "data-table" {
+        "ika-data-grid".to_string()
+    } else {
+        format!("ika-{}", component)
+    };
+    let element = document().create_element(&tag)?;
+    element.set_attribute("data-example-component", component)?;
+    root.append_child(&element)?;
+}`,
+  };
+}
+
 const EXAMPLE_BY_KIND = Object.fromEntries(
-  EXAMPLES.map((example) => [example.kind, example]),
+  EXAMPLES.map((example) => [
+    example.kind,
+    { ...example, source: webAbiExampleSource(example) },
+  ]),
 ) as Record<ExampleKind, ExampleSpec>;
 
-export const EXAMPLE_SPECS = EXAMPLES;
+export const EXAMPLE_SPECS = Object.values(EXAMPLE_BY_KIND);
 
 export function exampleSpec(kind: ExampleKind): ExampleSpec {
   return EXAMPLE_BY_KIND[kind];

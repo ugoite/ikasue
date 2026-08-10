@@ -13,7 +13,7 @@ hero:
       variant: minimal
 ---
 
-ikasueは、情報密度の高いworkspaceのためのframework-neutralなcomponent systemです。すべての領域を一枚のplane上の順序と空間配分として扱い、新しい情報は意味のあるedgeから入り、既存の情報を隠さずに場所を譲ります。
+ikasueは、Webを実行環境とするframework/language-neutralなUI substrateです。公開ABIはCustom Elements、JSON-safe properties、data-only CustomEvents、command methods、CSS custom propertiesで構成されます。すべての領域を一枚のplane上の順序と空間配分として扱い、新しい情報は意味のあるedgeから入り、既存の情報を隠さずに場所を譲ります。
 
 ## 平面適応UI
 
@@ -23,12 +23,13 @@ ikasueは、情報密度の高いworkspaceのためのframework-neutralなcompon
 
 1. [平面適応UIの思想](../philosophy/)で、plane、axis、selectionの考え方を読む。
 2. [component inventory](../components/)から現在の17 componentの責務を選ぶ。
-3. [使い方](../guides/usage/)と[統合](../guides/integration/)でpackageを既存のappへ組み込む。
-4. [振る舞いの契約](../guides/behavioral-contracts/)と[アクセシビリティ](../guides/accessibility/)を実装前に確認する。
-5. [例](../examples/)で、少数の要素をplaneへ組み合わせる様子を見る。
+3. [ホスト環境から使う](../guides/hosts/)で、plain Web、framework、Rust/WASM、Worker、WebViewからの同じ使い方を確認する。
+4. [使い方](../guides/usage/)と[統合](../guides/integration/)でpackageを既存のappへ組み込む。
+5. [振る舞いの契約](../guides/behavioral-contracts/)と[アクセシビリティ](../guides/accessibility/)を実装前に確認する。
+6. [例](../examples/)で、少数の要素をplaneへ組み合わせる様子を見る。
 
 ## package、component page、公開境界
 
-packageは`@ugoite/ikasue`です。`vertical`、`horizontal`、`resolvePlane`とcurrent component metadataを公開します。GitHub Pagesでは各component pageが説明、契約、source、properties、同じregistry/native rendererによるinteractive demoを一体で持ち、packageはGitHub Packagesへ別のworkflowで公開されます。
+packageは`@ugoite/ikasue`です。`@ugoite/ikasue/elements`がWeb ABIのTypeScript binding、`@ugoite/ikasue/contract`がdata-only contract、`@ugoite/ikasue/view`が同じCustom Elementsへのloweringを公開し、`vertical`、`horizontal`、`resolvePlane`とcomponent metadataも維持します。GitHub Pagesでは各component pageが説明、契約、source、properties、公開elementを直接呼ぶinteractive demoを一体で持ち、packageはGitHub Packagesへ別のworkflowで公開されます。
 
 root localeは日本語です。[English docs](../en/)も同じpath treeを持つ手書きのlocaleとして管理しています。同期scriptはpathの一致とroot-absolute internal linkの混入を検査します。外部の翻訳serviceへ内容を送ることはありません。

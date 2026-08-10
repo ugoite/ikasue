@@ -13,33 +13,29 @@ npm install @ugoite/ikasue --registry=https://npm.pkg.github.com
 
 Credentials belong in the managed GitHub Packages configuration, not in this documentation.
 
-## Mount and use the plane API
+## Use the Web ABI and plane API
 
 ```js
 import {
   horizontal,
-  mountCatalog,
   resolvePlane,
   vertical,
 } from "@ugoite/ikasue";
+import { defineIkaSue } from "@ugoite/ikasue/elements";
 import "@ugoite/ikasue/style.css";
 
-const target = document.querySelector("#workspace");
-const handle = target
-  ? mountCatalog(target, {
-      label: "Operations workspace",
-      component: "data-table",
-    })
-  : undefined;
+defineIkaSue();
+const grid = document.querySelector<HTMLElement & {
+  rows: readonly { id: string; cells: Record<string, string> }[];
+}>("ika-data-grid");
+if (grid) grid.rows = [{ id: "42", cells: { name: "ika" } }];
 
 const header = horizontal(["title", "actions"], { fit: "elastic", gap: 1 });
 const body = vertical(["filters", "table"], { fit: "elastic", gap: 1 });
 const layout = resolvePlane(vertical(["header", "body"], { gap: 1 }));
-
-handle?.dispose();
 ```
 
-`mountCatalog` owns listeners and the generated catalog subtree for its target. Call `dispose()` during route teardown. `vertical`, `horizontal`, and `resolvePlane` are serializable, framework-neutral plane contracts.
+Element properties, events, and methods are the Web ABI. `vertical`, `horizontal`, and `resolvePlane` are serializable, framework-neutral plane contracts. [Host environments](hosts/) explains how to operate the same element from each language environment.
 
 ## State ownership
 

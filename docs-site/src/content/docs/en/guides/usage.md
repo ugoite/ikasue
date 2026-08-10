@@ -3,26 +3,28 @@ title: Usage
 description: Compose ikasue components around one negotiated plane.
 ---
 
-## The smallest mount
+## The smallest Web ABI usage
 
-Mount the package’s standalone runtime surface into an existing DOM target. `mountCatalog` is framework-neutral and can live inside an application shell. On GitHub Pages, the same native renderer is embedded in each component page.
+Register the Custom Elements in the host, then pass primitive configuration as attributes and structured data as properties.
 
-```js
-import { mountCatalog } from "@ugoite/ikasue";
+```ts
+import { defineIkaSue } from "@ugoite/ikasue/elements";
 import "@ugoite/ikasue/style.css";
 
-const target = document.querySelector("#workspace");
-if (!target) throw new Error("workspace target is required");
-
-const catalog = mountCatalog(target, {
-  label: "Operations workspace",
-  component: "data-table",
-});
-
-catalog.select("form-list");
-// Route teardown:
-catalog.dispose();
+defineIkaSue();
+const grid = document.querySelector<
+  HTMLElement & {
+    columns: readonly { id: string; label: string }[];
+    rows: readonly { id: string; cells: Record<string, string> }[];
+  }
+>("ika-data-grid");
+if (!grid) throw new Error("ika-data-grid is required");
+grid.setAttribute("density", "compact");
+grid.columns = [{ id: "name", label: "Name" }];
+grid.rows = [{ id: "42", cells: { name: "ika" } }];
 ```
+
+See [Host environments](hosts/) for plain Web, framework, Rust/WASM, Worker, and WebView usage. `npm run catalog` remains a development-only entry point for checking the package locally.
 
 ## Declare the plane first
 
@@ -65,4 +67,4 @@ A `PlaneSpec` gives components one vocabulary for available space, child order, 
 
 ## Check the composition
 
-Read each component’s property table, JavaScript implementation / usage, Rust implementation sketch, and page-local interactive demo as one component contract. The [Examples](../examples/) page shows the plane model with a few simple arrangements.
+Read each component’s property table, JavaScript implementation / usage, Rust implementation sketch, and page-local demo using the public element as one component contract. The [Examples](../examples/) page shows the plane model with a few simple arrangements.

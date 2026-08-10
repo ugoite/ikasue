@@ -2,11 +2,28 @@
 
 ## Product intent
 
-ikasue is a plane-centered adaptive UI component system for information-dense work. Every region shares one canvas. New information enters from the edge where it belongs and reallocates existing space; the system does not depend on floating card taxonomies, overlay drawers, shadow hierarchies, or evidence-obscuring modals.
+ikasue is a framework- and language-neutral UI substrate whose native ABI is the Web Platform. It provides plane-centered adaptive UI for information-dense work. Every region shares one canvas. New information enters from the edge where it belongs and reallocates existing space; the system does not depend on floating card taxonomies, overlay drawers, shadow hierarchies, or evidence-obscuring modals.
 
-## Current public component inventory
+## Web ABI
 
-The public runtime inventory is exactly 17 components. The catalog metadata and bilingual documentation use this same list:
+The stable v1 boundary is `ikasue-web/1`. Its canonical nodes are Custom Elements such as `<ika-data-grid>`, `<ika-tabs>`, and `<ika-split-view>`. A host may be plain JavaScript/TypeScript, React, Vue, Svelte, Angular, Rust/WASM, a Worker-backed model, or a WebView/native binding. None of those hosts is part of the runtime contract.
+
+The ABI has four distinct surfaces:
+
+- attributes for primitive declarative configuration;
+- properties for structured state, data, and models;
+- data-only `CustomEvent` details for user intent and state changes;
+- methods for imperative UI commands.
+
+Contract values are JSON-safe primitives, arrays, records, and variants. Functions, DOM objects, promises, dates, maps, sets, abort controllers, and class instances are runtime binding concerns and must not cross the language-neutral boundary. The schemas in `contract/` are the canonical data contract; TypeScript, Rust, documentation, and future WIT bindings may be generated from it.
+
+`defineIkaSue(registry)` registers the elements idempotently in the supplied `CustomElementRegistry` and reports a conflict if another constructor already owns a canonical tag. The default registry is the global one; a supplied registry is the isolation boundary for microfrontends and multiple runtime versions.
+
+Small data can be assigned directly with `element.rows = rows`. Large or remote data uses `element.model = model` or `element.connect(messagePort)`. The direct model and MessagePort adapter share request, response, error, event, and cancellation semantics. `renderIkaView` only lowers a serializable view to the same Custom Elements; it is not a second component renderer.
+
+## Catalog component inventory
+
+The documentation catalog currently describes exactly 17 responsibilities. The catalog metadata and bilingual documentation use this same list:
 
 - `developer-model`
 - `theme-root`
@@ -27,6 +44,8 @@ The public runtime inventory is exactly 17 components. The catalog metadata and 
 - `bottom-dialog`
 
 The separate conceptual page is the design philosophy. It is not an additional runtime component.
+
+The catalog name `data-table` maps to the Web ABI element `<ika-data-grid>`. Catalog entries are documentation metadata, not a second rendering API.
 
 ## Plane API
 
@@ -86,6 +105,6 @@ Astro-generated links use `sitePath` so local builds and project GitHub Pages bu
 
 ## Deployment boundaries
 
-- GitHub Pages is the only documentation host. The Pages workflow builds the Astro + Starlight site, embedding each component’s interactive demo in its component page, with `actions/configure-pages`, `actions/upload-pages-artifact`, and `actions/deploy-pages`. The Astro base is derived from `GITHUB_REPOSITORY` for project Pages sites.
+- GitHub Pages is the only documentation host. The Pages workflow builds the Astro + Starlight site, embedding each component’s public Custom Element demo in its component page, with `actions/configure-pages`, `actions/upload-pages-artifact`, and `actions/deploy-pages`. The Astro base is derived from `GITHUB_REPOSITORY` for project Pages sites.
 - GitHub Packages is the package distribution boundary. The package workflow publishes only `@ugoite/ikasue` to `https://npm.pkg.github.com` on `v*` tags with `GITHUB_TOKEN` and `packages: write`.
 - Pages deployment and GitHub Packages publishing are separate workflows and targets. The documentation phase does not change generated build output or package version.

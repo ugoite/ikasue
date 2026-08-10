@@ -3,26 +3,28 @@ title: Usage / 使い方
 description: Compose ikasue components around one negotiated plane.
 ---
 
-## 最小のmount
+## 最小のWeb ABI利用
 
-packageのstandalone runtime surfaceを既存のDOM targetへmountします。`mountCatalog`はframework-neutralで、既存のapp shellの内側に置けます。GitHub Pagesのcomponent docsでは同じnative rendererを各component pageへembeddedします。
+host環境では最初にCustom Elementsを登録し、primitiveはattribute、structured dataはpropertyとして渡します。
 
-```js
-import { mountCatalog } from "@ugoite/ikasue";
+```ts
+import { defineIkaSue } from "@ugoite/ikasue/elements";
 import "@ugoite/ikasue/style.css";
 
-const target = document.querySelector("#workspace");
-if (!target) throw new Error("workspace target is required");
-
-const catalog = mountCatalog(target, {
-  label: "Operations workspace",
-  component: "data-table",
-});
-
-catalog.select("form-list");
-// Route teardown:
-catalog.dispose();
+defineIkaSue();
+const grid = document.querySelector<
+  HTMLElement & {
+    columns: readonly { id: string; label: string }[];
+    rows: readonly { id: string; cells: Record<string, string> }[];
+  }
+>("ika-data-grid");
+if (!grid) throw new Error("ika-data-grid is required");
+grid.setAttribute("density", "compact");
+grid.columns = [{ id: "name", label: "Name" }];
+grid.rows = [{ id: "42", cells: { name: "ika" } }];
 ```
+
+各framework、Rust/WASM、Worker、WebViewからの使い分けは[ホスト環境から使う](hosts/)にまとめています。`npm run catalog`のstandalone surfaceは、packageをローカルで確認するための開発用入口です。
 
 ## planeを先に宣言する
 
@@ -65,4 +67,4 @@ const workspaceLayout = resolvePlane(workspace);
 
 ## compositionの確認
 
-component pageのproperty table、JavaScript implementation / usage、Rust implementation sketchと、ページ内のinteractive demoを同じcomponent contractとして確認してください。さらに[例](../examples/)で少数の要素を組み合わせたときのplaneの動きを確認できます。
+component pageのproperty table、JavaScript implementation / usage、Rust implementation sketchと、ページ内で直接public elementを使うinteractive demoを同じcomponent contractとして確認してください。さらに[例](../examples/)で少数の要素を組み合わせたときのplaneの動きを確認できます。
