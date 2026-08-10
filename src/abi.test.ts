@@ -12,6 +12,8 @@ import {
   isIkaView,
   isIkaJsonRecord,
   isIkaJsonValue,
+  isIkaMessage,
+  isIkaRowRequest,
   type IkaView,
 } from "./contract";
 import { renderIkaView } from "./view";
@@ -121,7 +123,7 @@ describe("ikasue Web ABI", () => {
     const root = document.createElement("main");
     const view: IkaView = {
       version: IKASUE_ABI_VERSION,
-      kind: "data-table",
+      kind: "data-grid",
       props: { editable: true, columns: [] },
       children: [{ version: IKASUE_ABI_VERSION, kind: "text", text: "A row" }],
     };
@@ -158,5 +160,26 @@ describe("ikasue Web ABI", () => {
       );
       expect(schema.$id).toContain("ikasue");
     }
+  });
+
+  it("keeps the MessagePort envelope aligned with the row contract", () => {
+    expect(isIkaRowRequest({ start: 0, limit: 25 })).toBe(true);
+    expect(isIkaRowRequest({ start: -1, limit: 25 })).toBe(false);
+    expect(
+      isIkaMessage({
+        version: IKASUE_ABI_VERSION,
+        type: "response",
+        id: 1,
+        result: "not-a-record",
+      }),
+    ).toBe(false);
+    expect(
+      isIkaMessage({
+        version: IKASUE_ABI_VERSION,
+        type: "event",
+        event: "rows-invalidated",
+        payload: "not-a-record",
+      }),
+    ).toBe(false);
   });
 });

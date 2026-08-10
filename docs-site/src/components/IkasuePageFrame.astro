@@ -4,14 +4,23 @@ import MobileMenuToggle from "@astrojs/starlight/components/MobileMenuToggle.ast
 const { hasSidebar } = Astro.locals.starlightRoute;
 ---
 
-<div class="page sl-flex" data-ikasue-frame>
-  <header class="header" data-ikasue-header><slot name="header" /></header>
+<script>
+  import { defineIkaSue } from "../../../src/elements";
+
+  defineIkaSue();
+</script>
+
+<ika-theme-root class="page sl-flex" data-ikasue-frame>
+  <ika-toolbar class="header" data-ikasue-header role="banner">
+    <slot name="header" />
+  </ika-toolbar>
   {
     hasSidebar && (
-      <nav
+      <ika-sidebar
         class="sidebar print:hidden"
         data-ikasue-sidebar
         aria-label={Astro.locals.t("sidebarNav.accessibleLabel")}
+        role="navigation"
       >
         <MobileMenuToggle />
         <div
@@ -23,11 +32,13 @@ const { hasSidebar } = Astro.locals.starlightRoute;
             <slot name="sidebar" />
           </div>
         </div>
-      </nav>
+      </ika-sidebar>
     )
   }
-  <div class="main-frame" data-ikasue-content-plane><slot /></div>
-</div>
+  <ika-scroll-area class="main-frame" data-ikasue-content-plane role="main">
+    <slot />
+  </ika-scroll-area>
+</ika-theme-root>
 
 <script is:inline>
   const frame = document.querySelector("[data-ikasue-frame]");

@@ -1,9 +1,10 @@
 import {
   IKASUE_ABI_VERSION,
-  isIkaDataGridRow,
   isIkaError,
   isIkaJsonRecord,
   isIkaMessage,
+  isIkaRowPage,
+  isIkaRowRequest,
   isIkaJsonValue,
 } from "./contract";
 import type {
@@ -11,7 +12,6 @@ import type {
   IkaRowPage,
   IkaRowRequest,
   IkaJsonRecord,
-  IkaJsonValue,
 } from "./contract";
 
 export interface IkaDataGridModel {
@@ -29,7 +29,7 @@ export interface IkaDataGridModel {
 
 export interface IkaDataGridModelEvent {
   readonly event: string;
-  readonly payload: IkaJsonValue;
+  readonly payload: IkaJsonRecord;
 }
 
 function asError(value: unknown): Error {
@@ -60,30 +60,14 @@ export function isIkaDataGridModelEvent(
     Object.keys(value).every((key) => key === "event" || key === "payload") &&
     typeof value.event === "string" &&
     value.event.length > 0 &&
-    isIkaJsonValue(value.payload)
+    isIkaJsonRecord(value.payload)
   );
 }
 
 export function assertIkaRowPage(value: unknown): IkaRowPage {
-  if (!isIkaJsonRecord(value) || !Array.isArray(value.rows))
+  if (!isIkaRowPage(value))
     throw new Error("ikasue model returned an invalid row page");
-  if (!Object.keys(value).every((key) => key === "rows" || key === "total"))
-    throw new Error("ikasue model returned an invalid row page");
-  if (!value.rows.every(isIkaDataGridRow))
-    throw new Error("ikasue model returned an invalid row");
-  const total =
-    value.total === undefined
-      ? undefined
-      : typeof value.total === "number" &&
-          Number.isInteger(value.total) &&
-          value.total >= 0
-        ? value.total
-        : (() => {
-            throw new Error("ikasue model returned an invalid total");
-          })();
-  return total === undefined
-    ? { rows: value.rows }
-    : { rows: value.rows, total };
+  return value;
 }
 
 /** Adapts the portable data-only MessagePort protocol to the direct model API. */
@@ -128,7 +112,10 @@ export function createDataGridPortModel(
       data.type === "event" &&
       isIkaDataGridModelEvent({ event: data.event, payload: data.payload })
     ) {
-      const event = { event: data.event, payload: data.payload };
+      const event = {
+        event: data.event,
+        payload: data.payload,
+      } satisfies IkaDataGridModelEvent;
       for (const listener of listeners) listener(event);
       return;
     }
@@ -141,7 +128,7 @@ export function createDataGridPortModel(
     if (!request) return;
     pending.delete(data.id);
     if (data.type === "error") request.reject(asError(data.error));
-    else request.resolve((data as { readonly result: IkaJsonValue }).result);
+    else request.resolve(data.result);
   };
 
   port.addEventListener("message", receive);
@@ -157,6 +144,12 @@ export function createDataGridPortModel(
     return new Promise((resolve, reject) => {
       if (!isIkaJsonRecord(payload)) {
         reject(new Error("ikasue model payload must be a JSON-safe record"));
+        return;
+      }
+      if (operation === "rows" && !isIkaRowRequest(payload)) {
+        reject(
+          new Error("ikasue row request does not match the JSON contract"),
+        );
         return;
       }
       if (disposed) {
@@ -187,13 +180,23 @@ export function createDataGridPortModel(
           reject(reason);
         },
       });
-      port.postMessage({
-        version: IKASUE_ABI_VERSION,
-        type: "request",
-        id,
-        operation,
-        payload,
-      } satisfies IkaMessage);
+      if (operation === "rows") {
+        port.postMessage({
+          version: IKASUE_ABI_VERSION,
+          type: "request",
+          id,
+          operation,
+          payload: payload as unknown as IkaRowRequest,
+        } satisfies IkaMessage);
+      } else {
+        port.postMessage({
+          version: IKASUE_ABI_VERSION,
+          type: "request",
+          id,
+          operation,
+          payload,
+        } satisfies IkaMessage);
+      }
     });
   };
 

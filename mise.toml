@@ -5,10 +5,6 @@ node = "22.14.0"
 description = "Install npm dependencies"
 run = "npm install"
 
-[tasks.dev]
-description = "Run the Vite development shell"
-run = "npm run dev"
-
 [tasks.build]
 description = "Build the distributable package"
 run = "npm run build"
@@ -16,18 +12,6 @@ run = "npm run build"
 [tasks.check]
 description = "Run formatting, lint, type, and test checks"
 run = "npm run check"
-
-[tasks.test]
-description = "Run the Vitest suite"
-run = "npm run test"
-
-[tasks.catalog]
-description = "Run the catalog development entry point"
-run = "npm run catalog"
-
-[tasks.docs]
-description = "Run the Astro + Starlight documentation site"
-run = "npm run docs:dev"
 
 [tasks.docs-build]
 description = "Build the Astro + Starlight documentation site"

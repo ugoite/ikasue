@@ -1,98 +1,61 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import routeData from "./catalog-routes.json" with { type: "json" };
 
-const repositoryRoot = path.resolve(
+const root = path.resolve(
   path.dirname(new URL(import.meta.url).pathname),
   "..",
 );
-const componentRoot = path.join(
-  repositoryRoot,
-  "docs-site",
-  "src",
-  "content",
-  "docs",
-  "components",
-);
-const distRoot = path.join(repositoryRoot, "docs-site", "dist");
-const componentIds = fs
-  .readdirSync(componentRoot)
-  .filter((file) => file.endsWith(".mdx") && file !== "index.mdx")
-  .map((file) => file.slice(0, -4))
-  .sort();
-const repositoryName = process.env.GITHUB_REPOSITORY?.split("/")[1];
-const base = repositoryName ? `/${repositoryName}/` : "/";
-
-function count(source, value) {
-  return source.split(value).length - 1;
-}
-
+const dist = path.join(root, "docs-site", "dist");
+const repository = process.env.GITHUB_REPOSITORY?.split("/");
+const rawBase =
+  process.env.ASTRO_BASE?.trim() ||
+  (process.env.GITHUB_ACTIONS === "true" && repository?.[1]
+    ? `/${repository[1]}/`
+    : "/");
+const base = rawBase === "/" ? "/" : `/${rawBase.replace(/^\/+|\/+$/g, "")}/`;
+const routes = [...routeData.jaRoutes, ...routeData.enRoutes];
 const errors = [];
-for (const locale of ["ja", "en"]) {
-  const localePrefix = locale === "en" ? "en/" : "";
-  for (const id of componentIds) {
-    const relativePath = path.join(
-      locale === "en" ? "en" : "",
-      "components",
-      id,
-      "index.html",
-    );
-    const outputPath = path.join(distRoot, relativePath);
-    if (!fs.existsSync(outputPath)) {
-      errors.push(`Missing generated component page: ${relativePath}`);
-      continue;
-    }
-    const source = fs.readFileSync(outputPath, "utf8");
-    const expectedComponentHref = `href="${base}${localePrefix}components/${id}/"`;
-    for (const [marker, expected] of [
-      ["data-has-sidebar", 1],
-      ['class="page ', 1],
-      [`data-component=\"${id}\"`, 1],
-      ["data-element-kind", 1],
-      [expectedComponentHref, 1],
-    ]) {
-      if (count(source, marker) !== expected)
-        errors.push(`${relativePath} must contain ${marker} exactly once`);
-    }
-    for (const marker of ["data-component-demo", "ika-"]) {
-      if (!source.includes(marker))
-        errors.push(`${relativePath} must contain ${marker}`);
-    }
-    for (const marker of [
-      "app-shell",
-      "nav-plane",
-      "topline",
-      "content-scroll",
-      'target="_blank"',
-      "?component=",
-      "catalogPath",
-      "mountCatalog",
-      "renderDemo",
-      "renderNativePlane",
-      "example-renderer",
-    ]) {
-      if (source.includes(marker))
-        errors.push(`${relativePath} contains forbidden ${marker}`);
-    }
+const joinBase = (route) =>
+  base === "/" ? route : `${base.slice(0, -1)}${route}`;
+const routeFile = (route) =>
+  route === "/"
+    ? "index.html"
+    : `${route.replace(/^\//, "").replace(/\/$/, "")}/index.html`;
+const expectedFiles = new Set(routes.map(routeFile));
+function htmlFiles(directory, prefix = "") {
+  if (!fs.existsSync(directory)) return [];
+  const result = [];
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const absolute = path.join(directory, entry.name);
+    const relative = path.join(prefix, entry.name).replaceAll(path.sep, "/");
+    if (entry.isDirectory()) result.push(...htmlFiles(absolute, relative));
+    else if (
+      entry.isFile() &&
+      relative.endsWith(".html") &&
+      relative !== "404.html"
+    )
+      result.push(relative);
   }
+  return result;
 }
-
-for (const relativePath of [
-  path.join("catalog", "index.html"),
-  path.join("en", "catalog", "index.html"),
-]) {
-  if (fs.existsSync(path.join(distRoot, relativePath)))
+if (!fs.existsSync(dist)) errors.push("Missing documentation output");
+const actualFiles = new Set(htmlFiles(dist));
+for (const route of routes) {
+  const relative = routeFile(route);
+  const absolute = path.join(dist, relative);
+  if (!actualFiles.has(relative))
+    errors.push(`Missing generated route: ${relative}`);
+  else if (!fs.readFileSync(absolute, "utf8").includes(joinBase(route)))
     errors.push(
-      `Standalone catalog build output must not exist: ${relativePath}`,
+      `Generated route does not contain its configured base path: ${joinBase(route)}`,
     );
 }
-
+for (const relative of actualFiles)
+  if (!expectedFiles.has(relative))
+    errors.push(`Unexpected generated route: ${relative}`);
 if (errors.length) {
-  console.error("Docs build regression check failed:");
   console.error(errors.join("\n"));
   process.exitCode = 1;
-} else {
-  console.log(
-    `Docs build regression check passed: ${componentIds.length * 2} bilingual component pages have one Starlight frame and one embedded demo.`,
-  );
-}
+} else console.log(`Documentation route check passed for ${base}.`);

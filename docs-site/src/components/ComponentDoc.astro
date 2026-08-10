@@ -1,439 +1,198 @@
 ---
-import { Code, TabItem, Tabs } from "@astrojs/starlight/components";
-import {
-  componentSource,
-  findRegistryEntry,
-} from "../../../src/catalog/registry";
-import type { CatalogComponentId } from "../../../src/catalog/types";
-import { sitePath } from "../data/site-path";
+import { findRegistryEntry } from "../../../src/catalog/registry";
+import type {
+  CatalogComponentId,
+  CatalogLocale,
+} from "../../../src/catalog/types";
+import { IKA_ELEMENT_CONTRACTS } from "../../../src/abi";
 
 interface Props {
   id: CatalogComponentId;
-  simple?: boolean;
+  locale?: CatalogLocale;
 }
-
-const { id, simple = false } = Astro.props;
-const locale = Astro.currentLocale === "en" ? "en" : "ja";
+const { id, locale = "ja" } = Astro.props as Props;
 const entry = findRegistryEntry(id);
-const copy = entry.documentation[locale];
-const source = componentSource(id);
-const localePrefix = locale === "en" ? "en/" : "";
-const displayDefault = (property: (typeof entry.properties)[number]) =>
-  locale === "en" ? property.defaultEn : property.defaultJa;
-const elementKind =
-  id === "data-table" ? "data-grid" : id === "developer-model" ? "text" : id;
-const propertyRows =
-  id === "data-table"
-    ? [
-        {
-          key: "editable",
-          labelJa: "編集",
-          labelEn: "Editable",
-          type: "attribute",
-          defaultValue: "true",
-          values: ["true", "false"],
-        },
-        {
-          key: "columns",
-          labelJa: "列定義",
-          labelEn: "Columns",
-          type: "property",
-          defaultValue: "readonly IkaDataGridColumn[]",
-          values: [],
-        },
-        {
-          key: "rows",
-          labelJa: "行データ",
-          labelEn: "Rows",
-          type: "property",
-          defaultValue: "readonly IkaDataGridRow[]",
-          values: [],
-        },
-        {
-          key: "selection",
-          labelJa: "選択",
-          labelEn: "Selection",
-          type: "property",
-          defaultValue: "IkaDataGridSelection | undefined",
-          values: [],
-        },
-      ]
-    : entry.properties.map((property) => ({
-        key: property.key,
-        labelJa: property.labelJa,
-        labelEn: property.labelEn,
-        type: property.type === "text" ? "property" : "attribute",
-        defaultValue: String(displayDefault(property)),
-        values: property.values,
-      }));
-const contract = JSON.stringify(
-  id === "data-table"
+const componentEntry = entry?.kind === "component" ? entry : undefined;
+const abiEntry = IKA_ELEMENT_CONTRACTS[id];
+const tag = `ika-${id}`;
+const copy =
+  locale === "ja"
     ? {
-        abi: "ikasue-web/1",
-        element: "ika-data-grid",
-        attributes: { editable: true },
-        properties: {
-          columns: [{ id: "name", label: "Name" }],
-          rows: [{ id: "42", cells: { name: "ika" } }],
-          selection: { row: "42", column: "name" },
-        },
-        events: ["ika-selection-change", "ika-edit-start", "ika-error"],
-        methods: ["focus", "scrollToRow", "startEditing"],
+        contract: "Web ABI contract",
+        contractText:
+          "ikasueのcomponent pageは、公開Custom Elementを直接登録し、attribute、property、CustomEvent、methodの境界をそのまま説明します。",
+        demo: "公開elementのlive demo",
+        source: "elementの使い方",
+        name: "名前",
+        type: "型",
+        defaultValue: "既定値",
+        empty: "—",
       }
     : {
-        abi: "ikasue-web/1",
-        element: `ika-${elementKind}`,
-        attributes: Object.fromEntries(
-          entry.properties
-            .filter((property) => property.type !== "text")
-            .map((property) => [property.key, displayDefault(property)]),
-        ),
-        properties: Object.fromEntries(
-          entry.properties
-            .filter((property) => property.type === "text")
-            .map((property) => [property.key, displayDefault(property)]),
-        ),
-        events: ["ika-error"],
-        methods: ["focus"],
-      },
-  null,
-  2,
-);
+        contract: "Web ABI contract",
+        contractText:
+          "This component page registers the public Custom Element directly and documents the attribute, property, CustomEvent, and method boundaries.",
+        demo: "Live public element demo",
+        source: "Element usage",
+        name: "Name",
+        type: "Type",
+        defaultValue: "Default",
+        empty: "—",
+      };
 ---
 
-<div class:list={["component-doc", { "component-doc--simple": simple }]}>
-  <p class="eyebrow">
-    {
-      locale === "ja"
-        ? `${entry.displayNameJa} · ${copy.category}`
-        : copy.category
-    }
-  </p>
-  <p class="lede">{copy.summary}</p>
+<article class="docs-component" data-kind={id}>
+  <p class="eyebrow">{entry?.group ?? "component"}</p>
+  <p>{entry?.summary[locale] ?? ""}</p>
 
-  <div class="doc-links">
-    <span
-      >{locale === "en" ? "Element" : "element"}
-      <code>{`<ika-${elementKind}>`}</code></span
-    >
-    <a href={sitePath(`${localePrefix}components/`)}>
-      {locale === "en" ? "Component inventory" : "component一覧"}
-    </a>
-  </div>
-
-  <section
-    class="component-interactive"
-    aria-labelledby={`interactive-${entry.id}`}
-  >
-    <h2 id={`interactive-${entry.id}`}>
-      {locale === "en" ? "Live Web ABI demo" : "Web ABIのlive demo"}
-    </h2>
-    <p class="interactive-note">
-      {
-        locale === "en"
-          ? "This page imports ikasue, registers the same Custom Elements, and talks to the element through its public ABI."
-          : "このページはikasueをimportし、同じCustom Elementsを登録し、公開ABIだけでelementを操作します。"
-      }
+  <section aria-labelledby={`${id}-demo`} data-ika-demo>
+    <h2 id={`${id}-demo`}>{copy.demo}</h2>
+    <p>
+      <code>&lt;{tag}&gt;</code> is registered by importing ikasue and is used through
+      its public Web ABI.
     </p>
-    <div
-      data-component-demo
-      data-component={entry.id}
-      data-element-kind={elementKind}
-      data-locale={locale}
-      aria-label={`${entry.page[locale].title} ${locale === "en" ? "demo" : "demo"}`}
-    >
-    </div>
+    <div data-ika-demo-target data-ika-component={id} data-tag={tag}></div>
   </section>
 
-  <h2>{locale === "en" ? "Web ABI contract" : "Web ABI contract"}</h2>
-  <p>{copy.philosophy}</p>
-  <Code
-    code={contract}
-    lang="json"
-    title={`${entry.page[locale].title} Web ABI`}
-  />
+  <section aria-labelledby={`${id}-contract`}>
+    <h2 id={`${id}-contract`}>{copy.contract}</h2>
+    <p>{copy.contractText}</p>
+  </section>
 
-  <div class="guidance-grid">
-    <section>
-      <h2>{locale === "en" ? "Use it when" : "使う"}</h2>
-      <p>{copy.useWhen}</p>
-    </section>
-    <section>
-      <h2>{locale === "en" ? "Avoid it when" : "避ける"}</h2>
-      <p>{copy.avoidWhen}</p>
-    </section>
-  </div>
-
-  <h2>{locale === "en" ? "Element usage" : "elementの使い方"}</h2>
-  <p class="source-note">{copy.implementation}</p>
-  <Tabs>
-    <TabItem label="JavaScript">
-      <Code code={source.javascript} lang="js" title="JavaScript" />
-    </TabItem>
-    <TabItem label="Rust/WASM">
-      <Code code={source.rust} lang="rust" title="Rust/WASM" />
-    </TabItem>
-  </Tabs>
-
-  <h2>{locale === "en" ? "Properties" : "プロパティ"}</h2>
-  <div class="property-table">
-    <table>
-      <thead>
-        <tr>
-          <th scope="col">{locale === "en" ? "Name" : "名前"}</th>
-          <th scope="col">{locale === "en" ? "Type" : "型"}</th>
-          <th scope="col">{locale === "en" ? "Default" : "既定値"}</th>
-          <th scope="col">{locale === "en" ? "Values" : "値"}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {
-          propertyRows.length ? (
-            propertyRows.map((property) => (
+  {
+    componentEntry && abiEntry && (
+      <>
+        <section aria-labelledby={`${id}-properties`}>
+          <h2 id={`${id}-properties`}>
+            {locale === "ja" ? "Properties" : "Properties"}
+          </h2>
+          <table>
+            <thead>
               <tr>
-                <th scope="row">
-                  <code>{property.key}</code>
-                  <small>
-                    {locale === "ja" ? property.labelJa : property.labelEn}
-                  </small>
-                </th>
-                <td>
-                  <code>{property.type}</code>
-                </td>
-                <td>
-                  <code>{property.defaultValue}</code>
-                </td>
-                <td>
-                  {property.values.length ? property.values.join(" · ") : "—"}
-                </td>
+                <th scope="col">{copy.name}</th>
+                <th scope="col">{copy.type}</th>
+                <th scope="col">{copy.defaultValue}</th>
               </tr>
-            ))
-          ) : (
-            <tr>
-              <td colspan="4">—</td>
-            </tr>
-          )
-        }
-      </tbody>
-    </table>
-  </div>
-
-  <h2>
-    {
-      locale === "en"
-        ? "Behavior and accessibility"
-        : "振る舞いとアクセシビリティ"
-    }
-  </h2>
-  <dl class="behavior-list">
-    <div>
-      <dt>{locale === "en" ? "Interaction" : "interaction"}</dt><dd>
-        {copy.interaction}
-      </dd>
-    </div>
-    <div>
-      <dt>{locale === "en" ? "Keyboard" : "keyboard"}</dt><dd>
-        {copy.keyboard}
-      </dd>
-    </div>
-    <div>
-      <dt>{locale === "en" ? "Accessibility" : "アクセシビリティ"}</dt><dd>
-        {copy.accessibility}
-      </dd>
-    </div>
-  </dl>
-</div>
+            </thead>
+            <tbody>
+              {abiEntry.properties.map((property) => (
+                <tr>
+                  <th scope="row">
+                    <code>{property.name}</code>
+                  </th>
+                  <td>
+                    <code>{property.type}</code>
+                  </td>
+                  <td>
+                    {property.defaultValue === undefined
+                      ? copy.empty
+                      : String(property.defaultValue)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+        <p>
+          Attributes:{" "}
+          {abiEntry.attributes.length
+            ? abiEntry.attributes.join(", ")
+            : copy.empty}
+        </p>
+        <section aria-labelledby={`${id}-source`}>
+          <h2 id={`${id}-source`}>{copy.source}</h2>
+          <pre>
+            <code>{componentEntry.source.typescript}</code>
+          </pre>
+          <pre>
+            <code>{componentEntry.source.rust}</code>
+          </pre>
+        </section>
+        <section aria-labelledby={`${id}-events-methods`}>
+          <h2 id={`${id}-events-methods`}>Events and methods</h2>
+          <p>
+            Events:{" "}
+            {abiEntry.events.length ? abiEntry.events.join(", ") : copy.empty}
+          </p>
+          <p>
+            Methods:{" "}
+            {abiEntry.methods.length ? abiEntry.methods.join(", ") : copy.empty}
+          </p>
+        </section>
+      </>
+    )
+  }
+</article>
 
 <script>
   import { defineIkaSue } from "../../../src/elements";
   import type {
     IkaDataGridColumn,
     IkaDataGridRow,
-    IkaJsonRecord,
   } from "../../../src/contract";
 
-  const tagFor = (target: HTMLElement): string =>
-    `ika-${target.dataset.elementKind ?? "text"}`;
-
-  const mount = (target: HTMLElement): void => {
-    defineIkaSue();
-    const node = document.createElement(tagFor(target)) as HTMLElement & {
-      props?: IkaJsonRecord;
-      columns?: readonly IkaDataGridColumn[];
-      rows?: readonly IkaDataGridRow[];
-      selection?: { row: string; column: string };
-    };
-    const id = target.dataset.component ?? "text";
-    const defaults: Record<string, string | boolean> = {
-      ...(id === "text"
-        ? { editable: true, editor: "text", value: "Tokyo office" }
-        : {}),
-      ...(id === "data-table" ? { editable: true } : {}),
-      ...(id === "status-icon" ? { kind: "success", label: "Synced" } : {}),
-      ...(id === "boolean-text"
-        ? { checked: true, label: "Enable automatic save" }
-        : {}),
-    };
-    for (const [key, value] of Object.entries(defaults)) {
-      if (typeof value === "boolean") {
-        if (value) node.setAttribute(key, "");
-      } else {
-        node.setAttribute(key, value);
-      }
-    }
-    if (id === "data-table") {
-      node.columns = [
-        { id: "id", label: "ID" },
-        { id: "title", label: "Title" },
-        { id: "state", label: "State" },
-      ];
-      node.rows = [
-        {
-          id: "inc-204",
-          cells: { id: "INC-204", title: "Invoice sync", state: "Review" },
-        },
-        {
-          id: "job-881",
-          cells: { id: "JOB-881", title: "Inventory delta", state: "Active" },
-        },
-      ];
-      node.selection = { row: "inc-204", column: "title" };
-      node.addEventListener("ika-selection-change", (event) => {
-        const detail = (event as CustomEvent).detail as IkaJsonRecord;
-        target.dataset.lastEvent = JSON.stringify(detail);
-      });
-    } else {
-      node.props = defaults as IkaJsonRecord;
-    }
-    node.addEventListener("ika-error", () => {
-      target.dataset.error = "true";
-    });
-    target.append(node);
-  };
-
+  defineIkaSue();
   document
-    .querySelectorAll<HTMLElement>("[data-component-demo]")
-    .forEach(mount);
+    .querySelectorAll<HTMLElement>("[data-ika-demo-target]")
+    .forEach((target) => {
+      const id = target.dataset.ikaComponent ?? "text";
+      const element = document.createElement(
+        target.dataset.tag ?? `ika-${id}`,
+      ) as HTMLElement & {
+        columns?: readonly IkaDataGridColumn[];
+        rows?: readonly IkaDataGridRow[];
+        items?: readonly { id: string; label: string }[];
+        activeId?: string;
+        props?: Record<string, unknown>;
+      };
+      if (id === "data-grid") {
+        element.columns = [
+          { id: "id", label: "ID" },
+          { id: "name", label: "Name" },
+        ];
+        element.rows = [{ id: "42", cells: { id: "42", name: "ika" } }];
+        element.addEventListener("ika-selection-change", (event) => {
+          target.dataset.lastEvent = JSON.stringify(
+            (event as CustomEvent).detail,
+          );
+        });
+      } else if (id === "tabs") {
+        element.items = [
+          { id: "overview", label: "Overview" },
+          { id: "detail", label: "Detail" },
+        ];
+        element.activeId = "overview";
+      } else {
+        element.props = {};
+      }
+      target.append(element);
+    });
 </script>
 
 <style>
-  .component-doc {
-    --plane-border: color-mix(in srgb, var(--sl-color-white) 18%, transparent);
+  .docs-component section {
+    margin-block: 1.5rem;
   }
-  .eyebrow {
-    color: var(--sl-color-text-accent);
-    font-family: var(--sl-font-mono);
-    font-size: var(--sl-text-sm);
-    letter-spacing: 0.04em;
-  }
-  .lede {
-    max-width: 52rem;
-    font-size: var(--sl-text-lg);
-  }
-  .component-interactive {
-    margin-block: 2rem 3rem;
-    padding-block: 1.25rem 0;
-    border-block: 1px solid var(--sl-color-gray-5);
-  }
-  .interactive-note,
-  .source-note {
-    color: var(--sl-color-gray-3);
-    font-size: var(--sl-text-sm);
-  }
-  .doc-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem 1.25rem;
-    align-items: center;
-    margin-block: 1rem 2rem;
-    padding-block: 0.75rem;
-    border-block: 1px solid var(--sl-color-gray-5);
-    font-size: var(--sl-text-sm);
-  }
-  .guidance-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
-  }
-  .guidance-grid section {
+  [data-ika-demo-target] {
+    min-block-size: 7rem;
+    display: block;
     padding: 1rem;
-    border: 1px solid var(--sl-color-gray-5);
-    border-inline-start: 3px solid var(--sl-color-text-accent);
+    border-block: 1px solid var(--sl-color-gray-5);
   }
-  .property-table {
-    overflow-x: auto;
+  [data-ika-demo-target] > * {
+    display: block;
   }
   table {
     width: 100%;
-    min-width: 38rem;
     border-collapse: collapse;
   }
   th,
   td {
+    padding: 0.6rem;
     border-block-end: 1px solid var(--sl-color-gray-5);
-    padding: 0.65rem;
     text-align: start;
-    vertical-align: top;
   }
-  thead th {
-    color: var(--sl-color-white);
-    background: var(--sl-color-gray-2);
-  }
-  small {
-    display: block;
-    color: var(--sl-color-gray-3);
-    font-weight: 400;
-  }
-  .behavior-list > div {
-    display: grid;
-    grid-template-columns: minmax(9rem, 0.4fr) 1fr;
-    gap: 1rem;
-    padding-block: 0.7rem;
-    border-block-end: 1px solid var(--sl-color-gray-5);
-  }
-  dt {
-    color: var(--sl-color-text-accent);
-    font-weight: 650;
-  }
-  dd {
-    margin: 0;
-  }
-  :global([data-component-demo]) {
-    display: grid;
-    min-block-size: 8rem;
-    align-items: stretch;
-  }
-  :global(
-    [data-component-demo]
-      > :where(
-        ika-text,
-        ika-status-icon,
-        ika-boolean-text,
-        ika-icon-action,
-        ika-action-strip,
-        ika-choice-group,
-        ika-form-list,
-        ika-progress-region,
-        ika-message-region,
-        ika-bottom-dialog
-      )
-  ) {
-    display: block;
-    padding: 1.25rem;
-    border-block: 1px solid var(--sl-color-gray-5);
-    background: color-mix(in srgb, var(--sl-color-text-accent) 8%, transparent);
-  }
-  :global([data-component-demo] ika-data-grid) {
-    display: block;
-    min-block-size: 12rem;
-  }
-  @media (max-width: 48rem) {
-    .guidance-grid {
-      grid-template-columns: 1fr;
-    }
-    .behavior-list > div {
-      grid-template-columns: 1fr;
-      gap: 0.25rem;
-    }
+  pre {
+    overflow-x: auto;
   }
 </style>

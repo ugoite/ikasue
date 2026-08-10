@@ -1,1 +1,222 @@
-@import "./catalog/catalog.css";
+:root {
+  --ikasue-surface: #ffffff;
+  --ikasue-ink: #171717;
+  --ikasue-line: #b8b8b8;
+  --ikasue-selection: #dfeeff;
+  --ikasue-motion-duration: 160ms;
+  color: var(--ikasue-ink);
+  background: var(--ikasue-surface);
+  font-family: system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--ikasue-surface);
+  color: var(--ikasue-ink);
+}
+ika-theme-root,
+ika-text,
+ika-editable-text,
+ika-text-field,
+ika-flex,
+ika-stack,
+ika-grid,
+ika-scroll-area,
+ika-sidebar,
+ika-toolbar,
+ika-form,
+ika-data-grid,
+ika-history-timeline,
+ika-tabs,
+ika-split-view,
+ika-side-panel,
+ika-bottom-panel,
+ika-loading-region,
+ika-dialog,
+ika-status-indicator,
+ika-alert,
+ika-progress {
+  display: block;
+}
+ika-flex,
+ika-stack,
+ika-grid,
+ika-split-view {
+  min-width: 0;
+  min-height: 0;
+}
+ika-flex,
+ika-stack {
+  display: flex;
+  gap: var(--ikasue-layout-gap, 0);
+  flex-direction: row;
+}
+ika-stack {
+  flex-direction: column;
+}
+ika-grid {
+  display: grid;
+  gap: var(--ikasue-layout-gap, 0);
+  grid-template-columns: var(--ikasue-grid-columns, none);
+  grid-template-rows: var(--ikasue-grid-rows, none);
+}
+ika-scroll-area {
+  min-width: 0;
+  min-height: 0;
+}
+ika-separator {
+  flex: 0 0 auto;
+  background: var(--ikasue-line);
+}
+ika-separator[data-orientation="horizontal"] {
+  inline-size: 100%;
+  block-size: 1px;
+}
+ika-separator[data-orientation="vertical"] {
+  inline-size: 1px;
+  block-size: 100%;
+}
+ika-split-view {
+  display: flex;
+  flex-direction: row;
+  gap: 0.75rem;
+}
+ika-split-view[data-orientation="vertical"] {
+  flex-direction: column;
+}
+ika-split-view > [data-pane-id] {
+  min-width: 0;
+  min-height: 0;
+  border-inline-start: 1px solid var(--ikasue-line);
+  padding: 0.75rem;
+}
+ika-split-view > [data-collapsed="true"] {
+  flex: 0 0 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+ika-split-view > [data-pane-divider] {
+  flex: 0 0 auto;
+  background: var(--ikasue-line);
+  outline: none;
+}
+ika-split-view[data-orientation="horizontal"] > [data-pane-divider] {
+  width: 1px;
+  cursor: col-resize;
+}
+ika-split-view[data-orientation="vertical"] > [data-pane-divider] {
+  height: 1px;
+  cursor: row-resize;
+}
+ika-split-view[data-responsive-orientation="vertical"] > [data-pane-divider] {
+  width: auto;
+  height: 1px;
+  cursor: row-resize;
+}
+ika-side-panel,
+ika-bottom-panel {
+  border-block-start: 1px solid var(--ikasue-line);
+  padding: 0.75rem;
+}
+ika-loading-region {
+  position: relative;
+}
+ika-data-grid[data-density="compact"] {
+  --ikasue-grid-cell-padding: 0.25rem;
+}
+ika-theme-root {
+  min-height: 100vh;
+  background: var(--ikasue-surface);
+}
+ika-toolbar.ikasue-header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--ikasue-line);
+}
+ika-toolbar.ikasue-header nav {
+  display: flex;
+  gap: 1rem;
+}
+ika-scroll-area.ikasue-main {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2rem 1rem 5rem;
+}
+.ikasue-component-page {
+  display: grid;
+  gap: 1rem;
+}
+.ikasue-demo {
+  display: grid;
+  gap: 1rem;
+  container-type: inline-size;
+  border: 1px solid var(--ikasue-line);
+  padding: 1rem;
+  background: var(--ikasue-surface);
+}
+.ikasue-layout-container {
+  min-width: 0;
+  min-height: 0;
+}
+.ikasue-demo-label {
+  color: var(--ikasue-ink);
+  font-size: 0.875rem;
+}
+[data-selected="true"] {
+  background: var(--ikasue-selection);
+}
+[data-motion-origin="start"] {
+  transform-origin: left center;
+}
+[data-motion-origin="end"] {
+  transform-origin: right center;
+}
+[data-motion-origin="top"] {
+  transform-origin: center top;
+}
+[data-motion-origin="bottom"] {
+  transform-origin: center bottom;
+}
+
+@container (max-width: 600px) {
+  ika-flex,
+  ika-stack {
+    gap: 0.5rem !important;
+  }
+  ika-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  ika-split-view[data-orientation="horizontal"] {
+    flex-direction: column;
+  }
+  ika-split-view[data-orientation="horizontal"] > [data-pane-id] {
+    min-width: 0;
+    min-height: var(--ikasue-pane-min-size, 0);
+  }
+  ika-split-view[data-orientation="horizontal"] > [data-pane-divider] {
+    width: auto;
+    height: 1px;
+    cursor: row-resize;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ikasue-motion-duration: 0ms;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}

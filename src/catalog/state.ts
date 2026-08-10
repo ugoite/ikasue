@@ -1,80 +1,37 @@
-import {
-  CATALOG_REGISTRY,
-  COMPONENT_REGISTRY,
-  findRegistryEntry,
-} from "./registry";
-import type {
-  CatalogComponentId,
-  CatalogLocale,
-  CatalogPageId,
-  CatalogProps,
-} from "./types";
+import { COMPONENT_IDS, isCatalogComponentId } from "./registry";
+import { joinBase, normalizeBase } from "./routes";
+import type { CatalogComponentId, CatalogLocale } from "./types";
 
-export const DEFAULT_COMPONENT_ID: CatalogPageId = "philosophy";
-
-export function isCatalogComponentId(
-  value: string | null | undefined,
-): value is CatalogComponentId {
-  return (
-    value !== null &&
-    value !== undefined &&
-    COMPONENT_REGISTRY.some((component) => component.id === value)
-  );
+export function parseComponentSelection(
+  pathname: string,
+  base = "/",
+  locale?: CatalogLocale,
+): CatalogComponentId | undefined {
+  if (typeof pathname !== "string") return undefined;
+  const normalized = pathname.replace(/\\+/g, "/");
+  const prefix = normalizeBase(base);
+  const relative =
+    prefix === "/"
+      ? normalized
+      : normalized.startsWith(prefix.slice(0, -1))
+        ? normalized.slice(prefix.length - 1)
+        : "";
+  const match = relative.match(/^\/(en\/)?components\/([^/]+)\/$/);
+  const id = match?.[2];
+  if (!match || !id || (locale && Boolean(match[1]) !== (locale === "en")))
+    return undefined;
+  return isCatalogComponentId(id) ? id : undefined;
 }
 
-export function isCatalogPageId(
-  value: string | null | undefined,
-): value is CatalogPageId {
-  return (
-    value !== null &&
-    value !== undefined &&
-    CATALOG_REGISTRY.some((page) => page.id === value)
-  );
-}
-
-export function parseComponentQuery(
-  search: string,
-  fallback: CatalogPageId = DEFAULT_COMPONENT_ID,
-): CatalogPageId {
-  const normalized = search.startsWith("?") ? search.slice(1) : search;
-  const requested = new URLSearchParams(normalized).get("component");
-  return isCatalogPageId(requested) ? requested : fallback;
-}
-
-export const parseCatalogQuery = parseComponentQuery;
-
-export function serializeComponentQuery(
-  id: CatalogPageId,
-  search = "",
+export function serializeComponentSelection(
+  id: CatalogComponentId,
+  base = "/",
+  locale: CatalogLocale = "ja",
 ): string {
-  const normalized = search.startsWith("?") ? search.slice(1) : search;
-  const params = new URLSearchParams(normalized);
-  params.set("component", id);
-  const next = params.toString();
-  return next ? `?${next}` : "";
-}
-
-export const serializeCatalogQuery = serializeComponentQuery;
-
-export function defaultProps(
-  id: CatalogPageId,
-  locale: CatalogLocale = "ja",
-): CatalogProps {
-  const component = findRegistryEntry(id);
-  return Object.fromEntries(
-    component.properties.map((property) => [
-      property.key,
-      locale === "en" ? property.defaultEn : property.defaultJa,
-    ]),
+  if (!COMPONENT_IDS.includes(id))
+    return joinBase(normalizeBase(base), locale === "en" ? "/en/" : "/");
+  return joinBase(
+    normalizeBase(base),
+    `${locale === "en" ? "/en" : ""}/components/${id}/`,
   );
-}
-
-export const getDefaultProps = defaultProps;
-
-export function cloneProps(
-  id: CatalogPageId,
-  props?: CatalogProps,
-  locale: CatalogLocale = "ja",
-): CatalogProps {
-  return { ...defaultProps(id, locale), ...props };
 }
