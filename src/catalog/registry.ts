@@ -63,6 +63,38 @@ const names: Record<CatalogComponentId, { ja: string; en: string }> = {
 const groupFor = (id: CatalogComponentId) =>
   (Object.entries(groups).find(([, ids]) => ids.includes(id))?.[0] ??
     "principles") as CatalogGroup;
+const elementTagFor = (id: CatalogComponentId): string => `ika-${id}`;
+const componentSourceFor = (id: CatalogComponentId) => {
+  const tag = elementTagFor(id);
+  const dataGrid =
+    id === "data-grid"
+      ? [
+          'element.columns = [{ id: "name", label: "Name" }];',
+          'element.rows = [{ id: "42", cells: { name: "ika" } }];',
+          'element.addEventListener("ika-selection-change", (event) => console.log(event.detail));',
+        ]
+      : ["element.props = {};"];
+  return {
+    typescript: [
+      'import { defineIkaSue } from "@ugoite/ikasue/elements";',
+      "",
+      "defineIkaSue();",
+      `const element = document.querySelector("${tag}");`,
+      `if (!element) throw new Error("${tag} is required");`,
+      ...dataGrid,
+      "element.focus();",
+    ].join("\n"),
+    rust: [
+      "use wasm_bindgen::JsCast;",
+      "use web_sys::HtmlElement;",
+      "",
+      "// Rust/WASM operates the same Web ABI; it does not create another renderer.",
+      `let element: HtmlElement = document().query_selector("${tag}")?\n    .ok_or("${tag} is required")?\n    .dyn_into()?;`,
+      `element.set_attribute("aria-label", "${id}")?;`,
+      "element.focus()?;",
+    ].join("\n"),
+  };
+};
 const component = (id: CatalogComponentId): CatalogEntry => ({
   kind: "component",
   id,
@@ -72,14 +104,9 @@ const component = (id: CatalogComponentId): CatalogEntry => ({
     ja: `${names[id].ja} の標準的な契約`,
     en: `The standard contract for ${names[id].en}.`,
   },
-  source: {
-    typescript: `import { ${camel(id)} } from "@ugoite/ikasue";`,
-    rust: `use ikasue::${id.replaceAll("-", "_")};`,
-  },
+  source: componentSourceFor(id),
   properties: componentProperties[id],
 });
-const camel = (id: string) =>
-  id.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
 
 type ComponentProperty = {
   readonly name: string;
@@ -189,11 +216,10 @@ const componentProperties: Record<
     property("status", "FormStateStatus", "idle"),
   ],
   "data-grid": [
-    property("columns", "GridColumn[]", "[]"),
-    property("rows", "GridRow[]", "[]"),
-    property("cells", "DataGridCell[]", "[]"),
-    property("columnsProvided", "boolean", false),
-    property("rowsProvided", "boolean", false),
+    property("columns", "DataGridColumn[]", "[]"),
+    property("rows", "DataGridRow[]", "[]"),
+    property("selection", "DataGridSelection"),
+    property("editable", "boolean", false),
   ],
   "status-indicator": [
     property("label", "string", ""),
@@ -265,6 +291,10 @@ const siteCopy: Record<string, { ja: string; en: string }> = {
   },
   "guides/usage": { ja: "Usage", en: "Usage" },
   "guides/integration": { ja: "Integration", en: "Integration" },
+  "guides/hosts": {
+    ja: "ホスト環境から使う",
+    en: "Host environments",
+  },
   "guides/accessibility": { ja: "Accessibility", en: "Accessibility" },
   "guides/release": { ja: "Release", en: "Release" },
 };
@@ -299,6 +329,7 @@ export const CATALOG_REGISTRY = Object.fromEntries(
     site("guides/behavioral-contracts"),
     site("guides/usage"),
     site("guides/integration"),
+    site("guides/hosts"),
     site("guides/accessibility"),
     site("guides/release"),
     site("components"),
@@ -318,6 +349,7 @@ export const CATALOG_PAGES = [
   "guides/behavioral-contracts",
   "guides/usage",
   "guides/integration",
+  "guides/hosts",
   "guides/accessibility",
   "guides/release",
   "components",

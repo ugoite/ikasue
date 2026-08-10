@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import * as api from "./index";
 
 describe("public contract", () => {
-  it("exposes only the current component, state, and catalog surface", () => {
+  it("exposes the component, state, catalog, and Web ABI surfaces", () => {
     const expected = [
       "themeRoot",
       "flex",
@@ -61,6 +61,17 @@ describe("public contract", () => {
       "CATALOG_REGISTRY",
       "COMPONENT_REGISTRY",
       "CONCEPT_REGISTRY",
+      "IKASUE_ABI_VERSION",
+      "IKA_ELEMENT_CONTRACTS",
+      "IKA_ELEMENT_TAGS",
+      "IKA_TAG_BY_KIND",
+      "IKA_VIEW_KINDS",
+      "IkaDataGridElement",
+      "IkaElement",
+      "IkaHistoryTimelineElement",
+      "IkaSplitViewElement",
+      "IkaSueError",
+      "IkaTabsElement",
       "COMPONENT_SOURCE_RECIPES",
       "CATALOG_PAGE_COPY",
       "COMPONENT_PAGE_COPY",
@@ -69,12 +80,30 @@ describe("public contract", () => {
       "RUNTIME_COMPONENT_REGISTRY",
       "componentDocumentationCopy",
       "componentSource",
+      "assertIkaRowPage",
+      "createDataGridPortModel",
+      "defineIkaSue",
       "findRegistryEntry",
       "defaultProps",
       "isCatalogComponentId",
       "isCatalogPageId",
+      "isIkaDataGridColumn",
+      "isIkaDataGridModelEvent",
+      "isIkaDataGridRow",
+      "isIkaDataGridSelection",
+      "isIkaError",
+      "isIkaJsonRecord",
+      "isIkaJsonValue",
+      "isIkaMessage",
+      "isIkaRowPage",
+      "isIkaRowRequest",
+      "isIkaSplitViewPane",
+      "isIkaTabsItem",
+      "isIkaView",
       "parseComponentSelection",
+      "renderIkaView",
       "serializeComponentSelection",
+      "tagNameForKind",
     ].sort();
     expect(Object.keys(api).sort()).toEqual(expected);
     expect(api).not.toHaveProperty("safeId");

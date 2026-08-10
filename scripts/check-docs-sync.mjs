@@ -21,6 +21,7 @@ const expected = [
     "behavioral-contracts",
     "usage",
     "integration",
+    "hosts",
     "accessibility",
     "release",
   ].map((id) => `guides/${id}.md`),

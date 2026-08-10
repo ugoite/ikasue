@@ -1,21 +1,35 @@
 {
   "name": "@ugoite/ikasue",
   "version": "0.2.2",
-  "description": "Planar adaptive UI components for information-dense workspaces.",
+  "description": "A portable Web UI runtime with a framework- and language-neutral ABI.",
   "license": "MIT",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
   },
   "type": "module",
   "files": [
-    "dist"
+    "dist",
+    "contract"
   ],
   "exports": {
     ".": {
       "types": "./dist/types/src/index.d.ts",
       "import": "./dist/ikasue.es.js"
     },
-    "./style.css": "./dist/ikasue.css"
+    "./style.css": "./dist/ikasue.css",
+    "./elements": {
+      "types": "./dist/types/src/elements.d.ts",
+      "import": "./dist/ikasue-elements.es.js"
+    },
+    "./view": {
+      "types": "./dist/types/src/view.d.ts",
+      "import": "./dist/ikasue-view.es.js"
+    },
+    "./contract": {
+      "types": "./dist/types/src/contract.d.ts",
+      "import": "./dist/ikasue-contract.es.js"
+    },
+    "./contract/*.schema.json": "./contract/*.schema.json"
   },
   "scripts": {
     "check": "prettier --check . && eslint . && tsc --noEmit && vitest run && npm run contract:check",
