@@ -141,6 +141,225 @@ export interface IkaView {
   readonly text?: string;
 }
 
+type IkaPropertyGuard = (value: IkaJsonValue) => boolean;
+
+const isString = (value: IkaJsonValue): boolean => typeof value === "string";
+const isBoolean = (value: IkaJsonValue): boolean => typeof value === "boolean";
+const isNumber = (value: IkaJsonValue): boolean =>
+  typeof value === "number" && Number.isFinite(value);
+const isEnum =
+  (...values: readonly string[]): IkaPropertyGuard =>
+  (value) =>
+    typeof value === "string" && values.includes(value);
+const isArrayOf =
+  (guard: (value: IkaJsonValue) => boolean): IkaPropertyGuard =>
+  (value) =>
+    Array.isArray(value) && value.every(guard);
+const isStringRecord = (value: IkaJsonValue): boolean =>
+  isIkaJsonRecord(value) && Object.values(value).every(isString);
+const isViewArray = (value: IkaJsonValue): boolean =>
+  Array.isArray(value) && value.every(isIkaView);
+const isFormField = (value: IkaJsonValue): boolean => {
+  if (
+    !isIkaJsonRecord(value) ||
+    !hasOnlyKeys(value, ["id", "label", "initialValue", "required"])
+  )
+    return false;
+  return (
+    typeof value.id === "string" &&
+    value.id.length > 0 &&
+    typeof value.label === "string" &&
+    value.label.length > 0 &&
+    (value.initialValue === undefined ||
+      typeof value.initialValue === "string") &&
+    (value.required === undefined || typeof value.required === "boolean")
+  );
+};
+const isChoiceOption = (value: IkaJsonValue): boolean =>
+  isIkaJsonRecord(value) &&
+  hasOnlyKeys(value, ["id", "label", "disabled"]) &&
+  typeof value.id === "string" &&
+  value.id.length > 0 &&
+  typeof value.label === "string" &&
+  (value.disabled === undefined || typeof value.disabled === "boolean");
+const isItem = isChoiceOption;
+const isHistoryEntry = (value: IkaJsonValue): boolean =>
+  isIkaJsonRecord(value) &&
+  hasOnlyKeys(value, ["id", "label", "content", "tone"]) &&
+  typeof value.id === "string" &&
+  value.id.length > 0 &&
+  typeof value.label === "string" &&
+  typeof value.content === "string" &&
+  (value.tone === undefined ||
+    ["default", "muted", "success", "danger"].includes(value.tone as string));
+
+const IKA_VIEW_PROPERTY_GUARDS: Readonly<
+  Record<IkaViewKind, Readonly<Record<string, IkaPropertyGuard>>>
+> = {
+  "theme-root": {
+    tokens: isStringRecord,
+    variant: isEnum("default", "quiet", "dense"),
+  },
+  text: {
+    content: isString,
+    tone: isEnum("default", "muted", "danger", "success"),
+    selectable: isBoolean,
+  },
+  "editable-text": { id: isString, value: isString, disabled: isBoolean },
+  "text-field": {
+    id: isString,
+    label: isString,
+    value: isString,
+    placeholder: isString,
+    disabled: isBoolean,
+    required: isBoolean,
+    description: isString,
+    error: isString,
+  },
+  flex: {
+    direction: isEnum("row", "column"),
+    wrap: isEnum("nowrap", "wrap", "wrap-reverse"),
+    gap: isString,
+    align: isString,
+    justify: isString,
+    children: isViewArray,
+  },
+  stack: {
+    gap: isString,
+    align: isString,
+    justify: isString,
+    children: isViewArray,
+  },
+  grid: {
+    columns: isString,
+    rows: isString,
+    gap: isString,
+    align: isString,
+    justify: isString,
+    children: isViewArray,
+  },
+  "scroll-area": {
+    content: isString,
+    axis: isEnum("x", "y", "both"),
+    overscroll: isEnum("auto", "contain"),
+  },
+  separator: {
+    orientation: isEnum("horizontal", "vertical"),
+    role: isEnum("separator"),
+  },
+  tabs: {
+    items: isArrayOf(isIkaTabsItem),
+    activeId: isString,
+    variant: isEnum("default", "elastic"),
+    orientation: isEnum("horizontal", "vertical"),
+  },
+  sidebar: {
+    items: isArrayOf(isItem),
+    activeId: isString,
+    collapsed: isBoolean,
+  },
+  toolbar: { items: isArrayOf(isItem), overflow: isEnum("none", "menu") },
+  "icon-button": {
+    id: isString,
+    label: isString,
+    icon: isString,
+    type: isEnum("button", "submit", "reset"),
+    disabled: isBoolean,
+    pressed: isBoolean,
+  },
+  checkbox: {
+    id: isString,
+    label: isString,
+    checked: isBoolean,
+    disabled: isBoolean,
+  },
+  "radio-group": {
+    id: isString,
+    options: isArrayOf(isChoiceOption),
+    value: isString,
+    disabled: isBoolean,
+  },
+  "segmented-control": {
+    id: isString,
+    options: isArrayOf(isChoiceOption),
+    value: isString,
+    disabled: isBoolean,
+    variant: isEnum("default", "elastic"),
+  },
+  field: {
+    id: isString,
+    label: isString,
+    required: isBoolean,
+    content: isString,
+  },
+  form: {
+    fields: isArrayOf(isFormField),
+    values: isStringRecord,
+    status: isEnum("idle", "clean", "dirty", "submitting", "success", "error"),
+  },
+  "data-grid": {
+    columns: isArrayOf(isIkaDataGridColumn),
+    rows: isArrayOf(isIkaDataGridRow),
+    selection: isIkaDataGridSelection,
+    editable: isBoolean,
+    density: isEnum("default", "compact"),
+  },
+  "history-timeline": {
+    entries: isArrayOf(isHistoryEntry),
+    orientation: isEnum("horizontal", "vertical"),
+  },
+  "split-view": {
+    panes: isArrayOf(isIkaSplitViewPane),
+    orientation: isEnum("horizontal", "vertical"),
+    sizes: isArrayOf(isString),
+    collapsible: isBoolean,
+    motionOrigin: isEnum("start", "end", "top", "bottom"),
+  },
+  "side-panel": {
+    title: isString,
+    content: isString,
+    side: isEnum("start", "end"),
+    open: isBoolean,
+  },
+  "bottom-panel": { title: isString, content: isString, open: isBoolean },
+  "loading-region": { content: isString, busy: isBoolean, label: isString },
+  dialog: {
+    title: isString,
+    content: isString,
+    open: isBoolean,
+    modal: isBoolean,
+  },
+  "status-indicator": {
+    label: isString,
+    status: isEnum("neutral", "info", "success", "warning", "danger"),
+  },
+  alert: {
+    message: isString,
+    severity: isEnum("info", "success", "warning", "danger"),
+    dismissible: isBoolean,
+  },
+  progress: { value: isNumber, max: isNumber, label: isString },
+};
+
+export function isIkaViewProps(
+  kindOrTag: string,
+  value: unknown,
+): value is IkaJsonRecord {
+  const kind = kindOrTag.startsWith("ika-")
+    ? kindOrTag.slice("ika-".length)
+    : kindOrTag;
+  const guards = (
+    IKA_VIEW_PROPERTY_GUARDS as Partial<
+      Record<string, Readonly<Record<string, IkaPropertyGuard>>>
+    >
+  )[kind];
+  if (!guards || !isIkaJsonRecord(value)) return false;
+  return Object.entries(value).every(
+    ([key, propertyValue]) =>
+      guards[key] !== undefined && guards[key](propertyValue),
+  );
+}
+
 export interface IkaDataGridColumn {
   readonly id: string;
   readonly label: string;
@@ -337,8 +556,22 @@ export function isIkaView(value: unknown): value is IkaView {
   if (!(IKA_VIEW_KINDS as readonly string[]).includes(value.kind)) return false;
   if (
     value.props !== undefined &&
-    (!isIkaJsonRecord(value.props) ||
+    (!isIkaViewProps(value.kind, value.props) ||
       Object.keys(value.props).some((key) => !IKA_VIEW_PROPERTY_KEYS.has(key)))
+  )
+    return false;
+  if (value.children !== undefined && Array.isArray(value.props?.children))
+    return false;
+  if (value.text !== undefined && value.kind !== "text") return false;
+  if (
+    value.text !== undefined &&
+    isIkaJsonRecord(value.props) &&
+    value.props.content !== undefined
+  )
+    return false;
+  if (
+    (value.text !== undefined && Array.isArray(value.props?.children)) ||
+    (value.text !== undefined && value.children !== undefined)
   )
     return false;
   if (
