@@ -21,8 +21,18 @@ defineIkaSue();
 microfrontendや異なるpackage versionを分離したい場合はScoped Custom Element Registryを渡せます。登録は同じregistryに対してidempotentで、別のconstructorがすでに同じtagを持つ場合はconflictとして失敗します。
 
 ```ts
+import { defineIkaSue } from "@ugoite/ikasue/elements";
+import { renderIkaView } from "@ugoite/ikasue/view";
+
 const registry = new CustomElementRegistry();
 defineIkaSue(registry);
+const host = document.querySelector<HTMLElement>("#isolated-root");
+if (!host) throw new Error("#isolated-root is required");
+renderIkaView(
+  host,
+  { version: "ikasue-web/1", kind: "text", text: "Isolated host" },
+  registry,
+);
 ```
 
 これはrendererをhostへ配る仕組みではありません。hostはelementを作り、propertiesを渡し、eventsを受け、必要なcommand methodを呼びます。
@@ -242,7 +252,7 @@ serialized viewは`IkaView → <ika-…>`へlowerするだけです。hostごと
 
 ```css
 ika-data-grid {
-  --ika-density: compact;
+  --ikasue-grid-cell-padding: 0.25rem;
 }
 
 ika-data-grid::part(table) {

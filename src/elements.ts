@@ -9,6 +9,8 @@ import {
   isIkaRowRequest,
   isIkaSplitViewPane,
   isIkaTabsItem,
+  isIkaView,
+  isIkaViewProps,
   type IkaDataGridColumn,
   type IkaDataGridRow,
   type IkaDataGridSelection,
@@ -17,6 +19,7 @@ import {
   type IkaTabsItem,
   type IkaJsonRecord,
   type IkaJsonValue,
+  type IkaView,
   type IkaViewKind,
 } from "./contract";
 import { IkaSueError } from "./errors";
@@ -126,39 +129,71 @@ const primitiveAttributes = new Set([
   "id",
   "density",
   "editable",
-  "editor",
-  "state",
-  "kind",
+  "disabled",
+  "required",
   "label",
+  "content",
+  "title",
+  "message",
+  "placeholder",
   "axis",
-  "weight",
-  "action",
-  "active",
   "direction",
-  "selected",
-  "marker",
-  "loading",
-  "pattern",
-  "target",
-  "intent",
-  "dismiss",
   "orientation",
   "variant",
   "fit",
   "gap",
-  "motion",
-  "selection",
-  "line",
+  "wrap",
+  "align",
+  "justify",
+  "tone",
+  "selectable",
+  "overscroll",
+  "role",
+  "overflow",
+  "type",
+  "pressed",
   "checked",
-  "compact",
-  "changes",
-  "items",
-  "basis",
-  "available",
+  "collapsed",
+  "open",
+  "modal",
+  "collapsible",
+  "busy",
+  "status",
+  "severity",
+  "dismissible",
+  "side",
   "value",
-  "focus",
-  "navigation",
+  "max",
 ]);
+
+const booleanAttributes = new Set([
+  "editable",
+  "disabled",
+  "required",
+  "selectable",
+  "pressed",
+  "checked",
+  "collapsed",
+  "open",
+  "modal",
+  "collapsible",
+  "busy",
+  "dismissible",
+]);
+
+const registryForElement = new WeakMap<HTMLElement, CustomElementRegistry>();
+const serializedChildrenForElement = new WeakMap<
+  HTMLElement,
+  readonly IkaView[]
+>();
+const nextSplitViewInstanceId = (): number => {
+  const scope = globalThis as typeof globalThis & {
+    __ikasue_split_view_instance_id__?: number;
+  };
+  const next = (scope.__ikasue_split_view_instance_id__ ?? 0) + 1;
+  scope.__ikasue_split_view_instance_id__ = next;
+  return next;
+};
 
 const propertyKeysByTag: Readonly<
   Record<IkaElementTagName, ReadonlySet<string>>
@@ -265,10 +300,122 @@ function asSplitPanes(value: unknown): readonly IkaSplitViewPane[] {
   return value;
 }
 
+function isPrimitive(value: IkaJsonValue): boolean {
+  return (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  );
+}
+
+/** Lowers a view node to the canonical element tree, including structured children. */
+export function appendIkaView(
+  parent: HTMLElement,
+  view: IkaView,
+  registry?: CustomElementRegistry,
+): HTMLElement {
+  if (!isIkaView(view))
+    throw new IkaSueError(
+      "invalid-contract",
+      "IkaView must match the kind-specific JSON contract",
+    );
+  const activeRegistry =
+    registry ?? parent.ownerDocument.defaultView?.customElements;
+  if (!activeRegistry)
+    throw new IkaSueError(
+      "registry-unavailable",
+      "CustomElementRegistry is unavailable",
+    );
+  defineIkaSue(activeRegistry);
+  const node = parent.ownerDocument.createElement(tagNameForKind(view.kind), {
+    customElementRegistry: activeRegistry,
+  });
+  registryForElement.set(node, activeRegistry);
+  if (!Array.isArray(view.props?.children) && view.children !== undefined)
+    serializedChildrenForElement.set(node, view.children);
+  node.setAttribute("data-ika-structured", "");
+  for (const [key, value] of Object.entries(view.props ?? {})) {
+    if (!isPrimitive(value)) continue;
+    if (typeof value === "boolean") {
+      if (value) node.setAttribute(key, "");
+    } else if (value !== null) node.setAttribute(key, textValue(value));
+  }
+  if (view.props || view.kind === "form" || view.text !== undefined)
+    (node as HTMLElement & { props: IkaJsonRecord }).props =
+      view.text === undefined
+        ? (view.props ?? {})
+        : { ...(view.props ?? {}), content: view.text };
+  if (
+    !Array.isArray(view.props?.children) &&
+    view.children !== undefined &&
+    !hasStructuredChild(serializedChildrenParent(node))
+  ) {
+    const childParent = serializedChildrenParent(node);
+    for (const child of view.children)
+      appendIkaView(childParent, child, activeRegistry);
+  }
+  parent.append(node);
+  return node;
+}
+
 function clearInternalContent(root: HTMLElement | ShadowRoot): void {
   root.querySelectorAll<HTMLElement>("[data-ika-internal]").forEach((node) => {
-    node.remove();
+    if (node.parentNode === root) node.remove();
   });
+}
+
+function clearStructuredChildren(root: HTMLElement | ShadowRoot): void {
+  root
+    .querySelectorAll<HTMLElement>("[data-ika-structured]")
+    .forEach((node) => {
+      if (node.parentNode === root) node.remove();
+    });
+}
+
+function hasStructuredChild(root: HTMLElement): boolean {
+  const querySelector = (
+    root as unknown as {
+      readonly querySelector?: (selector: string) => unknown;
+    }
+  ).querySelector;
+  return (
+    typeof querySelector === "function" &&
+    querySelector.call(root, ":scope > [data-ika-structured]") !== null
+  );
+}
+
+function hasDirectInternalChild(root: HTMLElement | ShadowRoot): boolean {
+  return Array.from(
+    root.querySelectorAll<HTMLElement>("[data-ika-internal]"),
+  ).some((node) => node.parentNode === root);
+}
+
+function serializedChildrenParent(root: HTMLElement): HTMLElement {
+  if (root.localName !== "ika-form") return root;
+  const querySelector = (
+    root as unknown as {
+      readonly querySelector?: (selector: string) => unknown;
+    }
+  ).querySelector;
+  if (typeof querySelector !== "function") return root;
+  return (
+    (querySelector.call(
+      root,
+      'form[data-ika-internal="true"]',
+    ) as HTMLElement | null) ?? root
+  );
+}
+
+function preserveFormChildren(root: HTMLElement): void {
+  const form = Array.from(
+    root.querySelectorAll<HTMLElement>('form[data-ika-internal="true"]'),
+  ).find((node) => node.parentNode === root);
+  if (!form) return;
+  for (const child of Array.from(form.children)) {
+    if (child.hasAttribute("data-ika-structured")) child.remove();
+    else if (!child.hasAttribute("data-ika-internal")) root.append(child);
+  }
 }
 
 function propertyText(value: IkaJsonRecord, key: string): string {
@@ -277,6 +424,24 @@ function propertyText(value: IkaJsonRecord, key: string): string {
 
 function propertyBoolean(value: IkaJsonRecord, key: string): boolean {
   return value[key] === true;
+}
+
+function applySplitSize(section: HTMLElement, size: string): void {
+  const value = size.trim();
+  const fractional = /^(\d+(?:\.\d+)?)fr$/.exec(value);
+  if (fractional) {
+    section.style.flexGrow = fractional[1] ?? "1";
+    section.style.flexShrink = "1";
+    section.style.flexBasis = "0";
+    return;
+  }
+  if (value === "auto") {
+    section.style.flex = "1 1 auto";
+    return;
+  }
+  section.style.flexGrow = "0";
+  section.style.flexShrink = "1";
+  section.style.flexBasis = value;
 }
 
 function appendInternal(
@@ -307,13 +472,27 @@ export class IkaElement extends HTMLElementBase {
     ...primitiveAttributes,
   ];
   #props: IkaJsonRecord = {};
+  #themeTokenKeys = new Set<string>();
+  #reflectingAttributes = false;
 
   connectedCallback(): void {
+    if (this.localName === "ika-form" && this.getAttribute("role") !== "form") {
+      this.#reflectingAttributes = true;
+      try {
+        this.setAttribute("role", "form");
+      } finally {
+        this.#reflectingAttributes = false;
+      }
+    }
     this.render();
+    this.appendSerializedChildren();
   }
 
   attributeChangedCallback(): void {
-    if (this.isConnected) this.render();
+    if (this.isConnected && !this.#reflectingAttributes) {
+      this.render();
+      this.appendSerializedChildren();
+    }
   }
 
   get props(): IkaJsonRecord {
@@ -321,7 +500,7 @@ export class IkaElement extends HTMLElementBase {
   }
 
   set props(value: IkaJsonRecord) {
-    if (!isIkaJsonRecord(value)) {
+    if (!isIkaViewProps(this.localName, value)) {
       this.reportInvalidContract();
       return;
     }
@@ -330,22 +509,42 @@ export class IkaElement extends HTMLElementBase {
       this.reportInvalidContract();
       return;
     }
-    for (const attribute of primitiveAttributes) {
-      const propValue = value[attribute];
-      if (typeof propValue === "boolean") {
-        if (propValue) this.setAttribute(attribute, "");
-        else this.removeAttribute(attribute);
-      } else if (
-        propValue !== null &&
-        (typeof propValue === "string" || typeof propValue === "number")
-      ) {
-        this.setAttribute(attribute, textValue(propValue));
-      } else if (this.hasAttribute(attribute)) {
-        this.removeAttribute(attribute);
-      }
-    }
+    if (Array.isArray(value.children))
+      serializedChildrenForElement.delete(this);
     this.#props = value;
+    this.#reflectingAttributes = true;
+    try {
+      for (const attribute of primitiveAttributes) {
+        if (this.localName === "ika-form" && attribute === "role") continue;
+        const propValue = value[attribute];
+        if (typeof propValue === "boolean") {
+          if (propValue) this.setAttribute(attribute, "");
+          else this.removeAttribute(attribute);
+        } else if (
+          propValue !== null &&
+          (typeof propValue === "string" || typeof propValue === "number")
+        ) {
+          this.setAttribute(attribute, textValue(propValue));
+        } else if (this.hasAttribute(attribute)) {
+          this.removeAttribute(attribute);
+        }
+      }
+    } finally {
+      this.#reflectingAttributes = false;
+    }
     this.render();
+    this.appendSerializedChildren();
+  }
+
+  private appendSerializedChildren(): void {
+    const children = serializedChildrenForElement.get(this);
+    if (!children) return;
+    const parent = serializedChildrenParent(this);
+    clearStructuredChildren(parent);
+    const registry =
+      registryForElement.get(this) ??
+      this.ownerDocument.defaultView?.customElements;
+    for (const child of children) appendIkaView(parent, child, registry);
   }
 
   protected get renderRoot(): HTMLElement | ShadowRoot {
@@ -365,6 +564,19 @@ export class IkaElement extends HTMLElementBase {
       kind === "ika-scroll-area"
     ) {
       this.setAttribute("data-ika-layout", "");
+      if (kind === "ika-theme-root") {
+        for (const key of this.#themeTokenKeys) this.style.removeProperty(key);
+        this.#themeTokenKeys.clear();
+        if (isIkaJsonRecord(value.tokens)) {
+          for (const [key, token] of Object.entries(value.tokens)) {
+            if (typeof token !== "string") continue;
+            const cssProperty = key.startsWith("--") ? key : `--${key}`;
+            this.style.setProperty(cssProperty, token);
+            this.#themeTokenKeys.add(cssProperty);
+          }
+        }
+        this.dataset.variant = propertyText(value, "variant") || "default";
+      }
       if (kind === "ika-stack") this.style.flexDirection = "column";
       else if (kind === "ika-flex")
         this.style.flexDirection = propertyText(value, "direction") || "row";
@@ -382,11 +594,44 @@ export class IkaElement extends HTMLElementBase {
         this.style.alignItems = propertyText(value, "align") || "stretch";
         this.style.justifyItems = propertyText(value, "justify") || "start";
       }
+      clearStructuredChildren(root);
+      if (kind === "ika-scroll-area") {
+        const axis = propertyText(value, "axis") || "y";
+        this.dataset.axis = axis;
+        this.style.overflowX = axis === "y" ? "hidden" : "auto";
+        this.style.overflowY = axis === "x" ? "hidden" : "auto";
+        this.style.overscrollBehavior =
+          propertyText(value, "overscroll") || "auto";
+        if (
+          !Array.isArray(value.children) &&
+          !serializedChildrenForElement.has(this)
+        ) {
+          clearInternalContent(root);
+          if (propertyText(value, "content"))
+            appendInternal(root, "div", (element) => {
+              element.part = "content";
+              element.textContent = propertyText(value, "content");
+            });
+        }
+      }
+      if (Array.isArray(value.children)) {
+        const registry =
+          registryForElement.get(this) ??
+          this.ownerDocument.defaultView?.customElements;
+        for (const child of value.children) {
+          if (isIkaView(child)) appendIkaView(this, child, registry);
+        }
+      }
+      return;
+    }
+    if (kind !== "ika-form" && serializedChildrenForElement.has(this)) {
+      clearInternalContent(root);
       return;
     }
     if (
+      kind !== "ika-form" &&
       root.childNodes.length > 0 &&
-      !root.querySelector("[data-ika-internal]")
+      !hasDirectInternalChild(root)
     )
       return;
     clearInternalContent(root);
@@ -394,6 +639,8 @@ export class IkaElement extends HTMLElementBase {
       propertyText(value, "label") || this.getAttribute("label") || kind;
     switch (kind) {
       case "ika-text":
+        this.dataset.tone = propertyText(value, "tone") || "default";
+        this.dataset.selectable = String(value.selectable !== false);
         appendInternal(root, "span", (element) => {
           element.part = "label";
           element.textContent = propertyText(value, "content") || label;
@@ -426,6 +673,10 @@ export class IkaElement extends HTMLElementBase {
           input.placeholder = propertyText(value, "placeholder");
           input.disabled = propertyBoolean(value, "disabled");
           input.required = propertyBoolean(value, "required");
+          const description = propertyText(value, "description");
+          const error = propertyText(value, "error");
+          if (description) input.setAttribute("aria-description", description);
+          input.setAttribute("aria-invalid", String(Boolean(error)));
           input.addEventListener("input", () =>
             this.dispatchEvent(
               new CustomEvent("ika-input", {
@@ -439,6 +690,8 @@ export class IkaElement extends HTMLElementBase {
         });
         break;
       case "ika-separator":
+        this.dataset.orientation =
+          propertyText(value, "orientation") || "horizontal";
         appendInternal(root, "hr", (element) => {
           element.part = "separator";
           element.setAttribute("role", "separator");
@@ -455,6 +708,7 @@ export class IkaElement extends HTMLElementBase {
             "button" | "submit" | "reset";
           button.part = "button";
           button.disabled = propertyBoolean(value, "disabled");
+          button.setAttribute("aria-pressed", String(value.pressed === true));
           button.textContent = propertyText(value, "icon") || label;
           button.addEventListener("click", () =>
             this.dispatchEvent(
@@ -471,6 +725,7 @@ export class IkaElement extends HTMLElementBase {
         appendInternal(root, "label", (element) => {
           const input = this.ownerDocument.createElement("input");
           input.type = "checkbox";
+          input.id = propertyText(value, "id");
           input.checked = propertyBoolean(value, "checked");
           input.disabled = propertyBoolean(value, "disabled");
           input.addEventListener("change", () =>
@@ -496,7 +751,24 @@ export class IkaElement extends HTMLElementBase {
         appendInternal(root, "aside", (element) => {
           element.setAttribute("role", "alert");
           element.part = "alert";
+          element.dataset.severity = propertyText(value, "severity") || "info";
           element.textContent = propertyText(value, "message") || label;
+          if (value.dismissible === true) {
+            const dismiss = this.ownerDocument.createElement("button");
+            dismiss.type = "button";
+            dismiss.part = "dismiss";
+            dismiss.textContent = "Dismiss";
+            dismiss.addEventListener("click", () =>
+              this.dispatchEvent(
+                new CustomEvent("ika-dismiss", {
+                  bubbles: true,
+                  composed: true,
+                  detail: {},
+                }),
+              ),
+            );
+            element.append(dismiss);
+          }
         });
         break;
       case "ika-progress":
@@ -511,25 +783,57 @@ export class IkaElement extends HTMLElementBase {
         });
         break;
       case "ika-dialog":
-        appendInternal(root, "dialog", (element) => {
-          const dialog = element as HTMLDialogElement;
-          dialog.part = "dialog";
-          dialog.open = propertyBoolean(value, "open");
-          dialog.textContent =
-            propertyText(value, "title") ||
-            propertyText(value, "content") ||
-            label;
+        this.dataset.modal = String(value.modal !== false);
+        const dialogNode = appendInternal(root, "dialog", (element) => {
+          element.part = "dialog";
+          element.setAttribute("aria-modal", String(value.modal !== false));
+          const title = propertyText(value, "title");
+          const content = propertyText(value, "content");
+          if (title) {
+            const heading = this.ownerDocument.createElement("h2");
+            heading.part = "title";
+            heading.textContent = title;
+            element.append(heading);
+          }
+          if (content) {
+            const paragraph = this.ownerDocument.createElement("p");
+            paragraph.part = "content";
+            paragraph.textContent = content;
+            element.append(paragraph);
+          }
+          if (!title && !content) element.textContent = label;
         });
+        if (propertyBoolean(value, "open")) {
+          const dialog = dialogNode as HTMLDialogElement;
+          try {
+            if (value.modal !== false) dialog.showModal();
+            else dialog.show();
+          } catch {
+            dialog.open = true;
+          }
+        }
         break;
       case "ika-side-panel":
       case "ika-bottom-panel":
+        this.dataset.side = propertyText(value, "side") || "end";
         appendInternal(root, "aside", (element) => {
           element.hidden = !propertyBoolean(value, "open");
           element.part = "panel";
-          element.textContent =
-            propertyText(value, "title") ||
-            propertyText(value, "content") ||
-            label;
+          const title = propertyText(value, "title");
+          const content = propertyText(value, "content");
+          if (title) {
+            const heading = this.ownerDocument.createElement("h2");
+            heading.part = "title";
+            heading.textContent = title;
+            element.append(heading);
+          }
+          if (content) {
+            const paragraph = this.ownerDocument.createElement("p");
+            paragraph.part = "content";
+            paragraph.textContent = content;
+            element.append(paragraph);
+          }
+          if (!title && !content) element.textContent = label;
         });
         break;
       case "ika-loading-region":
@@ -544,6 +848,9 @@ export class IkaElement extends HTMLElementBase {
         break;
       case "ika-sidebar":
       case "ika-toolbar":
+        this.dataset.collapsed = String(value.collapsed === true);
+        this.dataset.overflow = propertyText(value, "overflow") || "none";
+        this.dataset.activeId = propertyText(value, "activeId");
         appendInternal(
           root,
           kind === "ika-sidebar" ? "nav" : "div",
@@ -560,6 +867,8 @@ export class IkaElement extends HTMLElementBase {
               button.type = "button";
               button.textContent = textValue(item.label) || item.id;
               button.disabled = item.disabled === true;
+              if (item.id === value.activeId)
+                button.setAttribute("aria-current", "page");
               button.addEventListener("click", () =>
                 this.dispatchEvent(
                   new CustomEvent("ika-select", {
@@ -576,6 +885,7 @@ export class IkaElement extends HTMLElementBase {
         break;
       case "ika-radio-group":
       case "ika-segmented-control":
+        this.dataset.variant = propertyText(value, "variant") || "default";
         appendInternal(root, "fieldset", (element) => {
           const options = Array.isArray(value.options) ? value.options : [];
           for (const option of options) {
@@ -605,6 +915,10 @@ export class IkaElement extends HTMLElementBase {
         break;
       case "ika-field":
         appendInternal(root, "fieldset", (element) => {
+          element.setAttribute(
+            "aria-required",
+            String(propertyBoolean(value, "required")),
+          );
           const legend = this.ownerDocument.createElement("legend");
           legend.textContent = label;
           const content = this.ownerDocument.createElement("div");
@@ -613,10 +927,40 @@ export class IkaElement extends HTMLElementBase {
         });
         break;
       case "ika-form":
-        appendInternal(root, "form", (element) => {
+        this.dataset.status = propertyText(value, "status") || "idle";
+        this.setAttribute(
+          "aria-invalid",
+          String(propertyText(value, "status") === "error"),
+        );
+        preserveFormChildren(this);
+        clearInternalContent(root);
+        const form = appendInternal(root, "form", (element) => {
           element.setAttribute("novalidate", "");
-          element.append(...Array.from(this.childNodes));
         });
+        for (const field of Array.isArray(value.fields) ? value.fields : []) {
+          if (!isIkaJsonRecord(field)) continue;
+          const label = this.ownerDocument.createElement("label");
+          label.dataset.ikaInternal = "true";
+          label.textContent = textValue(field.label);
+          const input = this.ownerDocument.createElement("input");
+          input.id = textValue(field.id);
+          input.type = "text";
+          const explicitValue = isIkaJsonRecord(value.values)
+            ? value.values[textValue(field.id)]
+            : undefined;
+          input.value = textValue(
+            typeof explicitValue === "string"
+              ? explicitValue
+              : field.initialValue,
+          );
+          input.required = field.required === true;
+          label.append(input);
+          form.append(label);
+        }
+        for (const child of Array.from(this.children)) {
+          if (child !== form && !child.hasAttribute("data-ika-internal"))
+            form.append(child);
+        }
         break;
       default:
         appendInternal(root, "div", (element) => {
@@ -638,19 +982,7 @@ export class IkaElement extends HTMLElementBase {
     const value: Record<string, IkaJsonValue> = { ...this.#props };
     for (const attribute of primitiveAttributes) {
       if (!this.hasAttribute(attribute)) continue;
-      const booleanAttribute = new Set([
-        "editable",
-        "disabled",
-        "required",
-        "checked",
-        "open",
-        "busy",
-        "pressed",
-        "selectable",
-        "collapsible",
-        "dismissible",
-      ]).has(attribute);
-      value[attribute] = booleanAttribute
+      value[attribute] = booleanAttributes.has(attribute)
         ? true
         : (this.getAttribute(attribute) ?? "");
     }
@@ -687,7 +1019,7 @@ export class IkaDataGridElement extends IkaElement {
   }
 
   override set props(value: IkaJsonRecord) {
-    if (!isIkaJsonRecord(value)) {
+    if (!isIkaViewProps(this.localName, value)) {
       this.reportInvalidContract();
       return;
     }
@@ -888,6 +1220,10 @@ export class IkaDataGridElement extends IkaElement {
 
   protected override render(): void {
     const root = this.renderRoot;
+    if (serializedChildrenForElement.has(this)) {
+      clearInternalContent(root);
+      return;
+    }
     const value = this.effectiveProps;
     clearInternalContent(root);
     this.dataset.editable = String(value.editable === true);
@@ -903,6 +1239,7 @@ export class IkaDataGridElement extends IkaElement {
     for (const column of this.#columns) {
       const cell = this.ownerDocument.createElement("th");
       cell.setAttribute("role", "columnheader");
+      cell.style.padding = "var(--ikasue-grid-cell-padding, 0.5rem)";
       cell.textContent = column.label;
       if (column.width !== undefined)
         cell.style.width = `${String(column.width)}px`;
@@ -918,6 +1255,7 @@ export class IkaDataGridElement extends IkaElement {
       for (const column of this.#columns) {
         const cell = this.ownerDocument.createElement("td");
         cell.setAttribute("role", "gridcell");
+        cell.style.padding = "var(--ikasue-grid-cell-padding, 0.5rem)";
         cell.dataset.rowId = row.id;
         cell.dataset.columnId = column.id;
         cell.textContent = cellText(row.cells[column.id]);
@@ -1000,7 +1338,7 @@ export class IkaTabsElement extends IkaElement {
   }
 
   override set props(value: IkaJsonRecord) {
-    if (!isIkaJsonRecord(value)) {
+    if (!isIkaViewProps(this.localName, value)) {
       this.reportInvalidContract();
       return;
     }
@@ -1061,6 +1399,10 @@ export class IkaTabsElement extends IkaElement {
 
   protected override render(): void {
     const root = this.renderRoot;
+    if (serializedChildrenForElement.has(this)) {
+      clearInternalContent(root);
+      return;
+    }
     const value = this.effectiveProps;
     clearInternalContent(root);
     this.dataset.orientation =
@@ -1085,14 +1427,16 @@ export class IkaTabsElement extends IkaElement {
 }
 
 export class IkaSplitViewElement extends IkaElement {
+  #instanceId = nextSplitViewInstanceId();
   #panes: readonly IkaSplitViewPane[] = [];
+  #collapsed = new Set<string>();
 
   override get props(): IkaJsonRecord {
     return super.props;
   }
 
   override set props(value: IkaJsonRecord) {
-    if (!isIkaJsonRecord(value)) {
+    if (!isIkaViewProps(this.localName, value)) {
       this.reportInvalidContract();
       return;
     }
@@ -1123,30 +1467,110 @@ export class IkaSplitViewElement extends IkaElement {
 
   protected override render(): void {
     const root = this.renderRoot;
+    if (serializedChildrenForElement.has(this)) {
+      clearInternalContent(root);
+      return;
+    }
     const value = this.effectiveProps;
     clearInternalContent(root);
     const orientation = propertyText(value, "orientation") || "horizontal";
     this.dataset.orientation = orientation;
+    this.dataset.collapsible = String(value.collapsible === true);
+    this.dataset.motionOrigin =
+      propertyText(value, "motionOrigin") ||
+      (orientation === "horizontal" ? "start" : "top");
+    if (value.collapsible !== true) this.#collapsed.clear();
     const sizes = Array.isArray(value.sizes)
       ? value.sizes.filter((item): item is string => typeof item === "string")
       : [];
     const container = this.ownerDocument.createElement("div");
     container.dataset.ikaInternal = "true";
+    container.dataset.ikaSplitContainer = "true";
+    container.style.display = "flex";
+    container.style.flex = "1 1 auto";
+    container.style.minWidth = "0";
+    container.style.minHeight = "0";
+    container.style.gap = "0.75rem";
     container.part = "panes";
+    const controls = this.ownerDocument.createElement("div");
+    controls.dataset.ikaInternal = "true";
+    controls.part = "controls";
+    controls.style.position = "absolute";
+    controls.style.insetInlineStart = "0";
+    controls.style.insetBlockStart = "0";
+    controls.style.zIndex = "1";
+    controls.style.display = "flex";
+    controls.style.gap = "0.25rem";
     for (const [index, pane] of this.#panes.entries()) {
       const section = this.ownerDocument.createElement("section");
       section.dataset.paneId = textValue(pane.id);
-      if (sizes[index] !== undefined) section.style.flexBasis = sizes[index];
-      section.textContent = textValue(pane.label ?? pane.content ?? pane.id);
+      section.id = `ika-split-view-${String(this.#instanceId)}-pane-${String(index + 1)}`;
+      section.dataset.collapsible = String(value.collapsible === true);
+      section.dataset.collapsed = String(this.#collapsed.has(pane.id));
+      section.setAttribute("aria-hidden", String(this.#collapsed.has(pane.id)));
+      if (this.#collapsed.has(pane.id)) {
+        section.style.flex = "0 0 0";
+        section.style.flexBasis = "0";
+      } else {
+        const size =
+          sizes[index] ??
+          (pane.basis === undefined ? "1fr" : `${String(pane.basis)}fr`);
+        applySplitSize(section, size);
+      }
+      if (pane.label) {
+        const heading = this.ownerDocument.createElement("h3");
+        heading.part = "label";
+        heading.textContent = pane.label;
+        section.append(heading);
+      }
+      if (pane.content) {
+        const content = this.ownerDocument.createElement("p");
+        content.part = "content";
+        content.textContent = pane.content;
+        section.append(content);
+      }
+      if (!pane.label && !pane.content)
+        section.append(this.ownerDocument.createTextNode(pane.id));
+      if (value.collapsible === true) {
+        const control = this.ownerDocument.createElement("button");
+        control.type = "button";
+        control.part = "collapse-control";
+        control.textContent = this.#collapsed.has(pane.id)
+          ? "Expand"
+          : "Collapse";
+        control.setAttribute(
+          "aria-expanded",
+          String(!this.#collapsed.has(pane.id)),
+        );
+        control.setAttribute("aria-controls", section.id);
+        control.addEventListener("click", () => {
+          const collapsed = !this.#collapsed.has(pane.id);
+          if (collapsed) this.#collapsed.add(pane.id);
+          else this.#collapsed.delete(pane.id);
+          this.render();
+          this.dispatchEvent(
+            new CustomEvent("ika-collapse-change", {
+              bubbles: true,
+              composed: true,
+              detail: { id: pane.id, collapsed },
+            }),
+          );
+        });
+        controls.append(control);
+      }
       container.append(section);
     }
-    root.append(container);
+    root.append(container, controls);
   }
 }
 
 export class IkaHistoryTimelineElement extends IkaElement {
   protected override render(): void {
     const root = this.renderRoot;
+    if (serializedChildrenForElement.has(this)) {
+      clearInternalContent(root);
+      return;
+    }
     const value = this.effectiveProps;
     clearInternalContent(root);
     const list = this.ownerDocument.createElement("ol");

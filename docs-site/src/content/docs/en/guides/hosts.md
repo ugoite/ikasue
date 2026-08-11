@@ -21,8 +21,18 @@ defineIkaSue();
 Pass a scoped `CustomElementRegistry` when a microfrontend or multiple package versions must be isolated. Registration is idempotent for one registry and fails with a conflict when another constructor already owns a tag.
 
 ```ts
+import { defineIkaSue } from "@ugoite/ikasue/elements";
+import { renderIkaView } from "@ugoite/ikasue/view";
+
 const registry = new CustomElementRegistry();
 defineIkaSue(registry);
+const host = document.querySelector<HTMLElement>("#isolated-root");
+if (!host) throw new Error("#isolated-root is required");
+renderIkaView(
+  host,
+  { version: "ikasue-web/1", kind: "text", text: "Isolated host" },
+  registry,
+);
 ```
 
 This does not distribute a renderer to the host. The host creates elements, assigns properties, listens to events, and calls documented command methods.
@@ -240,7 +250,7 @@ The public styling API is CSS custom properties, `::part()`, slots, and public a
 
 ```css
 ika-data-grid {
-  --ika-density: compact;
+  --ikasue-grid-cell-padding: 0.25rem;
 }
 
 ika-data-grid::part(table) {

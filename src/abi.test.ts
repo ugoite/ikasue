@@ -115,6 +115,50 @@ describe("ikasue Web ABI", () => {
         props: new Date(),
       }),
     ).toBe(false);
+    expect(
+      isIkaView({
+        version: IKASUE_ABI_VERSION,
+        kind: "text",
+        props: { selectable: "false" },
+      }),
+    ).toBe(false);
+    expect(
+      isIkaView({
+        version: IKASUE_ABI_VERSION,
+        kind: "data-grid",
+        props: { columns: "not-an-array" },
+      }),
+    ).toBe(false);
+    expect(
+      isIkaView({
+        version: IKASUE_ABI_VERSION,
+        kind: "flex",
+        props: {
+          children: [
+            {
+              version: IKASUE_ABI_VERSION,
+              kind: "text",
+              props: { content: "A" },
+            },
+          ],
+        },
+      }),
+    ).toBe(true);
+    expect(
+      isIkaView({
+        version: IKASUE_ABI_VERSION,
+        kind: "data-grid",
+        text: "not a grid prop",
+      }),
+    ).toBe(false);
+    expect(
+      isIkaView({
+        version: IKASUE_ABI_VERSION,
+        kind: "text",
+        text: "ambiguous",
+        props: { content: "other" },
+      }),
+    ).toBe(false);
   });
 
   it("lowers a serializable view to canonical element names", () => {

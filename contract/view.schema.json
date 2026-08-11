@@ -7,6 +7,46 @@
   "required": ["version", "kind"],
   "properties": {
     "version": { "const": "ikasue-web/1" },
+    "kind": { "$ref": "#/$defs/kind" },
+    "props": { "type": "object" },
+    "children": { "$ref": "#/$defs/viewArray" },
+    "text": { "type": "string" }
+  },
+  "allOf": [
+    { "$ref": "#/$defs/kindProps" },
+    {
+      "not": {
+        "required": ["children", "props"],
+        "properties": {
+          "props": { "required": ["children"] }
+        }
+      }
+    },
+    {
+      "not": {
+        "required": ["text", "props"],
+        "properties": {
+          "props": { "required": ["children"] }
+        }
+      }
+    },
+    {
+      "not": {
+        "required": ["children", "text"]
+      }
+    },
+    {
+      "if": { "required": ["text"] },
+      "then": { "properties": { "kind": { "const": "text" } } }
+    },
+    {
+      "if": { "required": ["text", "props"] },
+      "then": {
+        "not": { "properties": { "props": { "required": ["content"] } } }
+      }
+    }
+  ],
+  "$defs": {
     "kind": {
       "enum": [
         "theme-root",
@@ -39,73 +79,6 @@
         "progress"
       ]
     },
-    "props": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "tokens": { "$ref": "#/$defs/jsonRecord" },
-        "variant": { "$ref": "#/$defs/jsonValue" },
-        "content": { "$ref": "#/$defs/jsonValue" },
-        "density": { "$ref": "#/$defs/jsonValue" },
-        "tone": { "$ref": "#/$defs/jsonValue" },
-        "selectable": { "$ref": "#/$defs/jsonValue" },
-        "id": { "$ref": "#/$defs/jsonValue" },
-        "value": { "$ref": "#/$defs/jsonValue" },
-        "disabled": { "$ref": "#/$defs/jsonValue" },
-        "label": { "$ref": "#/$defs/jsonValue" },
-        "placeholder": { "$ref": "#/$defs/jsonValue" },
-        "required": { "$ref": "#/$defs/jsonValue" },
-        "description": { "$ref": "#/$defs/jsonValue" },
-        "error": { "$ref": "#/$defs/jsonValue" },
-        "direction": { "$ref": "#/$defs/jsonValue" },
-        "wrap": { "$ref": "#/$defs/jsonValue" },
-        "gap": { "$ref": "#/$defs/jsonValue" },
-        "align": { "$ref": "#/$defs/jsonValue" },
-        "justify": { "$ref": "#/$defs/jsonValue" },
-        "children": { "$ref": "#/$defs/jsonValue" },
-        "columns": { "$ref": "#/$defs/jsonValue" },
-        "rows": { "$ref": "#/$defs/jsonValue" },
-        "axis": { "$ref": "#/$defs/jsonValue" },
-        "overscroll": { "$ref": "#/$defs/jsonValue" },
-        "orientation": { "$ref": "#/$defs/jsonValue" },
-        "role": { "$ref": "#/$defs/jsonValue" },
-        "items": { "$ref": "#/$defs/jsonValue" },
-        "activeId": { "$ref": "#/$defs/jsonValue" },
-        "collapsed": { "$ref": "#/$defs/jsonValue" },
-        "overflow": { "$ref": "#/$defs/jsonValue" },
-        "icon": { "$ref": "#/$defs/jsonValue" },
-        "type": { "$ref": "#/$defs/jsonValue" },
-        "pressed": { "$ref": "#/$defs/jsonValue" },
-        "checked": { "$ref": "#/$defs/jsonValue" },
-        "options": { "$ref": "#/$defs/jsonValue" },
-        "fields": { "$ref": "#/$defs/jsonValue" },
-        "values": { "$ref": "#/$defs/jsonValue" },
-        "status": { "$ref": "#/$defs/jsonValue" },
-        "selection": { "$ref": "#/$defs/jsonValue" },
-        "editable": { "$ref": "#/$defs/jsonValue" },
-        "entries": { "$ref": "#/$defs/jsonValue" },
-        "panes": { "$ref": "#/$defs/jsonValue" },
-        "sizes": { "$ref": "#/$defs/jsonValue" },
-        "collapsible": { "$ref": "#/$defs/jsonValue" },
-        "motionOrigin": { "$ref": "#/$defs/jsonValue" },
-        "title": { "$ref": "#/$defs/jsonValue" },
-        "open": { "$ref": "#/$defs/jsonValue" },
-        "side": { "$ref": "#/$defs/jsonValue" },
-        "busy": { "$ref": "#/$defs/jsonValue" },
-        "message": { "$ref": "#/$defs/jsonValue" },
-        "severity": { "$ref": "#/$defs/jsonValue" },
-        "dismissible": { "$ref": "#/$defs/jsonValue" },
-        "loading": { "$ref": "#/$defs/jsonValue" },
-        "max": { "$ref": "#/$defs/jsonValue" }
-      }
-    },
-    "children": {
-      "type": "array",
-      "items": { "$ref": "#" }
-    },
-    "text": { "type": "string" }
-  },
-  "$defs": {
     "jsonValue": {
       "oneOf": [
         { "type": "null" },
@@ -119,6 +92,544 @@
     "jsonRecord": {
       "type": "object",
       "additionalProperties": { "$ref": "#/$defs/jsonValue" }
+    },
+    "stringRecord": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "viewArray": {
+      "type": "array",
+      "items": { "$ref": "#" }
+    },
+    "tabsItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string" },
+        "disabled": { "type": "boolean" }
+      }
+    },
+    "choiceOption": { "$ref": "#/$defs/tabsItem" },
+    "formField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "initialValue": { "type": "string" },
+        "required": { "type": "boolean" }
+      }
+    },
+    "historyEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "content"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string" },
+        "content": { "type": "string" },
+        "tone": { "enum": ["default", "muted", "success", "danger"] }
+      }
+    },
+    "dataGridColumn": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string" },
+        "width": { "type": "number", "minimum": 0 }
+      }
+    },
+    "dataGridRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "cells"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "cells": { "$ref": "#/$defs/jsonRecord" }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["row", "column"],
+      "properties": {
+        "row": { "type": "string", "minLength": 1 },
+        "column": { "type": "string", "minLength": 1 }
+      }
+    },
+    "splitPane": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string" },
+        "content": { "type": "string" },
+        "basis": { "type": "number", "minimum": 0 }
+      }
+    },
+    "kindProps": {
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "theme-root" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/themeProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "text" } } },
+          "then": { "properties": { "props": { "$ref": "#/$defs/textProps" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "editable-text" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/editableTextProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "text-field" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/textFieldProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "flex" } } },
+          "then": { "properties": { "props": { "$ref": "#/$defs/flexProps" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "stack" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/stackProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "grid" } } },
+          "then": { "properties": { "props": { "$ref": "#/$defs/gridProps" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "scroll-area" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/scrollProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "separator" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/separatorProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "tabs" } } },
+          "then": { "properties": { "props": { "$ref": "#/$defs/tabsProps" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "sidebar" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/sidebarProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "toolbar" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/toolbarProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "icon-button" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/iconButtonProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "checkbox" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/checkboxProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "radio-group" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/radioProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "segmented-control" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/segmentedProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "field" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/fieldProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "form" } } },
+          "then": { "properties": { "props": { "$ref": "#/$defs/formProps" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "data-grid" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/dataGridProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "history-timeline" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/historyProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "split-view" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/splitProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "side-panel" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/sidePanelProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "bottom-panel" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/bottomPanelProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "loading-region" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/loadingProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "dialog" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/dialogProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "status-indicator" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/statusProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "alert" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/alertProps" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "progress" } } },
+          "then": {
+            "properties": { "props": { "$ref": "#/$defs/progressProps" } }
+          }
+        }
+      ]
+    },
+    "themeProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tokens": { "$ref": "#/$defs/stringRecord" },
+        "variant": { "enum": ["default", "quiet", "dense"] }
+      }
+    },
+    "textProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "content": { "type": "string" },
+        "tone": { "enum": ["default", "muted", "danger", "success"] },
+        "selectable": { "type": "boolean" }
+      }
+    },
+    "editableTextProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "value": { "type": "string" },
+        "disabled": { "type": "boolean" }
+      }
+    },
+    "textFieldProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "value": { "type": "string" },
+        "placeholder": { "type": "string" },
+        "disabled": { "type": "boolean" },
+        "required": { "type": "boolean" },
+        "description": { "type": "string" },
+        "error": { "type": "string" }
+      }
+    },
+    "flexProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "direction": { "enum": ["row", "column"] },
+        "wrap": { "enum": ["nowrap", "wrap", "wrap-reverse"] },
+        "gap": { "type": "string" },
+        "align": { "type": "string" },
+        "justify": { "type": "string" },
+        "children": { "$ref": "#/$defs/viewArray" }
+      }
+    },
+    "stackProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "gap": { "type": "string" },
+        "align": { "type": "string" },
+        "justify": { "type": "string" },
+        "children": { "$ref": "#/$defs/viewArray" }
+      }
+    },
+    "gridProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "columns": { "type": "string" },
+        "rows": { "type": "string" },
+        "gap": { "type": "string" },
+        "align": { "type": "string" },
+        "justify": { "type": "string" },
+        "children": { "$ref": "#/$defs/viewArray" }
+      }
+    },
+    "scrollProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "content": { "type": "string" },
+        "axis": { "enum": ["x", "y", "both"] },
+        "overscroll": { "enum": ["auto", "contain"] }
+      }
+    },
+    "separatorProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "orientation": { "enum": ["horizontal", "vertical"] },
+        "role": { "const": "separator" }
+      }
+    },
+    "tabsProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "items": { "type": "array", "items": { "$ref": "#/$defs/tabsItem" } },
+        "activeId": { "type": "string" },
+        "variant": { "enum": ["default", "elastic"] },
+        "orientation": { "enum": ["horizontal", "vertical"] }
+      }
+    },
+    "sidebarProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/choiceOption" }
+        },
+        "activeId": { "type": "string" },
+        "collapsed": { "type": "boolean" }
+      }
+    },
+    "toolbarProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/choiceOption" }
+        },
+        "overflow": { "enum": ["none", "menu"] }
+      }
+    },
+    "iconButtonProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "icon": { "type": "string" },
+        "type": { "enum": ["button", "submit", "reset"] },
+        "disabled": { "type": "boolean" },
+        "pressed": { "type": "boolean" }
+      }
+    },
+    "checkboxProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "checked": { "type": "boolean" },
+        "disabled": { "type": "boolean" }
+      }
+    },
+    "radioProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "options": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/choiceOption" }
+        },
+        "value": { "type": "string" },
+        "disabled": { "type": "boolean" }
+      }
+    },
+    "segmentedProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "options": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/choiceOption" }
+        },
+        "value": { "type": "string" },
+        "disabled": { "type": "boolean" },
+        "variant": { "enum": ["default", "elastic"] }
+      }
+    },
+    "fieldProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "required": { "type": "boolean" },
+        "content": { "type": "string" }
+      }
+    },
+    "formProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fields": { "type": "array", "items": { "$ref": "#/$defs/formField" } },
+        "values": { "$ref": "#/$defs/stringRecord" },
+        "status": {
+          "enum": ["idle", "clean", "dirty", "submitting", "success", "error"]
+        }
+      }
+    },
+    "dataGridProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "columns": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/dataGridColumn" }
+        },
+        "rows": { "type": "array", "items": { "$ref": "#/$defs/dataGridRow" } },
+        "selection": { "$ref": "#/$defs/selection" },
+        "editable": { "type": "boolean" },
+        "density": { "enum": ["default", "compact"] }
+      }
+    },
+    "historyProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/historyEntry" }
+        },
+        "orientation": { "enum": ["horizontal", "vertical"] }
+      }
+    },
+    "splitProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "panes": { "type": "array", "items": { "$ref": "#/$defs/splitPane" } },
+        "orientation": { "enum": ["horizontal", "vertical"] },
+        "sizes": { "type": "array", "items": { "type": "string" } },
+        "collapsible": { "type": "boolean" },
+        "motionOrigin": { "enum": ["start", "end", "top", "bottom"] }
+      }
+    },
+    "sidePanelProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "side": { "enum": ["start", "end"] },
+        "open": { "type": "boolean" }
+      }
+    },
+    "bottomPanelProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "open": { "type": "boolean" }
+      }
+    },
+    "loadingProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "content": { "type": "string" },
+        "busy": { "type": "boolean" },
+        "label": { "type": "string" }
+      }
+    },
+    "dialogProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "open": { "type": "boolean" },
+        "modal": { "type": "boolean" }
+      }
+    },
+    "statusProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": { "type": "string" },
+        "status": {
+          "enum": ["neutral", "info", "success", "warning", "danger"]
+        }
+      }
+    },
+    "alertProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "message": { "type": "string" },
+        "severity": { "enum": ["info", "success", "warning", "danger"] },
+        "dismissible": { "type": "boolean" }
+      }
+    },
+    "progressProps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": { "type": "number" },
+        "max": { "type": "number" },
+        "label": { "type": "string" }
+      }
     }
   }
 }
