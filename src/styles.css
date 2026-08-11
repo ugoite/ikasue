@@ -43,6 +43,11 @@ ika-alert,
 ika-progress {
   display: block;
 }
+
+ika-text[data-selectable="false"] {
+  user-select: none;
+}
+
 ika-flex,
 ika-stack,
 ika-grid,
@@ -85,37 +90,47 @@ ika-split-view {
   display: flex;
   flex-direction: row;
   gap: 0.75rem;
+  position: relative;
 }
-ika-split-view[data-orientation="vertical"] {
+ika-split-view > [data-ika-split-container] {
+  flex-direction: row;
+}
+ika-split-view[data-orientation="vertical"] > [data-ika-split-container] {
   flex-direction: column;
 }
-ika-split-view > [data-pane-id] {
+ika-split-view > [data-ika-split-container] > [data-pane-id] {
   min-width: 0;
   min-height: 0;
   border-inline-start: 1px solid var(--ikasue-line);
   padding: 0.75rem;
 }
-ika-split-view > [data-collapsed="true"] {
+ika-split-view > [data-ika-split-container] > [data-collapsed="true"] {
   flex: 0 0 0;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
   padding: 0;
 }
-ika-split-view > [data-pane-divider] {
+ika-split-view > [data-ika-split-container] > [data-pane-divider] {
   flex: 0 0 auto;
   background: var(--ikasue-line);
   outline: none;
 }
-ika-split-view[data-orientation="horizontal"] > [data-pane-divider] {
+ika-split-view[data-orientation="horizontal"]
+  > [data-ika-split-container]
+  > [data-pane-divider] {
   width: 1px;
   cursor: col-resize;
 }
-ika-split-view[data-orientation="vertical"] > [data-pane-divider] {
+ika-split-view[data-orientation="vertical"]
+  > [data-ika-split-container]
+  > [data-pane-divider] {
   height: 1px;
   cursor: row-resize;
 }
-ika-split-view[data-responsive-orientation="vertical"] > [data-pane-divider] {
+ika-split-view[data-responsive-orientation="vertical"]
+  > [data-ika-split-container]
+  > [data-pane-divider] {
   width: auto;
   height: 1px;
   cursor: row-resize;
@@ -195,14 +210,18 @@ ika-scroll-area.ikasue-main {
   ika-grid {
     grid-template-columns: minmax(0, 1fr) !important;
   }
-  ika-split-view[data-orientation="horizontal"] {
+  ika-split-view[data-orientation="horizontal"] > [data-ika-split-container] {
     flex-direction: column;
   }
-  ika-split-view[data-orientation="horizontal"] > [data-pane-id] {
+  ika-split-view[data-orientation="horizontal"]
+    > [data-ika-split-container]
+    > [data-pane-id] {
     min-width: 0;
     min-height: var(--ikasue-pane-min-size, 0);
   }
-  ika-split-view[data-orientation="horizontal"] > [data-pane-divider] {
+  ika-split-view[data-orientation="horizontal"]
+    > [data-ika-split-container]
+    > [data-pane-divider] {
     width: auto;
     height: 1px;
     cursor: row-resize;
