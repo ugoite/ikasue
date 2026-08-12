@@ -64,14 +64,15 @@ const items = (value: unknown): NormalizedItem[] => {
     const source = record(item);
     const id = typeof source?.id === "string" ? source.id.trim() : "";
     const label = typeof source?.label === "string" ? source.label.trim() : "";
-    if (!id || !label || typeof source?.content !== "string" || ids.has(id))
-      return [];
+    if (!source || !id || !label || ids.has(id)) return [];
     ids.add(id);
     return [
       {
         id,
         label,
-        content: source.content,
+        ...(typeof source.content === "string"
+          ? { content: source.content }
+          : {}),
         ...(typeof source.icon === "string"
           ? { icon: source.icon.trim() }
           : {}),

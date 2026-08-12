@@ -117,6 +117,11 @@ describe("public contract", () => {
     expect(api.tabs().items).toEqual([]);
     expect(api.separator().orientation).toBe("horizontal");
     expect(api.loadingRegion({ busy: true }).busy).toBe(true);
+    expect(
+      api.sidebar({
+        items: [{ id: "home", label: "Home", icon: "⌂" }],
+      }).items,
+    ).toMatchObject([{ id: "home", label: "Home", icon: "⌂" }]);
     expect(api.dialog({ modal: true, openerId: "open" })).toMatchObject({
       modal: true,
       openerId: "open",

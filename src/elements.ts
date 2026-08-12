@@ -410,7 +410,13 @@ export function appendIkaView(
       if (value) node.setAttribute(key, "");
     } else if (value !== null) node.setAttribute(key, textValue(value));
   }
-  if (view.props || view.kind === "form" || view.text !== undefined)
+  if (
+    view.props ||
+    view.kind === "form" ||
+    view.text !== undefined ||
+    (view.children !== undefined &&
+      (view.kind === "side-panel" || view.kind === "bottom-panel"))
+  )
     (node as HTMLElement & { props: IkaJsonRecord }).props =
       view.text === undefined
         ? (view.props ?? {})
@@ -464,6 +470,11 @@ function hasDirectInternalChild(root: HTMLElement | ShadowRoot): boolean {
 }
 
 function serializedChildrenParent(root: HTMLElement): HTMLElement {
+  if (
+    root.localName === "ika-side-panel" ||
+    root.localName === "ika-bottom-panel"
+  )
+    return root.querySelector<HTMLElement>('[part="main"]') ?? root;
   if (root.localName !== "ika-form") return root;
   const querySelector = (
     root as unknown as {

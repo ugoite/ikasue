@@ -176,7 +176,6 @@ export interface LoadingRegionOptions {
   readonly id?: string;
   readonly content?: string;
   readonly busy?: boolean;
-  readonly progress?: number;
   readonly label?: string;
 }
 
@@ -185,7 +184,6 @@ export interface LoadingRegionSpec {
   readonly id?: string;
   readonly content: string;
   readonly busy: boolean;
-  readonly progress?: number;
   readonly label: string;
 }
 
@@ -224,7 +222,7 @@ export interface ThemeRootSpec {
 type Item = {
   readonly id: string;
   readonly label: string;
-  readonly content: string;
+  readonly content?: string;
   readonly icon?: string;
   readonly disabled?: boolean;
 };
