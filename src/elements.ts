@@ -1375,10 +1375,12 @@ export class IkaElement extends HTMLElementBase {
     this.dataset.editable = String(!disabled);
     this.dataset.editing = String(editableEditing.has(this));
     this.dataset.state = state;
+    const labelledBy = this.getAttribute("aria-labelledby");
     if (!editableEditing.has(this)) {
       appendInternal(root, "span", (element) => {
         element.part = "read-value";
         element.tabIndex = disabled ? -1 : 0;
+        if (labelledBy) element.setAttribute("aria-labelledby", labelledBy);
         element.textContent = currentValue;
         const start = (): void => {
           this.beginEditableTextEditing();
@@ -1413,6 +1415,7 @@ export class IkaElement extends HTMLElementBase {
           : "input";
     const input = appendInternal(root, tag, (element) => {
       element.part = "input";
+      if (labelledBy) element.setAttribute("aria-labelledby", labelledBy);
       element.setAttribute(
         "aria-label",
         propertyText(value, "id") || "Edit value",

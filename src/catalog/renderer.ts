@@ -592,7 +592,14 @@ function renderSplitView(
     index: number,
     node: HTMLElement,
   ): void => {
-    applyTrack(node, sizes[index] ?? pane.basis ?? "1fr");
+    applyTrack(
+      node,
+      sizes[index] ??
+        (typeof pane.basis === "number"
+          ? `${String(pane.basis)}fr`
+          : pane.basis) ??
+        "1fr",
+    );
     if (pane.grow !== undefined) node.style.flexGrow = String(pane.grow);
     if (pane.shrink !== undefined) node.style.flexShrink = String(pane.shrink);
     node.style.minWidth = "";
@@ -1000,14 +1007,23 @@ function renderComponentDemo(
 ): Cleanup | undefined {
   switch (id) {
     case "theme-root": {
-      const spec = themeRoot({});
-      Object.entries(spec.tokens).forEach(([key, value]) => {
-        target.style.setProperty(`--${key}`, value);
+      const spec = themeRoot({
+        tokens: {
+          "ikasue-surface": "#f5f7fb",
+          "ikasue-ink": "#172033",
+          "ikasue-line": "#9aa8bd",
+        },
       });
-      target.dataset.kind = spec.kind;
-      target.append(
+      const root = ikaDemoElement(
+        document,
+        "theme-root",
+        { tokens: spec.tokens, variant: spec.variant },
+        "ThemeRoot",
+      );
+      root.append(
         element(document, "p", "Theme tokens are applied at the root."),
       );
+      target.append(root);
       return;
     }
     case "flex":
