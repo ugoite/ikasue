@@ -549,6 +549,7 @@ export interface DataGridOptions {
   readonly editing?: DataGridSelection;
   readonly selectionMode?: "cell" | "context";
   readonly editable?: boolean;
+  readonly density?: "default" | "compact";
   readonly onSelect?: (selection: DataGridSelection | undefined) => void;
   readonly onEdit?: (row: string, column: string, value: string) => void;
   readonly onCopy?: ClipboardHandler;
@@ -566,6 +567,7 @@ export interface DataGridSpec {
   readonly editing?: DataGridSelection;
   readonly selectionMode: "cell" | "context";
   readonly editable: boolean;
+  readonly density: "default" | "compact";
   readonly onSelect?: (selection: DataGridSelection | undefined) => void;
   readonly onEdit?: (row: string, column: string, value: string) => void;
   readonly onCopy?: ClipboardHandler;

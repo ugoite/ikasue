@@ -114,6 +114,9 @@ test.describe("ikasue identity contracts", () => {
       )
       .not.toBe(initialSideColumns);
     const closedSideMain = await side.locator('[part="main"]').boundingBox();
+    const closedSideColumns = await side.evaluate(
+      (node) => getComputedStyle(node).gridTemplateColumns,
+    );
     await side.evaluate((node) => {
       (node as HTMLElement & { props: Record<string, unknown> }).props = {
         main: "Workspace content",
@@ -128,11 +131,7 @@ test.describe("ikasue identity contracts", () => {
       .poll(() =>
         side.evaluate((node) => getComputedStyle(node).gridTemplateColumns),
       )
-      .not.toBe(
-        await side.evaluate(
-          (node) => getComputedStyle(node).gridTemplateColumns,
-        ),
-      );
+      .not.toBe(closedSideColumns);
     const openSideMain = await side.locator('[part="main"]').boundingBox();
     expect(openSideMain?.width ?? 0).toBeLessThan(
       closedSideMain?.width ?? Number.POSITIVE_INFINITY,
@@ -315,6 +314,9 @@ test.describe("ikasue identity contracts", () => {
     const closedBottomMain = await bottom
       .locator('[part="main"]')
       .boundingBox();
+    const closedBottomRows = await bottom.evaluate(
+      (node) => getComputedStyle(node).gridTemplateRows,
+    );
     await bottom.evaluate((node) => {
       (node as HTMLElement & { props: Record<string, unknown> }).props = {
         main: "Workspace content",
@@ -328,11 +330,7 @@ test.describe("ikasue identity contracts", () => {
       .poll(() =>
         bottom.evaluate((node) => getComputedStyle(node).gridTemplateRows),
       )
-      .not.toBe(
-        await bottom.evaluate(
-          (node) => getComputedStyle(node).gridTemplateRows,
-        ),
-      );
+      .not.toBe(closedBottomRows);
     const openBottomMain = await bottom.locator('[part="main"]').boundingBox();
     expect(openBottomMain?.height ?? 0).toBeLessThan(
       closedBottomMain?.height ?? Number.POSITIVE_INFINITY,
