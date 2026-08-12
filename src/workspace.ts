@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 
 import { isMinSize, isSplitBasis } from "./layout";
+import { isIkaView } from "./contract";
 import type {
   BottomPanelOptions,
   BottomPanelSpec,
@@ -264,6 +265,9 @@ export function sidePanel(options?: SidePanelOptions): SidePanelSpec {
   const result: { -readonly [K in keyof SidePanelSpec]: SidePanelSpec[K] } = {
     kind: "side-panel",
     main: clean(options?.main),
+    children: Array.isArray(options?.children)
+      ? options.children.filter(isIkaView)
+      : [],
     title: clean(options?.title),
     content: clean(options?.content),
     side: options?.side === "start" ? "start" : "end",
@@ -278,6 +282,9 @@ export function bottomPanel(options?: BottomPanelOptions): BottomPanelSpec {
     {
       kind: "bottom-panel",
       main: clean(options?.main),
+      children: Array.isArray(options?.children)
+        ? options.children.filter(isIkaView)
+        : [],
       title: clean(options?.title),
       content: clean(options?.content),
       open: Boolean(options?.open),

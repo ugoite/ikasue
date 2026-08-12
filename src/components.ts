@@ -370,10 +370,30 @@ export function form(options?: FormOptions): FormSpec {
     values[field.id] =
       typeof supplied === "string" ? supplied : content(field.initialValue);
   }
+  const drafts: Record<string, string> = Object.create(null) as Record<
+    string,
+    string
+  >;
+  const suppliedDrafts = record(options?.drafts);
+  for (const field of fields) {
+    const draft = suppliedDrafts?.[field.id];
+    if (typeof draft === "string") drafts[field.id] = draft;
+  }
+  const errors: Record<string, string> = Object.create(null) as Record<
+    string,
+    string
+  >;
+  const suppliedErrors = record(options?.errors);
+  for (const field of fields) {
+    const error = suppliedErrors?.[field.id];
+    if (typeof error === "string" && error) errors[field.id] = error;
+  }
   const result: Mutable<FormSpec> = {
     kind: "form",
     fields,
     values,
+    drafts,
+    errors,
     status:
       options?.status === "clean" ||
       options?.status === "dirty" ||
@@ -479,6 +499,7 @@ export function dataGrid(options?: DataGridOptions): DataGridSpec {
     columnsProvided,
     rowsProvided,
     cells,
+    selectionMode: options?.selectionMode === "cell" ? "cell" : "context",
   };
   const selection = normalizeTarget(options?.selection);
   const editing = normalizeTarget(options?.editing);
@@ -505,6 +526,7 @@ export function statusIndicator(
       options?.status === "danger"
         ? options.status
         : "neutral",
+    showLabel: options?.showLabel === true,
   };
   if (text(options?.id)) result.id = text(options?.id);
   if (text(options?.icon)) result.icon = text(options?.icon);

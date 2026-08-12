@@ -954,6 +954,38 @@ const copy =
         }
         addDemoChildren(id, element);
         preview.append(element);
+        if (id === "editable-text") {
+          const stateStrip = preview.ownerDocument.createElement("div");
+          stateStrip.className = "editable-live-states";
+          const stateValues = [
+            { state: "clean", value: "Read value" },
+            { state: "modified", value: "Modified value" },
+            { state: "error", value: "Needs attention" },
+            { state: "editing", value: "Editing value" },
+          ] as const;
+          for (const stateValue of stateValues) {
+            const stateElement = preview.ownerDocument.createElement(
+              "ika-editable-text",
+            ) as DemoElement;
+            stateElement.dataset.demoState = stateValue.state;
+            stateElement.props = {
+              id: `state-${stateValue.state}`,
+              value: stateValue.value,
+              editor: "text",
+              state:
+                stateValue.state === "editing" ? "clean" : stateValue.state,
+            };
+            stateStrip.append(stateElement);
+            if (stateValue.state === "editing")
+              stateElement.querySelector('[part="read-value"]')?.dispatchEvent(
+                new KeyboardEvent("keydown", {
+                  key: "Enter",
+                  bubbles: true,
+                }),
+              );
+          }
+          preview.append(stateStrip);
+        }
         if (id === "alert") {
           const target = preview.ownerDocument.createElement("div");
           target.id = "selected-work";
@@ -1196,6 +1228,27 @@ const copy =
     grid-template-columns: repeat(4, minmax(0, 1fr));
     border-block: 1px solid var(--ikasue-line);
   }
+  .editable-live-states {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    padding-block: 1rem;
+    border-block-end: 1px solid var(--ikasue-line);
+  }
+  .editable-live-states::before {
+    content: "live states";
+    grid-column: 1 / -1;
+    color: var(--ikasue-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+  }
+  .editable-live-states [data-demo-state]::before {
+    display: block;
+    margin-block-end: 0.35rem;
+    color: var(--ikasue-muted);
+    content: attr(data-demo-state);
+    font-size: 0.72rem;
+  }
   .editable-state-sequence span {
     padding: 0.75rem 0.5rem;
     border-inline-end: 1px solid var(--ikasue-line);
@@ -1217,7 +1270,8 @@ const copy =
     color: var(--ikasue-error-ink, #a82e29);
   }
   @media (max-width: 720px) {
-    .editable-state-sequence {
+    .editable-state-sequence,
+    .editable-live-states {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }

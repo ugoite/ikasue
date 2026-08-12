@@ -171,6 +171,7 @@ const primitiveAttributes = new Set([
   "side",
   "target",
   "targetId",
+  "showLabel",
   "action",
   "value",
   "max",
@@ -189,6 +190,7 @@ const booleanAttributes = new Set([
   "collapsible",
   "busy",
   "dismissible",
+  "showLabel",
   "compact",
 ]);
 
@@ -281,12 +283,13 @@ const propertyKeysByTag: Readonly<
     "editor",
     "state",
   ]),
-  "ika-form": new Set(["fields", "values", "status"]),
+  "ika-form": new Set(["fields", "values", "drafts", "errors", "status"]),
   "ika-data-grid": new Set([
     "columns",
     "rows",
     "selection",
     "editing",
+    "selectionMode",
     "editable",
     "density",
   ]),
@@ -305,8 +308,15 @@ const propertyKeysByTag: Readonly<
     "collapsible",
     "motionOrigin",
   ]),
-  "ika-side-panel": new Set(["main", "title", "content", "side", "open"]),
-  "ika-bottom-panel": new Set(["main", "title", "content", "open"]),
+  "ika-side-panel": new Set([
+    "main",
+    "children",
+    "title",
+    "content",
+    "side",
+    "open",
+  ]),
+  "ika-bottom-panel": new Set(["main", "children", "title", "content", "open"]),
   "ika-loading-region": new Set(["content", "busy", "label"]),
   "ika-dialog": new Set(["title", "content", "open", "modal"]),
   "ika-status-indicator": new Set([
@@ -314,6 +324,7 @@ const propertyKeysByTag: Readonly<
     "label",
     "status",
     "icon",
+    "showLabel",
     "targetId",
   ]),
   "ika-alert": new Set([
@@ -402,12 +413,15 @@ export function appendIkaView(
       view.text === undefined
         ? (view.props ?? {})
         : { ...(view.props ?? {}), content: view.text };
-  if (
-    !Array.isArray(view.props?.children) &&
-    view.children !== undefined &&
-    !hasStructuredChild(serializedChildrenParent(node))
-  ) {
-    const childParent = serializedChildrenParent(node);
+  if (!Array.isArray(view.props?.children) && view.children !== undefined) {
+    const childParent =
+      view.kind === "side-panel" || view.kind === "bottom-panel"
+        ? (node.querySelector<HTMLElement>('[part="main"]') ?? node)
+        : serializedChildrenParent(node);
+    if (hasStructuredChild(childParent)) {
+      parent.append(node);
+      return node;
+    }
     for (const child of view.children)
       appendIkaView(childParent, child, activeRegistry);
   }
@@ -696,7 +710,12 @@ export class IkaElement extends HTMLElementBase {
       }
       return;
     }
-    if (kind !== "ika-form" && serializedChildrenForElement.has(this)) {
+    if (
+      kind !== "ika-form" &&
+      kind !== "ika-side-panel" &&
+      kind !== "ika-bottom-panel" &&
+      serializedChildrenForElement.has(this)
+    ) {
       clearInternalContent(root);
       return;
     }
@@ -828,6 +847,8 @@ export class IkaElement extends HTMLElementBase {
           copy.part = "label";
           copy.textContent = label;
           element.setAttribute("aria-label", label);
+          element.title = label;
+          this.dataset.showLabel = String(value.showLabel === true);
           const targetId = propertyText(value, "targetId");
           if (targetId) {
             element.tabIndex = 0;
@@ -961,7 +982,19 @@ export class IkaElement extends HTMLElementBase {
           workspace.part = "workspace";
           const main = this.ownerDocument.createElement("main");
           main.part = "main";
-          main.textContent = propertyText(value, "main");
+          const panelChildren = Array.isArray(value.children)
+            ? value.children
+            : serializedChildrenForElement.get(this);
+          if (panelChildren && panelChildren.length > 0) {
+            const registry =
+              registryForElement.get(this) ??
+              this.ownerDocument.defaultView?.customElements;
+            for (const child of panelChildren)
+              if (isIkaView(child) && registry)
+                appendIkaView(main, child, registry);
+          } else {
+            main.textContent = propertyText(value, "main");
+          }
           const panel = this.ownerDocument.createElement("aside");
           panel.part = "panel";
           panel.setAttribute(
@@ -1093,6 +1126,8 @@ export class IkaElement extends HTMLElementBase {
       case "ika-segmented-control":
         this.dataset.variant = propertyText(value, "variant") || "default";
         appendInternal(root, "fieldset", (element) => {
+          if (kind === "ika-radio-group")
+            element.setAttribute("role", "radiogroup");
           const options = Array.isArray(value.options) ? value.options : [];
           const buttons: HTMLButtonElement[] = [];
           for (const option of options) {
@@ -1189,6 +1224,18 @@ export class IkaElement extends HTMLElementBase {
         clearInternalContent(root);
         const form = appendInternal(root, "form", (element) => {
           element.setAttribute("novalidate", "");
+          element.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const drafts = isIkaJsonRecord(value.drafts) ? value.drafts : {};
+            const values = isIkaJsonRecord(value.values) ? value.values : {};
+            this.dispatchEvent(
+              new CustomEvent("ika-submit", {
+                bubbles: true,
+                composed: true,
+                detail: { values: { ...values, ...drafts } },
+              }),
+            );
+          });
         });
         for (const field of Array.isArray(value.fields) ? value.fields : []) {
           if (!isIkaJsonRecord(field)) continue;
@@ -1201,11 +1248,19 @@ export class IkaElement extends HTMLElementBase {
           const explicitValue = isIkaJsonRecord(value.values)
             ? value.values[textValue(field.id)]
             : undefined;
-          const currentValue = textValue(
+          const draftValue = isIkaJsonRecord(value.drafts)
+            ? value.drafts[textValue(field.id)]
+            : undefined;
+          const baseValue =
             typeof explicitValue === "string"
               ? explicitValue
-              : field.initialValue,
+              : field.initialValue;
+          const currentValue = textValue(
+            typeof draftValue === "string" ? draftValue : baseValue,
           );
+          const fieldError = isIkaJsonRecord(value.errors)
+            ? textValue(value.errors[textValue(field.id)])
+            : "";
           const editor = this.ownerDocument.createElement(
             "ika-editable-text",
           ) as HTMLElement & { props?: IkaJsonRecord };
@@ -1214,8 +1269,24 @@ export class IkaElement extends HTMLElementBase {
             id: textValue(field.id),
             value: currentValue,
             editor: propertyText(field, "editor") || "text",
-            state: propertyText(field, "state") || "clean",
+            state: fieldError
+              ? "error"
+              : propertyText(field, "state") || "clean",
           };
+          editor.addEventListener("ika-commit", (event) =>
+            this.dispatchEvent(
+              new CustomEvent("ika-draft-change", {
+                bubbles: true,
+                composed: true,
+                detail: {
+                  id: textValue(field.id),
+                  value: (event as CustomEvent<{ value?: unknown }>).detail
+                    .value,
+                },
+              }),
+            ),
+          );
+          if (fieldError) row.dataset.error = "true";
           row.append(fieldLabel, editor);
           form.append(row);
         }
@@ -1665,6 +1736,8 @@ export class IkaDataGridElement extends IkaElement {
     clearInternalContent(root);
     this.dataset.editable = String(value.editable === true);
     this.dataset.density = propertyText(value, "density") || "default";
+    this.dataset.selectionMode =
+      propertyText(value, "selectionMode") || "context";
     const table = this.ownerDocument.createElement("table");
     table.dataset.ikaInternal = "true";
     table.part = "table";
@@ -1702,9 +1775,15 @@ export class IkaDataGridElement extends IkaElement {
         const selected =
           selection?.row === row.id && selection.column === column.id;
         cell.dataset.selected = String(selected);
-        cell.dataset.rowPeer = String(selection?.row === row.id && !selected);
+        cell.dataset.rowPeer = String(
+          value.selectionMode !== "cell" &&
+            selection?.row === row.id &&
+            !selected,
+        );
         cell.dataset.columnPeer = String(
-          selection?.column === column.id && !selected,
+          value.selectionMode !== "cell" &&
+            selection?.column === column.id &&
+            !selected,
         );
         cell.dataset.state = gridCellState(rawValue);
         cell.textContent = gridCellValue(rawValue);
