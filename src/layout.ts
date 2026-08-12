@@ -206,6 +206,7 @@ export function separator(options?: SeparatorOptions): SeparatorSpec {
   const result: { -readonly [K in keyof SeparatorSpec]: SeparatorSpec[K] } = {
     kind: "separator",
     orientation: input?.orientation === "vertical" ? "vertical" : "horizontal",
+    weight: input?.weight === "standard" ? "standard" : "hairline",
   };
   if (input?.role === "separator") result.role = "separator";
   return Object.freeze(result);

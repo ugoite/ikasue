@@ -25,6 +25,22 @@ const validFields = (fields: unknown): FormField[] => {
     if (typeof field.initialValue === "string")
       result.initialValue = field.initialValue;
     if (field.required === true) result.required = true;
+    if (
+      field.editor === "email" ||
+      field.editor === "number" ||
+      field.editor === "date" ||
+      field.editor === "textarea" ||
+      field.editor === "select"
+    )
+      result.editor = field.editor;
+    if (
+      field.state === "clean" ||
+      field.state === "created" ||
+      field.state === "modified" ||
+      field.state === "deleted" ||
+      field.state === "error"
+    )
+      result.state = field.state;
     return [result];
   });
 };

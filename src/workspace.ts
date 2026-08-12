@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 
 import { isMinSize, isSplitBasis } from "./layout";
+import { isIkaView } from "./contract";
 import type {
   BottomPanelOptions,
   BottomPanelSpec,
@@ -33,16 +34,11 @@ const explicitlyCollapsed = (
   value[id] === true;
 const validPane = (value: unknown): SplitPane | undefined => {
   const pane = record(value);
-  if (
-    typeof pane?.id !== "string" ||
-    !pane.id.trim() ||
-    typeof pane.content !== "string"
-  )
-    return undefined;
+  if (typeof pane?.id !== "string" || !pane.id.trim()) return undefined;
   const result: { -readonly [K in keyof SplitPane]: SplitPane[K] } = {
     id: pane.id.trim(),
-    content: pane.content,
   };
+  if (typeof pane.content === "string") result.content = pane.content;
   if (typeof pane.label === "string") result.label = pane.label.trim();
   if (typeof pane.size === "string" && isSplitBasis(pane.size))
     result.size = pane.size.trim();
@@ -50,6 +46,12 @@ const validPane = (value: unknown): SplitPane | undefined => {
     result.minSize = pane.minSize.trim();
   if (typeof pane.basis === "string" && isSplitBasis(pane.basis))
     result.basis = pane.basis.trim();
+  if (
+    typeof pane.basis === "number" &&
+    Number.isFinite(pane.basis) &&
+    pane.basis >= 0
+  )
+    result.basis = pane.basis;
   if (
     typeof pane.grow === "number" &&
     Number.isFinite(pane.grow) &&
@@ -87,7 +89,14 @@ const sizes = (
     requested.every(isSplitBasis)
   )
     return requested.map((value) => value.trim());
-  return panes.map((pane) => pane.size ?? pane.basis ?? "1fr");
+  return panes.map(
+    (pane) =>
+      pane.size ??
+      (typeof pane.basis === "number"
+        ? `${String(pane.basis)}fr`
+        : pane.basis) ??
+      "1fr",
+  );
 };
 
 export function splitView(
@@ -151,7 +160,14 @@ export function createSplitViewState(
     initial.sizes.length === paneIds.length &&
     initial.sizes.every(isSplitBasis)
       ? initial.sizes.map((value) => value.trim())
-      : normalized.map((pane) => pane.size ?? pane.basis ?? "1fr");
+      : normalized.map(
+          (pane) =>
+            pane.size ??
+            (typeof pane.basis === "number"
+              ? `${String(pane.basis)}fr`
+              : pane.basis) ??
+            "1fr",
+        );
   const activePane =
     typeof initial?.activePane === "string" &&
     paneIds.includes(initial.activePane) &&
@@ -263,6 +279,10 @@ export function setPaneCollapsed(
 export function sidePanel(options?: SidePanelOptions): SidePanelSpec {
   const result: { -readonly [K in keyof SidePanelSpec]: SidePanelSpec[K] } = {
     kind: "side-panel",
+    main: clean(options?.main),
+    children: Array.isArray(options?.children)
+      ? options.children.filter(isIkaView)
+      : [],
     title: clean(options?.title),
     content: clean(options?.content),
     side: options?.side === "start" ? "start" : "end",
@@ -276,6 +296,10 @@ export function bottomPanel(options?: BottomPanelOptions): BottomPanelSpec {
   const result: { -readonly [K in keyof BottomPanelSpec]: BottomPanelSpec[K] } =
     {
       kind: "bottom-panel",
+      main: clean(options?.main),
+      children: Array.isArray(options?.children)
+        ? options.children.filter(isIkaView)
+        : [],
       title: clean(options?.title),
       content: clean(options?.content),
       open: Boolean(options?.open),
@@ -296,13 +320,6 @@ export function loadingRegion(
     label: clean(options?.label) || "Loading",
   };
   if (clean(options?.id)) result.id = clean(options?.id);
-  if (
-    typeof options?.progress === "number" &&
-    Number.isFinite(options.progress) &&
-    options.progress >= 0 &&
-    options.progress <= 100
-  )
-    result.progress = options.progress;
   return Object.freeze(result);
 }
 export function dialog(options?: DialogOptions): DialogSpec {

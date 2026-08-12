@@ -35,8 +35,16 @@ describe("standard layout descriptors", () => {
       scrollArea("body", { axis: "both", overscroll: "contain" }),
     ).toMatchObject({ axis: "both", overscroll: "contain" });
     expect(
-      separator({ orientation: "vertical", role: "separator" }),
-    ).toMatchObject({ orientation: "vertical", role: "separator" });
+      separator({
+        orientation: "vertical",
+        weight: "standard",
+        role: "separator",
+      }),
+    ).toMatchObject({
+      orientation: "vertical",
+      weight: "standard",
+      role: "separator",
+    });
     expect(flex(null as never)).toMatchObject({ children: [] });
   });
 });

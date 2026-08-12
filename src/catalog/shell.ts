@@ -6,7 +6,7 @@ import {
 import { parseComponentSelection, serializeComponentSelection } from "./state";
 import { clear, element, type Cleanup } from "./dom";
 import { normalizeBase, routesForBase } from "./routes";
-import { createDomAllocator, renderCatalogComponent } from "./renderer";
+import { renderCatalogComponent } from "./renderer";
 import type { CatalogLocale, CatalogMount, CatalogMountOptions } from "./types";
 
 export function getMountLabel(label?: string): string {
@@ -54,7 +54,6 @@ function render(
   options: Required<Pick<CatalogMountOptions, "locale" | "base">>,
 ): Cleanup | undefined {
   const document = target.ownerDocument;
-  const allocator = createDomAllocator();
   clear(target);
   target.className = "ikasue-catalog";
   target.dataset.locale = options.locale;
@@ -99,13 +98,7 @@ function render(
   const component = parseComponentSelection(pathname, "/", options.locale);
   let cleanup: Cleanup | undefined;
   if (component) {
-    cleanup = renderCatalogComponent(
-      document,
-      main,
-      component,
-      options.locale,
-      allocator,
-    );
+    cleanup = renderCatalogComponent(document, main, component, options.locale);
   } else {
     const pageId = pageIdForPath(pathname, options.locale);
     const entry = isCatalogPageId(pageId)

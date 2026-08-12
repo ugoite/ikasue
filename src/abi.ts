@@ -21,7 +21,12 @@ const property = (
 ): IkaElementPropertyContract =>
   defaultValue === undefined ? { name, type } : { name, type, defaultValue };
 
-const primitiveAttributeNames = new Set([
+/**
+ * Primitive properties may be reflected to attributes by the DOM binding.
+ * Keep this inventory shared with the runtime element implementation so the
+ * generated ABI and custom-element surface cannot drift apart.
+ */
+export const IKA_PRIMITIVE_ATTRIBUTE_NAMES = [
   "id",
   "density",
   "editable",
@@ -30,10 +35,25 @@ const primitiveAttributeNames = new Set([
   "label",
   "content",
   "title",
+  "main",
   "message",
   "placeholder",
+  "description",
+  "error",
   "orientation",
+  "weight",
   "variant",
+  "editor",
+  "state",
+  "compact",
+  "selectedId",
+  "activeId",
+  "activePane",
+  "icon",
+  "railWidth",
+  "openWidth",
+  "selectionMode",
+  "motionOrigin",
   "gap",
   "direction",
   "wrap",
@@ -51,15 +71,24 @@ const primitiveAttributeNames = new Set([
   "collapsed",
   "open",
   "modal",
+  "openerId",
   "collapsible",
   "busy",
   "status",
   "severity",
   "dismissible",
   "side",
+  "target",
+  "targetId",
+  "showLabel",
+  "action",
   "max",
   "value",
-]);
+] as const;
+
+const primitiveAttributeNames: ReadonlySet<string> = new Set(
+  IKA_PRIMITIVE_ATTRIBUTE_NAMES,
+);
 
 const contract = (
   kind: IkaViewKind,
@@ -69,7 +98,10 @@ const contract = (
 ): IkaElementContract => ({
   tag: `ika-${kind}`,
   attributes: properties
-    .filter(({ name }) => primitiveAttributeNames.has(name))
+    .filter(
+      ({ name, type }) =>
+        primitiveAttributeNames.has(name) && !type.startsWith("JSON"),
+    )
     .map(({ name }) => name),
   properties,
   events,
@@ -94,9 +126,19 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
     [
       property("id", "string", ""),
       property("value", "string", ""),
+      property(
+        "editor",
+        "text | email | number | date | textarea | select",
+        "text",
+      ),
+      property(
+        "state",
+        "clean | created | modified | deleted | error",
+        "clean",
+      ),
       property("disabled", "boolean", false),
     ],
-    ["ika-commit"],
+    ["ika-commit", "ika-cancel"],
   ),
   "text-field": contract(
     "text-field",
@@ -141,6 +183,7 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
   ]),
   separator: contract("separator", [
     property("orientation", "horizontal | vertical", "horizontal"),
+    property("weight", "hairline | standard", "hairline"),
     property("role", "separator", "separator"),
   ]),
   tabs: contract(
@@ -157,9 +200,12 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
   sidebar: contract(
     "sidebar",
     [
+      property("main", "string", ""),
       property("items", "Item[]", "[]"),
       property("activeId", "string"),
       property("collapsed", "boolean", false),
+      property("railWidth", "CSS length", "44px"),
+      property("openWidth", "CSS length", "18rem"),
     ],
     ["ika-select"],
   ),
@@ -167,6 +213,8 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
     "toolbar",
     [
       property("items", "Item[]", "[]"),
+      property("activeId", "string"),
+      property("collapsed", "boolean", false),
       property("overflow", "none | menu", "none"),
     ],
     ["ika-select"],
@@ -180,6 +228,7 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
       property("type", "button | submit | reset", "button"),
       property("disabled", "boolean", false),
       property("pressed", "boolean", false),
+      property("busy", "boolean", false),
     ],
     ["ika-action"],
   ),
@@ -217,20 +266,36 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
   field: contract("field", [
     property("id", "string", ""),
     property("label", "string", ""),
+    property("description", "string", ""),
+    property("error", "string", ""),
     property("required", "boolean", false),
     property("content", "string", ""),
+    property(
+      "editor",
+      "text | email | number | date | textarea | select",
+      "text",
+    ),
+    property("state", "clean | created | modified | deleted | error", "clean"),
   ]),
-  form: contract("form", [
-    property("fields", "FormField[]", "[]"),
-    property("values", "JSON object", "{}"),
-    property("status", "FormStateStatus", "idle"),
-  ]),
+  form: contract(
+    "form",
+    [
+      property("fields", "FormField[]", "[]"),
+      property("values", "JSON object", "{}"),
+      property("drafts", "JSON object", "{}"),
+      property("errors", "JSON object", "{}"),
+      property("status", "FormStateStatus", "idle"),
+    ],
+    ["ika-submit", "ika-draft-change"],
+  ),
   "data-grid": contract(
     "data-grid",
     [
       property("columns", "DataGridColumn[]", "[]"),
       property("rows", "DataGridRow[]", "[]"),
       property("selection", "DataGridSelection"),
+      property("editing", "DataGridSelection"),
+      property("selectionMode", "cell | context", "context"),
       property("editable", "boolean", false),
       property("density", "default | compact", "default"),
       property("model", "IkaDataGridModel (binding)"),
@@ -238,6 +303,7 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
     [
       "ika-selection-change",
       "ika-edit-start",
+      "ika-edit-commit",
       "ika-model-event",
       "ika-update",
       "ika-error",
@@ -255,25 +321,33 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
   "history-timeline": contract("history-timeline", [
     property("entries", "HistoryEntry[]", "[]"),
     property("orientation", "horizontal | vertical", "vertical"),
+    property("selectedId", "string"),
+    property("compact", "boolean", false),
   ]),
   "split-view": contract(
     "split-view",
     [
       property("panes", "SplitViewPane[]", "[]"),
       property("orientation", "horizontal | vertical", "horizontal"),
+      property("activePane", "string"),
       property("sizes", "CSS track list[]", "[]"),
       property("collapsible", "boolean", false),
+      property("collapsed", "JSON boolean map", "{}"),
       property("motionOrigin", "start | end | top | bottom", "start"),
     ],
-    ["ika-collapse-change"],
+    ["ika-collapse-change", "ika-active-pane-change"],
   ),
   "side-panel": contract("side-panel", [
+    property("main", "string", ""),
+    property("children", "IkaView[]", "[]"),
     property("title", "string", ""),
     property("content", "string", ""),
     property("side", "start | end", "end"),
     property("open", "boolean", false),
   ]),
   "bottom-panel": contract("bottom-panel", [
+    property("main", "string", ""),
+    property("children", "IkaView[]", "[]"),
     property("title", "string", ""),
     property("content", "string", ""),
     property("open", "boolean", false),
@@ -283,19 +357,28 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
     property("busy", "boolean", false),
     property("label", "string", "Loading"),
   ]),
-  dialog: contract("dialog", [
-    property("title", "string", ""),
-    property("content", "string", ""),
-    property("open", "boolean", false),
-    property("modal", "boolean", true),
-  ]),
+  dialog: contract(
+    "dialog",
+    [
+      property("title", "string", ""),
+      property("content", "string", ""),
+      property("open", "boolean", false),
+      property("modal", "boolean", true),
+      property("openerId", "string"),
+    ],
+    ["ika-close"],
+  ),
   "status-indicator": contract("status-indicator", [
+    property("id", "string", ""),
     property("label", "string", ""),
     property(
       "status",
       "neutral | info | success | warning | danger",
       "neutral",
     ),
+    property("icon", "string", ""),
+    property("showLabel", "boolean", false),
+    property("targetId", "string"),
   ]),
   alert: contract(
     "alert",
@@ -303,8 +386,10 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
       property("message", "string", ""),
       property("severity", "info | success | warning | danger", "info"),
       property("dismissible", "boolean", false),
+      property("target", "string"),
+      property("action", "string"),
     ],
-    ["ika-dismiss"],
+    ["ika-dismiss", "ika-action"],
   ),
   progress: contract("progress", [
     property("value", "number", "0"),

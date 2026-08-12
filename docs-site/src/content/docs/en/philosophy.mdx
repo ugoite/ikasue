@@ -1,8 +1,28 @@
 ---
 title: Principles
-description: A planar visual and interaction language for standard web layout.
+description: The visual and interaction language that keeps Ikasue distinctive on top of ordinary Web APIs.
 ---
 
-# Principles
+# Ikasue principles
 
-Standard web layout owns geometry. ikasue keeps information readable, gives selected work more area, and keeps motion aligned with the direction of appearance.
+Ikasue keeps component names and semantics familiar. The way working information is read, selected, edited, and given room should remain distinctive. Standard CSS owns geometry; these ten principles align the visual and interaction language.
+
+1. **Flat Surface** — Do not make shadows, floating cards, or overlay drawers the default. Create needed room with flow or grid tracks on the same surface.
+2. **Directional Origin** — Information on the right comes from the right, and information below comes from below. Motion explains geography.
+3. **Space Negotiation** — Workspace surfaces negotiate area toward focus and selection through ordinary layout tracks.
+4. **Finite Viewport** — A purpose-specific component owns overflow. There is no universal axis abstraction.
+5. **Information Is Editable** — Reading is the default; editing capability appears only when needed.
+6. **Selection Owns Area** — Selection receives a little area and a quiet neutral surface, not only an underline.
+7. **No Card Taxonomy** — Do not add boxes just to classify things. Use whitespace, one line, order, and edges.
+8. **Semantic Color Only** — Black is structure. Blue, green, red, and yellow are reserved for state.
+9. **Readable During Work** — Keep previous content visible during loading and updates; animate only the target region.
+10. **Keyboard Is Geometry** — Tab, arrows, Home/End, copy, and paste move in the same directions as the visual interface.
+
+## Working examples
+
+- `EditableText` starts as readable text with a dashed underline and enters one-line editing with Enter or F2.
+- `Tabs` and `SegmentedControl` transfer area to the selected option instead of relying on color or an underline alone.
+- `Sidebar`, `SidePanel`, and `BottomPanel` push the main surface by adding a rail or track; they do not float above it.
+- `LoadingRegion` keeps existing text while a neutral wave marks the affected region.
+
+Every component page exposes its design rationale, use, avoid, Keyboard, State, and Live behavior in that order.

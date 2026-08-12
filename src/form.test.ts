@@ -56,6 +56,17 @@ describe("form state", () => {
     expect(setFormErrors(errored, {}).status).toBe("clean");
   });
 
+  it("keeps the field editor and identity state in the form model", () => {
+    const state = createFormState([
+      { id: "email", label: "Email", editor: "email", state: "created" },
+      { id: "notes", label: "Notes", editor: "textarea", state: "error" },
+    ]);
+    expect(state.fields).toMatchObject([
+      { id: "email", editor: "email", state: "created" },
+      { id: "notes", editor: "textarea", state: "error" },
+    ]);
+  });
+
   it("treats reserved object names as ordinary field IDs", () => {
     const state = createFormState([
       { id: "__proto__", label: "Prototype", initialValue: "A" },

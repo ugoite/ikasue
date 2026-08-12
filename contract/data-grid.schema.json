@@ -15,7 +15,10 @@
       "items": { "$ref": "#/$defs/row" }
     },
     "selection": { "$ref": "#/$defs/selection" },
-    "editable": { "type": "boolean" }
+    "editing": { "$ref": "#/$defs/selection" },
+    "selectionMode": { "enum": ["cell", "context"] },
+    "editable": { "type": "boolean" },
+    "density": { "enum": ["default", "compact"] }
   },
   "$defs": {
     "column": {
@@ -34,7 +37,26 @@
       "required": ["id", "cells"],
       "properties": {
         "id": { "type": "string", "minLength": 1 },
-        "cells": { "type": "object", "additionalProperties": true }
+        "cells": { "$ref": "#/$defs/cells" }
+      }
+    },
+    "cells": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          { "type": ["string", "number", "boolean", "null"] },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value"],
+            "properties": {
+              "value": { "type": "string" },
+              "state": {
+                "enum": ["clean", "created", "modified", "deleted", "error"]
+              }
+            }
+          }
+        ]
       }
     },
     "selection": {
