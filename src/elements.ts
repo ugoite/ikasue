@@ -1788,6 +1788,20 @@ export class IkaDataGridElement extends IkaElement {
     this.render();
   }
 
+  get editing(): IkaDataGridSelection | undefined {
+    return this.#editing;
+  }
+
+  set editing(value: IkaDataGridSelection | undefined) {
+    if (value !== undefined && !isIkaDataGridSelection(value)) {
+      this.reportInvalidContract();
+      return;
+    }
+    this.#editing = value;
+    if (value) this.#selection = value;
+    this.render();
+  }
+
   get model(): IkaDataGridModel | undefined {
     return this.#model;
   }
@@ -1907,9 +1921,7 @@ export class IkaDataGridElement extends IkaElement {
       this.reportInvalidContract();
       return;
     }
-    this.#editing = request;
-    this.#selection = request;
-    this.render();
+    this.editing = request;
     this.dispatchEvent(
       new CustomEvent("ika-edit-start", {
         bubbles: true,

@@ -28,13 +28,32 @@
       "type": "object",
       "additionalProperties": { "$ref": "#/$defs/jsonValue" }
     },
+    "dataGridCell": {
+      "oneOf": [
+        { "type": ["string", "number", "boolean", "null"] },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value"],
+          "properties": {
+            "value": { "type": "string" },
+            "state": {
+              "enum": ["clean", "created", "modified", "deleted", "error"]
+            }
+          }
+        }
+      ]
+    },
     "dataGridRow": {
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "cells"],
       "properties": {
         "id": { "type": "string", "minLength": 1 },
-        "cells": { "$ref": "#/$defs/jsonRecord" }
+        "cells": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/dataGridCell" }
+        }
       }
     },
     "rowRequest": {

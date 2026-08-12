@@ -55,11 +55,21 @@ describe("MessagePort model transport", () => {
       version: "ikasue-web/1",
       type: "response",
       id: 1,
-      result: { rows: [{ id: "42", cells: { name: "ika" } }], total: 1 },
+      result: {
+        rows: [
+          {
+            id: "42",
+            cells: { name: { value: "ika", state: "modified" } },
+          },
+        ],
+        total: 1,
+      },
     });
 
     await expect(request).resolves.toEqual({
-      rows: [{ id: "42", cells: { name: "ika" } }],
+      rows: [
+        { id: "42", cells: { name: { value: "ika", state: "modified" } } },
+      ],
       total: 1,
     });
     expect(events).toEqual([
