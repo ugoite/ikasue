@@ -186,4 +186,13 @@ test.describe("ikasue identity contracts", () => {
       });
     expect(copied).toBe("changed");
   });
+
+  test("Alert returns attention to its target region", async ({ page }) => {
+    await page.goto("/components/alert/");
+    const alert = page.locator("ika-alert").first();
+    const target = page.locator("#selected-work");
+    await alert.locator('[part="alert-action"]').click();
+    await expect(target).toBeFocused();
+    await expect(target).toHaveAttribute("data-ika-attention", "true");
+  });
 });

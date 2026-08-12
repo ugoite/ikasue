@@ -1276,19 +1276,25 @@ function renderComponentDemo(
       return;
     }
     case "alert": {
-      target.append(
-        ikaDemoElement(
-          document,
-          "alert",
-          {
-            message: "Attention required",
-            severity: "warning",
-            target: "name",
-            action: "Review",
-          },
-          "Attention required",
-        ),
+      const alert = ikaDemoElement(
+        document,
+        "alert",
+        {
+          message: "Attention required",
+          severity: "warning",
+          target: "selected-work",
+          action: "Review",
+        },
+        "Attention required",
       );
+      const targetRegion = element(
+        document,
+        "div",
+        "Selected work region remains here for the linked action.",
+      );
+      targetRegion.id = "selected-work";
+      targetRegion.className = "ikasue-alert-target";
+      target.append(alert, targetRegion);
       return;
     }
     case "progress": {

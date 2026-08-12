@@ -757,6 +757,10 @@ ika-data-grid [part="cell"][data-state="error"] {
   background: var(--ikasue-error-fill);
 }
 
+ika-data-grid [part="cell"][data-selected="true"] {
+  border-block-end-color: var(--ikasue-ink);
+}
+
 ika-data-grid [part="input"] {
   inline-size: 100%;
   border: 0;
@@ -862,6 +866,12 @@ ika-alert [part="alert-action"] {
   padding: 4px 7px;
   color: currentColor;
   text-decoration: underline;
+}
+
+[data-ika-attention="true"] {
+  background: var(--ikasue-selection);
+  outline: 2px solid var(--ikasue-line-strong);
+  outline-offset: 2px;
 }
 
 ika-progress progress,
