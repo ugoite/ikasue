@@ -61,12 +61,16 @@ const { hasSidebar } = Astro.locals.starlightRoute;
     .page {
       flex-direction: column;
       min-height: 100vh;
+      color: var(--ikasue-ink);
+      background: var(--ikasue-surface);
     }
 
     .header {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: center;
       z-index: var(--sl-z-index-navbar);
-      position: fixed;
-      inset-inline-start: 0;
+      position: sticky;
       inset-block-start: 0;
       width: 100%;
       height: var(--sl-nav-height);
@@ -74,6 +78,7 @@ const { hasSidebar } = Astro.locals.starlightRoute;
       padding: var(--sl-nav-pad-y) var(--sl-nav-pad-x);
       padding-inline-end: var(--sl-nav-pad-x);
       background-color: var(--sl-color-bg-nav);
+      color: var(--ikasue-ink);
     }
 
     :global([data-has-sidebar]) .header {
@@ -89,7 +94,7 @@ const { hasSidebar } = Astro.locals.starlightRoute;
       inset-block: var(--sl-nav-height) 0;
       inset-inline-start: 0;
       width: 100%;
-      background-color: var(--sl-color-black);
+      background-color: var(--sl-color-bg-sidebar);
       overflow-y: auto;
       scrollbar-gutter: stable;
     }
@@ -114,8 +119,13 @@ const { hasSidebar } = Astro.locals.starlightRoute;
     }
 
     .main-frame {
-      padding-top: calc(var(--sl-nav-height) + var(--sl-mobile-toc-height));
-      padding-inline-start: var(--sl-content-inline-start);
+      display: block;
+      min-width: 0;
+      min-height: 0;
+      padding: calc(1.5rem + var(--sl-mobile-toc-height))
+        max(1rem, var(--sl-content-pad-x, 1.5rem)) 4rem;
+      color: var(--ikasue-ink);
+      background: var(--ikasue-surface);
     }
 
     @media (min-width: 50rem) {
@@ -128,6 +138,10 @@ const { hasSidebar } = Astro.locals.starlightRoute;
         width: var(--sl-sidebar-width);
         background-color: var(--sl-color-bg-sidebar);
         border-inline-end: 1px solid var(--sl-color-hairline-shade);
+      }
+
+      .main-frame {
+        margin-inline-start: var(--sl-sidebar-width);
       }
     }
   }

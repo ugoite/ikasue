@@ -2,7 +2,78 @@
   --sl-color-accent-low: #eef5ff;
   --sl-color-accent: #315f96;
   --sl-color-accent-high: #183455;
-  --sl-color-white: #171717;
+  --ikasue-surface: var(--sl-color-bg, #ffffff);
+  --ikasue-surface-raised: var(--sl-color-bg-nav, #f6f8fb);
+  --ikasue-ink: var(--sl-color-text, #172033);
+  --ikasue-muted: var(--sl-color-gray-3, #596579);
+  --ikasue-line: var(--sl-color-hairline, #aeb8c8);
+  --ikasue-selection: var(--sl-color-accent-low, #e6efff);
+  --ikasue-code-surface: var(--sl-color-gray-6, #172033);
+  --ikasue-code-ink: var(--sl-color-gray-1, #f5f7fb);
+  --ikasue-accent: var(--sl-color-accent, #315f96);
+  --ikasue-link: #315f96;
+}
+
+[data-ikasue-frame] {
+  --ikasue-surface: var(--sl-color-bg, #ffffff);
+  --ikasue-surface-raised: var(--sl-color-bg-nav, #f6f8fb);
+  --ikasue-ink: var(--sl-color-text, #172033);
+  --ikasue-muted: var(--sl-color-gray-3, #596579);
+  --ikasue-line: var(--sl-color-hairline, #aeb8c8);
+  --ikasue-selection: var(--sl-color-accent-low, #e6efff);
+  --ikasue-code-surface: var(--sl-color-gray-6, #172033);
+  --ikasue-code-ink: var(--sl-color-gray-1, #f5f7fb);
+  --ikasue-accent: var(--sl-color-accent, #315f96);
+  --ikasue-link: #315f96;
+  min-height: 100vh;
+  color: var(--ikasue-ink);
+  background: var(--ikasue-surface);
+}
+
+[data-ikasue-frame] a {
+  color: var(--ikasue-link);
+}
+
+[data-theme="dark"] [data-ikasue-frame] {
+  --ikasue-link: #b8d7ff;
+  --ikasue-selection: #243b5e;
+  color-scheme: dark;
+}
+
+[data-theme="light"] [data-ikasue-frame] {
+  color-scheme: light;
+}
+
+[data-theme="dark"] [data-ikasue-frame] a {
+  color: var(--ikasue-link);
+}
+
+[data-theme="dark"] ika-alert [data-severity="info"] {
+  color: #9fc7ff;
+}
+
+[data-theme="dark"] ika-alert [data-severity="success"] {
+  color: #8bd4ad;
+}
+
+[data-theme="dark"] ika-alert [data-severity="warning"] {
+  color: #ffd37a;
+}
+
+[data-theme="dark"] ika-alert [data-severity="danger"] {
+  color: #ffaaa6;
+}
+
+[data-ikasue-frame] button,
+[data-ikasue-frame] input,
+[data-ikasue-frame] textarea,
+[data-ikasue-frame] select {
+  color: var(--ikasue-ink);
+}
+
+[data-ikasue-frame] .sl-markdown-content,
+[data-ikasue-frame] .main-frame {
+  color: var(--ikasue-ink);
 }
 .docs-component {
   max-width: 48rem;
@@ -13,8 +84,17 @@
   letter-spacing: 0.08em;
 }
 .component-matrix ul {
-  columns: 2;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 0.4rem 1.5rem;
+  padding-inline-start: 1.25rem;
 }
 .ikasue-doc-frame {
   min-height: 100%;
+}
+
+@media (max-width: 40rem) {
+  .component-matrix ul {
+    grid-template-columns: 1fr;
+  }
 }
