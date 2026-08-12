@@ -1020,9 +1020,28 @@ function renderComponentDemo(
         { tokens: spec.tokens, variant: spec.variant },
         "ThemeRoot",
       );
-      root.append(
-        element(document, "p", "Theme tokens are applied at the root."),
+      const work = ikaDemoElement(
+        document,
+        "stack",
+        { gap: "0.5rem", align: "stretch", justify: "start" },
+        "Theme content",
       );
+      work.dataset.demoThemeDescendant = "true";
+      for (const [content, tone] of [
+        ["Primary work", "success"],
+        ["Secondary detail", "muted"],
+        ["Ready state", "default"],
+      ] as const) {
+        const child = ikaDemoElement(
+          document,
+          "text",
+          { content, tone, selectable: true },
+          content,
+        );
+        child.dataset.demoThemeDescendant = "true";
+        work.append(child);
+      }
+      root.append(work);
       target.append(root);
       return;
     }
@@ -1221,6 +1240,8 @@ function renderComponentDemo(
           {
             id: "name",
             label: "Name",
+            description: "Used for the workspace title",
+            error: "",
             content: "ikasue",
             editor: "text",
             state: "clean",

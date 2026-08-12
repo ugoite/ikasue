@@ -852,12 +852,28 @@ const copy =
     id: CatalogComponentId,
     element: HTMLElement,
   ): void => {
-    if (
-      id === "theme-root" ||
-      id === "flex" ||
-      id === "stack" ||
-      id === "grid"
-    ) {
+    if (id === "theme-root") {
+      const work = element.ownerDocument.createElement(
+        "ika-stack",
+      ) as DemoElement;
+      work.dataset.demoThemeDescendant = "true";
+      work.props = { gap: "0.5rem", align: "stretch", justify: "start" };
+      for (const [content, tone] of [
+        ["Primary work", "success"],
+        ["Secondary detail", "muted"],
+        ["Ready state", "default"],
+      ] as const) {
+        const child = element.ownerDocument.createElement(
+          "ika-text",
+        ) as DemoElement;
+        child.dataset.demoThemeDescendant = "true";
+        child.props = { content, tone, selectable: true };
+        work.append(child);
+      }
+      element.append(work);
+      return;
+    }
+    if (id === "flex" || id === "stack" || id === "grid") {
       addTextChild(element, "Primary work", "success");
       addTextChild(element, "Secondary detail", "muted");
       addTextChild(element, "Ready state", "default");

@@ -170,11 +170,15 @@ export function toolbar(options?: ToolbarOptions): ToolbarSpec {
       result.onSelect = item.onSelect as () => void;
     return [result];
   });
-  return Object.freeze({
+  const result: Mutable<ToolbarSpec> = {
     kind: "toolbar",
     items: normalized,
+    collapsed: options?.collapsed === true,
     overflow: options?.overflow === "menu" ? "menu" : "none",
-  });
+  };
+  const active = selected(normalized, options?.activeId);
+  if (active) result.activeId = active;
+  return Object.freeze(result);
 }
 export function iconButton(options: IconButtonOptions): IconButtonSpec {
   const result: Mutable<IconButtonSpec> = {

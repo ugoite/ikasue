@@ -277,6 +277,8 @@ export interface ToolbarOptions {
     readonly busy?: boolean;
     readonly onSelect?: () => void;
   }[];
+  readonly activeId?: string;
+  readonly collapsed?: boolean;
   readonly overflow?: "none" | "menu";
 }
 
@@ -291,6 +293,8 @@ export interface ToolbarSpec {
     readonly busy: boolean;
     readonly onSelect?: () => void;
   }[];
+  readonly activeId?: string;
+  readonly collapsed: boolean;
   readonly overflow: "none" | "menu";
 }
 

@@ -6,6 +6,8 @@
  * remain JSON values.
  */
 
+import { isMinSize, isSplitBasis } from "./layout";
+
 export const IKASUE_ABI_VERSION = "ikasue-web/1" as const;
 
 export type IkaJsonPrimitive = null | boolean | number | string;
@@ -172,6 +174,8 @@ const isArrayOf =
     Array.isArray(value) && value.every(guard);
 const isStringRecord = (value: IkaJsonValue): boolean =>
   isIkaJsonRecord(value) && Object.values(value).every(isString);
+const isBooleanRecord = (value: IkaJsonValue): boolean =>
+  isIkaJsonRecord(value) && Object.values(value).every(isBoolean);
 const isViewArray = (value: IkaJsonValue): boolean =>
   Array.isArray(value) && value.every(isIkaView);
 const isFormField = (value: IkaJsonValue): boolean => {
@@ -335,7 +339,12 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
     activeId: isString,
     collapsed: isBoolean,
   },
-  toolbar: { items: isArrayOf(isItem), overflow: isEnum("none", "menu") },
+  toolbar: {
+    items: isArrayOf(isItem),
+    activeId: isString,
+    collapsed: isBoolean,
+    overflow: isEnum("none", "menu"),
+  },
   "icon-button": {
     id: isString,
     label: isString,
@@ -366,6 +375,8 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
   field: {
     id: isString,
     label: isString,
+    description: isString,
+    error: isString,
     required: isBoolean,
     content: isString,
     editor: isEnum("text", "email", "number", "date", "textarea", "select"),
@@ -397,8 +408,9 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
     panes: isArrayOf(isIkaSplitViewPane),
     orientation: isEnum("horizontal", "vertical"),
     activePane: isString,
-    sizes: isArrayOf(isString),
+    sizes: isArrayOf(isSplitBasis),
     collapsible: isBoolean,
+    collapsed: isBooleanRecord,
     motionOrigin: isEnum("start", "end", "top", "bottom"),
   },
   "side-panel": {
@@ -519,6 +531,7 @@ export interface IkaSplitViewSpec {
   readonly activePane?: string;
   readonly sizes?: readonly string[];
   readonly collapsible?: boolean;
+  readonly collapsed?: Readonly<Record<string, boolean>>;
   readonly motionOrigin?: "start" | "end" | "top" | "bottom";
 }
 
@@ -842,10 +855,10 @@ export function isIkaSplitViewPane(value: unknown): value is IkaSplitViewPane {
     value.id.length > 0 &&
     (value.label === undefined || typeof value.label === "string") &&
     (value.content === undefined || typeof value.content === "string") &&
-    (value.size === undefined || typeof value.size === "string") &&
-    (value.minSize === undefined || typeof value.minSize === "string") &&
+    (value.size === undefined || isSplitBasis(value.size)) &&
+    (value.minSize === undefined || isMinSize(value.minSize)) &&
     (value.basis === undefined ||
-      (typeof value.basis === "string" && value.basis.length > 0) ||
+      (typeof value.basis === "string" && isSplitBasis(value.basis)) ||
       (typeof value.basis === "number" &&
         Number.isFinite(value.basis) &&
         value.basis >= 0)) &&

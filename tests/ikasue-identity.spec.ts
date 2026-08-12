@@ -334,6 +334,72 @@ test.describe("ikasue identity contracts", () => {
     );
     expect(submitted).toEqual({ values: { name: "ikasue draft" } });
 
+    await formHost.evaluate((node) => {
+      (node as HTMLElement & { props: Record<string, unknown> }).props = {
+        fields: [
+          {
+            id: "name",
+            label: "Name",
+            initialValue: "ikasue",
+            required: true,
+          },
+        ],
+        values: { name: "ikasue" },
+        drafts: {},
+        errors: { name: "Name is required" },
+        status: "error",
+      };
+    });
+    const formError = formHost.locator('[part="error"]').first();
+    await expect(formError).toHaveText("Name is required");
+    const formErrorId = await formError.getAttribute("id");
+    if (!formErrorId) throw new Error("Form error must have an id");
+    await expect(
+      formHost
+        .locator("ika-editable-text")
+        .first()
+        .locator('[part="read-value"]'),
+    ).toHaveAttribute("aria-describedby", formErrorId);
+
+    await page.goto("/components/field/");
+    const fieldHost = page.locator("ika-field").first();
+    await fieldHost.evaluate((node) => {
+      (node as HTMLElement & { props: Record<string, unknown> }).props = {
+        id: "profile/name",
+        label: "Name",
+        description: "Used for the workspace title",
+        error: "Name is required",
+        required: true,
+        content: "ikasue",
+        editor: "text",
+        state: "error",
+      };
+    });
+    const fieldLegend = fieldHost.locator("legend");
+    const fieldLegendId = await fieldLegend.getAttribute("id");
+    if (!fieldLegendId) throw new Error("Field legend must have an id");
+    const fieldEditor = fieldHost.locator("ika-editable-text");
+    await expect(fieldEditor.locator('[part="read-value"]')).toHaveAttribute(
+      "aria-labelledby",
+      fieldLegendId,
+    );
+    await expect(fieldHost.locator('[part="description"]')).toHaveText(
+      "Used for the workspace title",
+    );
+    const fieldDescriptionId = await fieldHost
+      .locator('[part="description"]')
+      .getAttribute("id");
+    if (!fieldDescriptionId)
+      throw new Error("Field description must have an id");
+    const fieldError = fieldHost.locator('[part="error"]');
+    await expect(fieldError).toHaveText("Name is required");
+    const fieldErrorId = await fieldError.getAttribute("id");
+    if (!fieldErrorId) throw new Error("Field error must have an id");
+    await expect(fieldEditor.locator('[part="read-value"]')).toHaveAttribute(
+      "aria-describedby",
+      `${fieldDescriptionId} ${fieldErrorId}`,
+    );
+
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/components/split-view/");
     const split = page.locator("ika-split-view").first();
@@ -513,8 +579,13 @@ test.describe("ikasue identity contracts", () => {
     await page.goto("/components/theme-root/");
     const theme = page.locator("ika-theme-root").first();
     await expect(theme).toHaveAttribute("data-variant", "default");
+    await expect(theme.locator("ika-stack")).toHaveCount(1);
+    await expect(
+      theme.locator('[data-demo-theme-descendant="true"]'),
+    ).toHaveCount(4);
     const inheritedSurface = await theme
-      .locator("p")
+      .locator('ika-text[data-demo-theme-descendant="true"]')
+      .first()
       .evaluate((node) =>
         getComputedStyle(node).getPropertyValue("--ikasue-surface"),
       );
@@ -529,7 +600,8 @@ test.describe("ikasue identity contracts", () => {
     await expect
       .poll(() =>
         theme
-          .locator("p")
+          .locator('ika-text[data-demo-theme-descendant="true"]')
+          .first()
           .evaluate((node) =>
             getComputedStyle(node).getPropertyValue("--ikasue-surface").trim(),
           ),

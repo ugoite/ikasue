@@ -7,7 +7,7 @@ import {
   defineIkaSue,
   tagNameForKind,
 } from "./elements";
-import { IKA_ELEMENT_CONTRACTS } from "./abi";
+import { IKA_ELEMENT_CONTRACTS, IKA_PRIMITIVE_ATTRIBUTE_NAMES } from "./abi";
 import {
   IKASUE_ABI_VERSION,
   isIkaView,
@@ -15,7 +15,9 @@ import {
   isIkaJsonValue,
   isIkaMessage,
   isIkaRowRequest,
+  isIkaSplitViewPane,
   isIkaTabsItem,
+  isIkaViewProps,
   type IkaView,
 } from "./contract";
 import { renderIkaView } from "./view";
@@ -231,6 +233,41 @@ describe("ikasue Web ABI", () => {
     expect(IKA_ELEMENT_CONTRACTS["editable-text"].events).toContain(
       "ika-cancel",
     );
+  });
+
+  it("keeps primitive attributes and split geometry aligned", () => {
+    const attributes = new Set<string>(IKA_PRIMITIVE_ATTRIBUTE_NAMES);
+    expect(attributes.has("activeId")).toBe(true);
+    expect(attributes.has("icon")).toBe(true);
+    expect(attributes.has("selectionMode")).toBe(true);
+    expect(attributes.has("motionOrigin")).toBe(true);
+    expect(attributes.has("description")).toBe(true);
+    expect(attributes.has("error")).toBe(true);
+    expect(attributes.has("fit")).toBe(false);
+    expect(
+      IKA_ELEMENT_CONTRACTS.field.properties.map(({ name }) => name),
+    ).toEqual(expect.arrayContaining(["description", "error"]));
+    expect(
+      IKA_ELEMENT_CONTRACTS["split-view"].properties.map(({ name }) => name),
+    ).toEqual(expect.arrayContaining(["collapsed"]));
+    expect(
+      isIkaSplitViewPane({ id: "list", size: "1fr", minSize: "12rem" }),
+    ).toBe(true);
+    expect(isIkaSplitViewPane({ id: "list", size: "calc(1fr)" })).toBe(false);
+    expect(isIkaSplitViewPane({ id: "list", minSize: "1fr" })).toBe(false);
+    expect(
+      isIkaViewProps("split-view", {
+        panes: [{ id: "list", basis: 1 }],
+        sizes: ["1fr"],
+        collapsed: { list: true },
+      }),
+    ).toBe(true);
+    expect(
+      isIkaViewProps("split-view", {
+        panes: [{ id: "list", basis: 1 }],
+        sizes: ["not-a-track"],
+      }),
+    ).toBe(false);
   });
 
   it("keeps the MessagePort envelope aligned with the row contract", () => {
