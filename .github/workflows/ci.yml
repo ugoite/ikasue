@@ -29,12 +29,12 @@ jobs:
         run: npm ci
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
-      - name: Run Ikasue identity acceptance tests
-        run: npm run test:ui -- tests/ikasue-identity.spec.ts --workers=1 --timeout=30000
       - name: Install documentation dependencies
         run: npm ci --prefix docs-site
       - name: Check formatting and package
         run: npm run check
+      - name: Run Ikasue identity acceptance tests
+        run: npm run test:ui -- tests/ikasue-identity.spec.ts --workers=1 --timeout=30000
       - name: Build package
         run: npm run build
       - name: Check documentation
