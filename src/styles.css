@@ -483,6 +483,32 @@ ika-sidebar[data-collapsed="true"] nav button [part="label"] {
   display: none;
 }
 
+ika-sidebar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 18rem);
+  min-inline-size: 0;
+  border-inline-end: 1px solid var(--ikasue-line);
+}
+
+ika-sidebar[data-collapsed="true"] {
+  inline-size: auto;
+  grid-template-columns: minmax(0, 1fr) 44px;
+}
+
+ika-sidebar [part="workspace"] {
+  display: contents;
+}
+
+ika-sidebar [part="main"] {
+  grid-column: 1;
+  min-inline-size: 0;
+  padding: 0.75rem;
+}
+
+ika-sidebar [part="nav"] {
+  grid-column: 2;
+}
+
 ika-tabs [part="tablist"] {
   display: flex;
   gap: 3px;

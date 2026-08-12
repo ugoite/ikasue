@@ -243,6 +243,7 @@ export interface TabsSpec {
 }
 
 export interface SidebarOptions {
+  readonly main?: string;
   readonly items?: readonly Item[];
   readonly activeId?: string;
   readonly collapsed?: boolean;
@@ -251,6 +252,7 @@ export interface SidebarOptions {
 
 export interface SidebarSpec {
   readonly kind: "sidebar";
+  readonly main: string;
   readonly items: readonly NormalizedItem[];
   readonly activeId?: string;
   readonly collapsed: boolean;

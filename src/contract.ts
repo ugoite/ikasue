@@ -235,6 +235,14 @@ const isHistoryEntry = (value: IkaJsonValue): boolean =>
   typeof value.content === "string" &&
   (value.tone === undefined ||
     ["default", "muted", "success", "danger"].includes(value.tone as string));
+const isDataGridCellValue = (value: IkaJsonValue): boolean =>
+  !isIkaJsonRecord(value) ||
+  (hasOnlyKeys(value, ["value", "state"]) &&
+    typeof value.value === "string" &&
+    (value.state === undefined ||
+      ["clean", "created", "modified", "deleted", "error"].includes(
+        value.state as string,
+      )));
 const isUniqueTabsItems = (value: IkaJsonValue): boolean => {
   if (!Array.isArray(value)) return false;
   const ids = new Set<string>();
@@ -312,6 +320,7 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
     orientation: isEnum("horizontal", "vertical"),
   },
   sidebar: {
+    main: isString,
     items: isArrayOf(isItem),
     activeId: isString,
     collapsed: isBoolean,
@@ -760,7 +769,8 @@ export function isIkaDataGridRow(value: unknown): value is IkaDataGridRow {
   return (
     typeof value.id === "string" &&
     value.id.length > 0 &&
-    isIkaJsonRecord(value.cells)
+    isIkaJsonRecord(value.cells) &&
+    Object.values(value.cells).every(isDataGridCellValue)
   );
 }
 

@@ -1059,6 +1059,7 @@ function renderComponentDemo(
           document,
           "tabs",
           {
+            main: "Workspace content remains visible beside the navigation rail.",
             items: [
               { id: "overview", label: "Overview", content: "Overview" },
               { id: "details", label: "Details", content: "Details" },
@@ -1077,6 +1078,7 @@ function renderComponentDemo(
           document,
           "sidebar",
           {
+            main: "Workspace content remains visible beside the navigation rail.",
             items: [
               { id: "home", label: "Home", content: "Home", icon: "⌂" },
               {

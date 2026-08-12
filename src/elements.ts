@@ -984,72 +984,91 @@ export class IkaElement extends HTMLElementBase {
         });
         break;
       case "ika-sidebar":
+        this.dataset.collapsed = String(value.collapsed === true);
+        this.dataset.activeId = propertyText(value, "activeId");
+        appendInternal(root, "div", (workspace) => {
+          workspace.part = "workspace";
+          const main = this.ownerDocument.createElement("main");
+          main.part = "main";
+          main.textContent = propertyText(value, "main");
+          const nav = this.ownerDocument.createElement("nav");
+          nav.part = "nav";
+          nav.setAttribute("role", "navigation");
+          const items = Array.isArray(value.items) ? value.items : [];
+          for (const item of items) {
+            if (!isIkaJsonRecord(item) || typeof item.id !== "string") continue;
+            const button = this.ownerDocument.createElement("button");
+            button.type = "button";
+            const itemLabel = textValue(item.label) || item.id;
+            button.setAttribute("aria-label", itemLabel);
+            button.title = itemLabel;
+            button.part = "nav-item";
+            button.disabled = item.disabled === true;
+            if (item.id === value.activeId)
+              button.setAttribute("aria-current", "page");
+            const icon = this.ownerDocument.createElement("span");
+            icon.part = "icon";
+            icon.setAttribute("aria-hidden", "true");
+            icon.textContent = textValue(item.icon) || "⌂";
+            const itemText = this.ownerDocument.createElement("span");
+            itemText.part = "label";
+            itemText.textContent = itemLabel;
+            button.append(icon, itemText);
+            button.addEventListener("click", () =>
+              this.dispatchEvent(
+                new CustomEvent("ika-select", {
+                  bubbles: true,
+                  composed: true,
+                  detail: { id: item.id },
+                }),
+              ),
+            );
+            nav.append(button);
+          }
+          workspace.append(main, nav);
+        });
+        break;
       case "ika-toolbar":
         this.dataset.collapsed = String(value.collapsed === true);
         this.dataset.overflow = propertyText(value, "overflow") || "none";
         this.dataset.activeId = propertyText(value, "activeId");
-        appendInternal(
-          root,
-          kind === "ika-sidebar" ? "nav" : "div",
-          (element) => {
-            element.part = kind === "ika-sidebar" ? "nav" : "toolbar";
-            element.setAttribute(
-              "role",
-              kind === "ika-sidebar" ? "navigation" : "toolbar",
+        appendInternal(root, "div", (element) => {
+          element.part = "toolbar";
+          element.setAttribute("role", "toolbar");
+          const items = Array.isArray(value.items) ? value.items : [];
+          for (const item of items) {
+            if (!isIkaJsonRecord(item) || typeof item.id !== "string") continue;
+            const button = this.ownerDocument.createElement("button");
+            button.type = "button";
+            const itemLabel = textValue(item.label) || item.id;
+            const itemIcon =
+              textValue(item.icon) ||
+              (item.id === "save" ? "↓" : item.id === "refresh" ? "↻" : "⋯");
+            button.setAttribute("aria-label", itemLabel);
+            button.title = itemLabel;
+            button.part = "item";
+            button.disabled = item.disabled === true;
+            button.setAttribute("aria-pressed", String(item.pressed === true));
+            button.dataset.busy = String(item.busy === true);
+            if (item.id === value.activeId)
+              button.setAttribute("aria-current", "page");
+            const icon = this.ownerDocument.createElement("span");
+            icon.part = "icon";
+            icon.setAttribute("aria-hidden", "true");
+            icon.textContent = itemIcon;
+            button.append(icon);
+            button.addEventListener("click", () =>
+              this.dispatchEvent(
+                new CustomEvent("ika-select", {
+                  bubbles: true,
+                  composed: true,
+                  detail: { id: item.id },
+                }),
+              ),
             );
-            const items = Array.isArray(value.items) ? value.items : [];
-            for (const item of items) {
-              if (!isIkaJsonRecord(item) || typeof item.id !== "string")
-                continue;
-              const button = this.ownerDocument.createElement("button");
-              button.type = "button";
-              const itemLabel = textValue(item.label) || item.id;
-              const itemIcon =
-                textValue(item.icon) ||
-                (kind === "ika-toolbar"
-                  ? item.id === "save"
-                    ? "↓"
-                    : item.id === "refresh"
-                      ? "↻"
-                      : "⋯"
-                  : item.id === "settings"
-                    ? "⚙"
-                    : "⌂");
-              button.setAttribute("aria-label", itemLabel);
-              button.title = itemLabel;
-              button.part = kind === "ika-toolbar" ? "item" : "nav-item";
-              button.disabled = item.disabled === true;
-              button.setAttribute(
-                "aria-pressed",
-                String(item.pressed === true),
-              );
-              button.dataset.busy = String(item.busy === true);
-              if (item.id === value.activeId)
-                button.setAttribute("aria-current", "page");
-              const icon = this.ownerDocument.createElement("span");
-              icon.part = "icon";
-              icon.setAttribute("aria-hidden", "true");
-              icon.textContent = itemIcon;
-              button.append(icon);
-              if (kind === "ika-sidebar") {
-                const itemText = this.ownerDocument.createElement("span");
-                itemText.part = "label";
-                itemText.textContent = itemLabel;
-                button.append(itemText);
-              }
-              button.addEventListener("click", () =>
-                this.dispatchEvent(
-                  new CustomEvent("ika-select", {
-                    bubbles: true,
-                    composed: true,
-                    detail: { id: item.id },
-                  }),
-                ),
-              );
-              element.append(button);
-            }
-          },
-        );
+            element.append(button);
+          }
+        });
         break;
       case "ika-radio-group":
       case "ika-segmented-control":
@@ -1300,7 +1319,10 @@ export class IkaElement extends HTMLElementBase {
           this.cancelEditableText();
         } else if (event.key === "Enter" || event.key === "Tab") {
           event.preventDefault();
+          const next =
+            event.key === "Tab" ? this.nextTabTarget(element) : undefined;
           this.commitEditableText();
+          next?.focus();
         }
       });
     });
@@ -1353,6 +1375,24 @@ export class IkaElement extends HTMLElementBase {
     this.dispatchEvent(
       new CustomEvent("ika-cancel", { bubbles: true, composed: true }),
     );
+  }
+
+  private nextTabTarget(current: HTMLElement): HTMLElement | undefined {
+    const parent = this.parentElement;
+    if (!parent) return undefined;
+    const siblings = Array.from(parent.children);
+    const index = siblings.indexOf(this);
+    for (const candidate of siblings.slice(index + 1)) {
+      if (!(candidate instanceof HTMLElement) || candidate === current)
+        continue;
+      if (
+        candidate.matches(
+          'button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex="-1"])',
+        )
+      )
+        return candidate;
+    }
+    return undefined;
   }
 
   protected get effectiveProps(): IkaJsonRecord {
