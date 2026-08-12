@@ -135,6 +135,7 @@ const componentProperties: Record<
     property("selectable", "boolean", true),
   ],
   "editable-text": [
+    property("id", "string", ""),
     property("value", "string", ""),
     property("disabled", "boolean", false),
   ],
@@ -164,11 +165,13 @@ const componentProperties: Record<
   separator: [property("orientation", "horizontal | vertical", "horizontal")],
   tabs: [
     property("items", "Item[]", "[]"),
+    property("activeId", "string", ""),
     property("variant", "default | elastic", "default"),
     property("orientation", "horizontal | vertical", "horizontal"),
   ],
   sidebar: [
     property("items", "Item[]", "[]"),
+    property("activeId", "string", ""),
     property("collapsed", "boolean", false),
   ],
   toolbar: [
@@ -176,7 +179,9 @@ const componentProperties: Record<
     property("overflow", "none | menu", "none"),
   ],
   "icon-button": [
+    property("id", "string", ""),
     property("label", "string", ""),
+    property("icon", "string", ""),
     property("type", "button | submit | reset", "button"),
     property("disabled", "boolean", false),
     property("pressed", "boolean", false),
@@ -196,11 +201,15 @@ const componentProperties: Record<
     property("disabled", "boolean", false),
   ],
   "radio-group": [
+    property("id", "string", ""),
     property("options", "ChoiceOption[]", "[]"),
+    property("value", "string", ""),
     property("disabled", "boolean", false),
   ],
   "segmented-control": [
+    property("id", "string", ""),
     property("options", "ChoiceOption[]", "[]"),
+    property("value", "string", ""),
     property("disabled", "boolean", false),
     property("variant", "default | elastic", "default"),
   ],
@@ -220,6 +229,7 @@ const componentProperties: Record<
     property("rows", "DataGridRow[]", "[]"),
     property("selection", "DataGridSelection"),
     property("editable", "boolean", false),
+    property("density", "default | compact", "default"),
   ],
   "status-indicator": [
     property("label", "string", ""),
@@ -234,7 +244,11 @@ const componentProperties: Record<
     property("severity", "info | success | warning | danger", "info"),
     property("dismissible", "boolean", false),
   ],
-  progress: [property("max", "number", "100"), property("label", "string", "")],
+  progress: [
+    property("value", "number", "0"),
+    property("max", "number", "100"),
+    property("label", "string", ""),
+  ],
   dialog: [
     property("title", "string", ""),
     property("content", "string", ""),
@@ -413,7 +427,7 @@ const componentDefaults: Record<
 > = {
   "theme-root": { tokens: "{}", variant: "default" },
   text: { content: "", tone: "default", selectable: true },
-  "editable-text": { value: "", disabled: false },
+  "editable-text": { id: "", value: "", disabled: false },
   flex: {
     direction: "row",
     wrap: "nowrap",
@@ -437,10 +451,22 @@ const componentDefaults: Record<
   },
   "scroll-area": { axis: "y", overscroll: "auto" },
   separator: { orientation: "horizontal" },
-  tabs: { items: "[]", variant: "default", orientation: "horizontal" },
-  sidebar: { items: "[]", collapsed: false },
+  tabs: {
+    items: "[]",
+    activeId: "",
+    variant: "default",
+    orientation: "horizontal",
+  },
+  sidebar: { items: "[]", activeId: "", collapsed: false },
   toolbar: { items: "[]", overflow: "none" },
-  "icon-button": { label: "", type: "button", disabled: false, pressed: false },
+  "icon-button": {
+    id: "",
+    label: "",
+    icon: "",
+    type: "button",
+    disabled: false,
+    pressed: false,
+  },
   "text-field": {
     id: "",
     label: "",
@@ -450,20 +476,25 @@ const componentDefaults: Record<
     required: false,
   },
   checkbox: { id: "", label: "", checked: false, disabled: false },
-  "radio-group": { options: "[]", disabled: false },
-  "segmented-control": { options: "[]", disabled: false, variant: "default" },
+  "radio-group": { id: "", options: "[]", value: "", disabled: false },
+  "segmented-control": {
+    id: "",
+    options: "[]",
+    value: "",
+    disabled: false,
+    variant: "default",
+  },
   field: { id: "", label: "", required: false, content: "" },
   form: { fields: "[]", values: "{}", status: "idle" },
   "data-grid": {
     columns: "[]",
     rows: "[]",
-    cells: "[]",
-    columnsProvided: false,
-    rowsProvided: false,
+    editable: false,
+    density: "default",
   },
   "status-indicator": { label: "", status: "neutral" },
   alert: { message: "", severity: "info", dismissible: false },
-  progress: { max: "100", label: "" },
+  progress: { value: "0", max: "100", label: "" },
   dialog: { title: "", content: "", open: false, modal: true },
   "split-view": {
     panes: "[]",

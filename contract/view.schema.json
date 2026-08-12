@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ugoite.github.io/ikasue/contract/view.schema.json",
   "title": "ikasue serializable view",
+  "$comment": "Tab item ids must be unique; JSON Schema 2020-12 cannot express uniqueness by object property, so hosts must apply the public validator.",
   "type": "object",
   "additionalProperties": false,
   "required": ["version", "kind"],
@@ -108,10 +109,20 @@
       "properties": {
         "id": { "type": "string", "minLength": 1 },
         "label": { "type": "string" },
+        "content": { "type": "string" },
         "disabled": { "type": "boolean" }
       }
     },
-    "choiceOption": { "$ref": "#/$defs/tabsItem" },
+    "choiceOption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string" },
+        "disabled": { "type": "boolean" }
+      }
+    },
     "formField": {
       "type": "object",
       "additionalProperties": false,
@@ -430,7 +441,10 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "items": { "type": "array", "items": { "$ref": "#/$defs/tabsItem" } },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/tabsItem" }
+        },
         "activeId": { "type": "string" },
         "variant": { "enum": ["default", "elastic"] },
         "orientation": { "enum": ["horizontal", "vertical"] }

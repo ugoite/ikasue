@@ -1,28 +1,42 @@
 ---
+import { IKA_ELEMENT_CONTRACTS } from "../../../src/abi";
+import {
+  componentDemo,
+  componentSourceForProps,
+} from "../../../src/catalog/demo";
 import { findRegistryEntry } from "../../../src/catalog/registry";
 import type {
   CatalogComponentId,
   CatalogLocale,
 } from "../../../src/catalog/types";
-import { IKA_ELEMENT_CONTRACTS } from "../../../src/abi";
 
 interface Props {
   id: CatalogComponentId;
   locale?: CatalogLocale;
 }
+
 const { id, locale = "ja" } = Astro.props as Props;
 const entry = findRegistryEntry(id);
 const componentEntry = entry?.kind === "component" ? entry : undefined;
 const abiEntry = IKA_ELEMENT_CONTRACTS[id];
+const demo = componentDemo(id);
 const tag = `ika-${id}`;
 const copy =
   locale === "ja"
     ? {
         contract: "Web ABI contract",
         contractText:
-          "ikasueのcomponent pageは、公開Custom Elementを直接登録し、attribute、property、CustomEvent、methodの境界をそのまま説明します。",
-        demo: "公開elementのlive demo",
-        source: "elementの使い方",
+          "公開Custom Elementを直接使い、attribute、property、CustomEvent、methodの境界をそのまま確認できます。",
+        demo: "ライブサンプル",
+        options: "オプション",
+        preview: "描画",
+        code: "コード",
+        typescript: "TypeScript",
+        rust: "Rust / WASM",
+        ready: "オプションを変えると描画とコードが更新されます。",
+        source: "現在の設定から生成したコード",
+        attributes: "Attributes",
+        eventsMethods: "Events and methods",
         name: "名前",
         type: "型",
         defaultValue: "既定値",
@@ -31,9 +45,17 @@ const copy =
     : {
         contract: "Web ABI contract",
         contractText:
-          "This component page registers the public Custom Element directly and documents the attribute, property, CustomEvent, and method boundaries.",
-        demo: "Live public element demo",
-        source: "Element usage",
+          "Use the public Custom Element directly and inspect the attribute, property, CustomEvent, and method boundaries in one place.",
+        demo: "Live example",
+        options: "Options",
+        preview: "Preview",
+        code: "Code",
+        typescript: "TypeScript",
+        rust: "Rust / WASM",
+        ready: "Change an option to update both the preview and the code.",
+        source: "Code generated from the current options",
+        attributes: "Attributes",
+        eventsMethods: "Events and methods",
         name: "Name",
         type: "Type",
         defaultValue: "Default",
@@ -42,19 +64,147 @@ const copy =
 ---
 
 <article class="docs-component" data-kind={id}>
-  <p class="eyebrow">{entry?.group ?? "component"}</p>
-  <p>{entry?.summary[locale] ?? ""}</p>
+  <header class="docs-component-heading">
+    <p class="eyebrow">{entry?.group ?? "component"}</p>
+    <p>{entry?.summary[locale] ?? ""}</p>
+  </header>
 
-  <section aria-labelledby={`${id}-demo`} data-ika-demo>
-    <h2 id={`${id}-demo`}>{copy.demo}</h2>
-    <p>
-      <code>&lt;{tag}&gt;</code> is registered by importing ikasue and is used through
-      its public Web ABI.
-    </p>
-    <div data-ika-demo-target data-ika-component={id} data-tag={tag}></div>
+  <section class="demo-section" aria-labelledby={`${id}-demo`}>
+    <div class="section-heading">
+      <div>
+        <h2 id={`${id}-demo`}>{copy.demo}</h2>
+        <p>
+          <code>&lt;{tag}&gt;</code> is the canonical runtime element. Use the controls,
+          then switch between the rendered result and its provider code.
+        </p>
+      </div>
+      <span class="demo-contract">{tag}</span>
+    </div>
+
+    <div
+      class="demo-workbench"
+      data-ika-demo-root
+      data-ika-component={id}
+      data-ika-locale={locale}
+    >
+      <div class="demo-options">
+        <div class="demo-options-heading">
+          <h3>{copy.options}</h3>
+          <span>live</span>
+        </div>
+        <div class="demo-control-list" data-ika-control-list></div>
+      </div>
+
+      <div class="demo-output">
+        <div
+          class="demo-view-tabs"
+          id={`${id}-demo-mode-tabs`}
+          data-ika-tab-group="mode"
+          role="tablist"
+          aria-label={`${copy.demo} view`}
+        >
+          <button
+            type="button"
+            role="tab"
+            id={`${id}-demo-preview-tab`}
+            aria-controls={`${id}-demo-preview-panel`}
+            aria-selected="true"
+            tabindex="0"
+            data-ika-mode="preview"
+          >
+            {copy.preview}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id={`${id}-demo-code-tab`}
+            aria-controls={`${id}-demo-code-panel`}
+            aria-selected="false"
+            tabindex="-1"
+            data-ika-mode="code"
+          >
+            {copy.code}
+          </button>
+        </div>
+
+        <div
+          id={`${id}-demo-preview-panel`}
+          role="tabpanel"
+          aria-labelledby={`${id}-demo-preview-tab`}
+          data-ika-mode-panel="preview"
+        >
+          <div class="demo-preview" data-ika-preview>
+            <p class="demo-fallback">{copy.ready}</p>
+          </div>
+        </div>
+
+        <div
+          id={`${id}-demo-code-panel`}
+          role="tabpanel"
+          aria-labelledby={`${id}-demo-code-tab`}
+          data-ika-mode-panel="code"
+          hidden
+        >
+          <div
+            class="demo-provider-tabs"
+            id={`${id}-demo-provider-tabs`}
+            data-ika-tab-group="provider"
+            role="tablist"
+            aria-label="Code provider"
+          >
+            <button
+              type="button"
+              role="tab"
+              id={`${id}-demo-typescript-tab`}
+              aria-controls={`${id}-demo-provider-panel`}
+              aria-selected="true"
+              tabindex="0"
+              data-ika-provider="typescript"
+            >
+              {copy.typescript}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id={`${id}-demo-rust-tab`}
+              aria-controls={`${id}-demo-provider-panel`}
+              aria-selected="false"
+              tabindex="-1"
+              data-ika-provider="rust"
+            >
+              {copy.rust}
+            </button>
+          </div>
+          <div
+            id={`${id}-demo-provider-panel`}
+            role="tabpanel"
+            aria-labelledby={`${id}-demo-typescript-tab`}
+            data-ika-provider-panel
+          >
+            <p class="demo-code-caption">{copy.source}</p>
+            <pre
+              class="demo-code"
+              data-language="typescript"><code data-ika-code>{componentSourceForProps(id, demo.props, "typescript")}</code></pre>
+          </div>
+        </div>
+
+        <p class="demo-status" role="status" data-ika-demo-status>
+          {copy.ready}
+        </p>
+      </div>
+      <script
+        is:inline
+        type="application/json"
+        data-ika-demo-config
+        set:html={JSON.stringify({
+          props: demo.props,
+          controls: demo.controls,
+        })}
+      />
+    </div>
   </section>
 
-  <section aria-labelledby={`${id}-contract`}>
+  <section aria-labelledby={`${id}-contract`} class="contract-section">
     <h2 id={`${id}-contract`}>{copy.contract}</h2>
     <p>{copy.contractText}</p>
   </section>
@@ -66,57 +216,63 @@ const copy =
           <h2 id={`${id}-properties`}>
             {locale === "ja" ? "Properties" : "Properties"}
           </h2>
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">{copy.name}</th>
-                <th scope="col">{copy.type}</th>
-                <th scope="col">{copy.defaultValue}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {abiEntry.properties.map((property) => (
+          <div class="table-wrap">
+            <table>
+              <thead>
                 <tr>
-                  <th scope="row">
-                    <code>{property.name}</code>
-                  </th>
-                  <td>
-                    <code>{property.type}</code>
-                  </td>
-                  <td>
-                    {property.defaultValue === undefined
-                      ? copy.empty
-                      : String(property.defaultValue)}
-                  </td>
+                  <th scope="col">{copy.name}</th>
+                  <th scope="col">{copy.type}</th>
+                  <th scope="col">{copy.defaultValue}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {abiEntry.properties.map((property) => (
+                  <tr>
+                    <th scope="row">
+                      <code>{property.name}</code>
+                    </th>
+                    <td>
+                      <code>{property.type}</code>
+                    </td>
+                    <td>
+                      {property.defaultValue === undefined
+                        ? copy.empty
+                        : String(property.defaultValue)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
-        <p>
-          Attributes:{" "}
-          {abiEntry.attributes.length
-            ? abiEntry.attributes.join(", ")
-            : copy.empty}
-        </p>
-        <section aria-labelledby={`${id}-source`}>
-          <h2 id={`${id}-source`}>{copy.source}</h2>
-          <pre>
-            <code>{componentEntry.source.typescript}</code>
-          </pre>
-          <pre>
-            <code>{componentEntry.source.rust}</code>
-          </pre>
+        <section aria-labelledby={`${id}-attributes`} class="contract-details">
+          <h2 id={`${id}-attributes`}>{copy.attributes}</h2>
+          <p>
+            <code>
+              {abiEntry.attributes.length
+                ? abiEntry.attributes.join(", ")
+                : copy.empty}
+            </code>
+          </p>
         </section>
-        <section aria-labelledby={`${id}-events-methods`}>
-          <h2 id={`${id}-events-methods`}>Events and methods</h2>
+        <section
+          aria-labelledby={`${id}-events-methods`}
+          class="contract-details"
+        >
+          <h2 id={`${id}-events-methods`}>{copy.eventsMethods}</h2>
           <p>
             Events:{" "}
-            {abiEntry.events.length ? abiEntry.events.join(", ") : copy.empty}
+            <code>
+              {abiEntry.events.length ? abiEntry.events.join(", ") : copy.empty}
+            </code>
           </p>
           <p>
             Methods:{" "}
-            {abiEntry.methods.length ? abiEntry.methods.join(", ") : copy.empty}
+            <code>
+              {abiEntry.methods.length
+                ? abiEntry.methods.join(", ")
+                : copy.empty}
+            </code>
           </p>
         </section>
       </>
@@ -126,73 +282,524 @@ const copy =
 
 <script>
   import { defineIkaSue } from "../../../src/elements";
-  import type {
-    IkaDataGridColumn,
-    IkaDataGridRow,
+  import { componentSourceForProps } from "../../../src/catalog/demo";
+  import {
+    isIkaJsonValue,
+    isIkaViewProps,
+    type IkaJsonRecord,
+    type IkaJsonValue,
   } from "../../../src/contract";
+  import type { CatalogComponentId } from "../../../src/catalog/types";
 
   defineIkaSue();
+
+  type DemoConfig = {
+    readonly props: IkaJsonRecord;
+    readonly controls: readonly {
+      readonly key: string;
+      readonly label: { readonly ja: string; readonly en: string };
+      readonly kind: "text" | "boolean" | "number" | "select" | "json";
+      readonly options?: readonly string[];
+      readonly min?: number;
+      readonly max?: number;
+    }[];
+  };
+  type DemoElement = HTMLElement & { props: IkaJsonRecord };
+
+  const addTextChild = (
+    parent: HTMLElement,
+    content: string,
+    tone = "default",
+  ): void => {
+    const child = parent.ownerDocument.createElement("ika-text") as DemoElement;
+    child.props = { content, tone, selectable: true };
+    parent.append(child);
+  };
+
+  const addDemoChildren = (
+    id: CatalogComponentId,
+    element: HTMLElement,
+  ): void => {
+    if (
+      id === "theme-root" ||
+      id === "flex" ||
+      id === "stack" ||
+      id === "grid"
+    ) {
+      addTextChild(element, "Primary work", "success");
+      addTextChild(element, "Secondary detail", "muted");
+      addTextChild(element, "Ready state", "default");
+    }
+  };
+
   document
-    .querySelectorAll<HTMLElement>("[data-ika-demo-target]")
-    .forEach((target) => {
-      const id = target.dataset.ikaComponent ?? "text";
-      const element = document.createElement(
-        target.dataset.tag ?? `ika-${id}`,
-      ) as HTMLElement & {
-        columns?: readonly IkaDataGridColumn[];
-        rows?: readonly IkaDataGridRow[];
-        items?: readonly { id: string; label: string }[];
-        activeId?: string;
-        props?: Record<string, unknown>;
-      };
-      if (id === "data-grid") {
-        element.columns = [
-          { id: "id", label: "ID" },
-          { id: "name", label: "Name" },
-        ];
-        element.rows = [{ id: "42", cells: { id: "42", name: "ika" } }];
-        element.addEventListener("ika-selection-change", (event) => {
-          target.dataset.lastEvent = JSON.stringify(
-            (event as CustomEvent).detail,
-          );
-        });
-      } else if (id === "tabs") {
-        element.items = [
-          { id: "overview", label: "Overview" },
-          { id: "detail", label: "Detail" },
-        ];
-        element.activeId = "overview";
-      } else {
-        element.props = {};
+    .querySelectorAll<HTMLElement>("[data-ika-demo-root]")
+    .forEach((root) => {
+      const id = root.dataset.ikaComponent as CatalogComponentId | undefined;
+      const locale = root.dataset.ikaLocale === "en" ? "en" : "ja";
+      const configNode = root.querySelector<HTMLScriptElement>(
+        "[data-ika-demo-config]",
+      );
+      const preview = root.querySelector<HTMLElement>("[data-ika-preview]");
+      const controls = root.querySelector<HTMLElement>(
+        "[data-ika-control-list]",
+      );
+      const code = root.querySelector<HTMLElement>("[data-ika-code]");
+      const status = root.querySelector<HTMLElement>("[data-ika-demo-status]");
+      if (!id || !configNode || !preview || !controls || !code || !status)
+        return;
+
+      let config: DemoConfig;
+      try {
+        config = JSON.parse(configNode.textContent ?? "") as DemoConfig;
+      } catch {
+        status.textContent = "Unable to load demo configuration.";
+        return;
       }
-      target.append(element);
+      let state: IkaJsonRecord = { ...config.props };
+      let provider: "typescript" | "rust" = "typescript";
+      const controlNodes = new Map<
+        string,
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >();
+
+      const displayValue = (value: unknown): string =>
+        typeof value === "string"
+          ? value
+          : (JSON.stringify(value, null, 2) ?? "");
+
+      const updateControlValues = (): void => {
+        for (const control of config.controls) {
+          const node = controlNodes.get(control.key);
+          if (!node) continue;
+          if (control.kind === "boolean" && node instanceof HTMLInputElement)
+            node.checked = state[control.key] === true;
+          else if (
+            control.kind === "json" ||
+            control.kind === "text" ||
+            control.kind === "number"
+          )
+            node.value = displayValue(state[control.key]);
+          else node.value = String(state[control.key] ?? "");
+        }
+      };
+
+      const renderCode = (): void => {
+        code.textContent = componentSourceForProps(id, state, provider);
+        code.parentElement?.setAttribute("data-language", provider);
+      };
+
+      const renderPreview = (): boolean => {
+        preview.replaceChildren();
+        const invalidMessage =
+          "This option combination is not valid for the public contract.";
+        if (!isIkaViewProps(id, state)) {
+          const error = preview.ownerDocument.createElement("p");
+          error.textContent = invalidMessage;
+          preview.append(error);
+          return false;
+        }
+        const element = preview.ownerDocument.createElement(
+          `ika-${id}`,
+        ) as DemoElement;
+        let rejected = false;
+        element.addEventListener("ika-error", () => {
+          rejected = true;
+        });
+        try {
+          element.props = state;
+        } catch {
+          const error = preview.ownerDocument.createElement("p");
+          error.textContent = invalidMessage;
+          preview.append(error);
+          return false;
+        }
+        if (rejected) {
+          const error = preview.ownerDocument.createElement("p");
+          error.textContent = invalidMessage;
+          preview.append(error);
+          return false;
+        }
+        addDemoChildren(id, element);
+        preview.append(element);
+        element.addEventListener("ika-active-change", (event) => {
+          const next = (event as CustomEvent<{ readonly id?: unknown }>).detail
+            ?.id;
+          if (typeof next !== "string" || state.activeId === next) return;
+          state = { ...state, activeId: next };
+          updateControlValues();
+          renderCode();
+          status.textContent = `Active tab: ${next}`;
+        });
+        element.addEventListener("ika-dismiss", () => {
+          element.remove();
+          status.textContent =
+            "Alert dismissed. Turn Dismissible off and on to restore it.";
+        });
+        return true;
+      };
+
+      const setState = (key: string, value: IkaJsonValue): void => {
+        state = { ...state, [key]: value };
+        const previewAccepted = renderPreview();
+        renderCode();
+        status.textContent = previewAccepted
+          ? "Updated preview and provider code."
+          : "The preview rejected these options; check the public contract.";
+      };
+
+      config.controls.forEach((control) => {
+        const label = root.ownerDocument.createElement("label");
+        label.className = "demo-control";
+        const text = root.ownerDocument.createElement("span");
+        text.textContent = control.label[locale];
+        label.append(text);
+        let node: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+        if (control.kind === "boolean") {
+          const input = root.ownerDocument.createElement("input");
+          input.type = "checkbox";
+          node = input;
+          label.classList.add("demo-control-boolean");
+        } else if (control.kind === "select") {
+          const select = root.ownerDocument.createElement("select");
+          for (const option of control.options ?? []) {
+            const item = root.ownerDocument.createElement("option");
+            item.value = option;
+            item.textContent = option;
+            select.append(item);
+          }
+          node = select;
+        } else if (control.kind === "json") {
+          const textarea = root.ownerDocument.createElement("textarea");
+          textarea.rows = 3;
+          textarea.spellcheck = false;
+          node = textarea;
+        } else {
+          const input = root.ownerDocument.createElement("input");
+          input.type = control.kind === "number" ? "number" : "text";
+          if (control.min !== undefined) input.min = String(control.min);
+          if (control.max !== undefined) input.max = String(control.max);
+          node = input;
+        }
+        node.name = control.key;
+        node.setAttribute("aria-label", control.label[locale]);
+        controlNodes.set(control.key, node);
+        const eventName =
+          control.kind === "select" || control.kind === "boolean"
+            ? "change"
+            : "input";
+        node.addEventListener(eventName, () => {
+          if (control.kind === "boolean" && node instanceof HTMLInputElement) {
+            setState(control.key, node.checked);
+            return;
+          }
+          if (control.kind === "json") {
+            try {
+              const value: unknown = JSON.parse(node.value);
+              if (isIkaJsonValue(value)) setState(control.key, value);
+            } catch {
+              status.textContent =
+                "JSON options must be valid before they are applied.";
+            }
+            return;
+          }
+          if (control.kind === "number") {
+            const value = Number(node.value);
+            if (Number.isFinite(value)) setState(control.key, value);
+            return;
+          }
+          setState(control.key, node.value);
+        });
+        label.append(node);
+        controls.append(label);
+      });
+      updateControlValues();
+
+      const setupTabGroup = (list: HTMLElement): void => {
+        const buttons = Array.from(
+          list.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+        );
+        const panelFor = (
+          button: HTMLButtonElement,
+        ): HTMLElement | undefined => {
+          const panelId = button.getAttribute("aria-controls");
+          return panelId
+            ? Array.from(
+                root.querySelectorAll<HTMLElement>('[role="tabpanel"]'),
+              ).find((panel) => panel.id === panelId)
+            : undefined;
+        };
+        const activate = (
+          button: HTMLButtonElement,
+          shouldFocus = false,
+        ): void => {
+          const panelIds = new Set(
+            buttons
+              .map((candidate) => candidate.getAttribute("aria-controls"))
+              .filter((value): value is string => value !== null),
+          );
+          buttons.forEach((candidate) => {
+            const selected = candidate === button;
+            candidate.setAttribute("aria-selected", String(selected));
+            candidate.tabIndex = selected ? 0 : -1;
+          });
+          root
+            .querySelectorAll<HTMLElement>('[role="tabpanel"]')
+            .forEach((panel) => {
+              if (!panelIds.has(panel.id)) return;
+              panel.hidden = true;
+            });
+          const panel = panelFor(button);
+          if (panel) {
+            panel.hidden = false;
+            panel.setAttribute("aria-labelledby", button.id);
+          }
+          if (shouldFocus) button.focus();
+        };
+        buttons.forEach((button) =>
+          button.addEventListener("click", () => {
+            activate(button);
+            if (list.dataset.ikaTabGroup === "provider") {
+              const next = button.dataset.ikaProvider;
+              if (next === "typescript" || next === "rust") {
+                provider = next;
+                renderCode();
+              }
+            }
+          }),
+        );
+        list.addEventListener("keydown", (event) => {
+          if (!(event.target instanceof HTMLButtonElement)) return;
+          const current = buttons.indexOf(event.target);
+          if (current < 0) return;
+          const key = event.key;
+          const delta =
+            key === "ArrowLeft" || key === "ArrowUp"
+              ? -1
+              : key === "ArrowRight" || key === "ArrowDown"
+                ? 1
+                : 0;
+          if (key !== "Home" && key !== "End" && delta === 0) return;
+          event.preventDefault();
+          const nextIndex =
+            key === "Home"
+              ? 0
+              : key === "End"
+                ? buttons.length - 1
+                : (current + delta + buttons.length) % buttons.length;
+          const next = buttons[nextIndex];
+          if (next) {
+            activate(next, true);
+            if (list.dataset.ikaTabGroup === "provider") {
+              const nextProvider = next.dataset.ikaProvider;
+              if (nextProvider === "typescript" || nextProvider === "rust") {
+                provider = nextProvider;
+                renderCode();
+              }
+            }
+          }
+        });
+        const selected = buttons.find(
+          (button) => button.getAttribute("aria-selected") === "true",
+        );
+        if (selected) activate(selected);
+      };
+      root
+        .querySelectorAll<HTMLElement>("[data-ika-tab-group]")
+        .forEach(setupTabGroup);
+      renderPreview();
+      renderCode();
     });
 </script>
 
 <style>
-  .docs-component section {
-    margin-block: 1.5rem;
+  .docs-component {
+    display: grid;
+    gap: 2rem;
+    max-width: 64rem;
   }
-  [data-ika-demo-target] {
-    min-block-size: 7rem;
-    display: block;
+  .docs-component-heading,
+  .demo-section,
+  .contract-section,
+  .contract-details {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .demo-section {
+    container-type: inline-size;
+  }
+  .eyebrow {
+    margin: 0;
+    color: var(--ikasue-accent);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .section-heading,
+  .demo-options-heading {
+    display: flex;
+    gap: 1rem;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .section-heading h2,
+  .demo-options-heading h3 {
+    margin-block: 0;
+  }
+  .demo-contract,
+  .demo-options-heading span {
+    color: var(--ikasue-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8rem;
+  }
+  .demo-workbench {
+    display: grid;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--ikasue-line);
+    background: var(--ikasue-surface);
+  }
+  .demo-options {
+    display: grid;
+    gap: 0.75rem;
+    min-width: 0;
     padding: 1rem;
-    border-block: 1px solid var(--sl-color-gray-5);
+    border-block-end: 1px solid var(--ikasue-line);
+    background: var(--ikasue-surface-raised);
   }
-  [data-ika-demo-target] > * {
-    display: block;
+  .demo-control-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+    gap: 0.75rem;
+  }
+  :global(.demo-control) {
+    display: grid;
+    gap: 0.35rem;
+    min-width: 0;
+    color: var(--ikasue-ink);
+    font-size: 0.85rem;
+  }
+  :global(.demo-control-boolean) {
+    display: flex;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  :global(.demo-control input:not([type="checkbox"])),
+  :global(.demo-control select),
+  :global(.demo-control textarea) {
+    inline-size: 100%;
+    min-inline-size: 0;
+    border: 1px solid var(--ikasue-line);
+    border-radius: 0.25rem;
+    padding: 0.45rem 0.55rem;
+    background: var(--ikasue-surface);
+    color: var(--ikasue-ink);
+  }
+  :global(.demo-control textarea) {
+    resize: vertical;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.75rem;
+  }
+  .demo-output {
+    display: grid;
+    gap: 0.75rem;
+    min-width: 0;
+    padding: 1rem;
+  }
+  .demo-view-tabs,
+  .demo-provider-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .demo-view-tabs {
+    border-block-end: 1px solid var(--ikasue-line);
+  }
+  .demo-view-tabs button,
+  .demo-provider-tabs button {
+    border: 0;
+    border-block-end: 2px solid transparent;
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+  .demo-view-tabs button[aria-selected="true"],
+  .demo-provider-tabs button[aria-selected="true"] {
+    border-color: currentColor;
+    background: var(--ikasue-selection);
+  }
+  .demo-preview {
+    display: grid;
+    align-content: start;
+    min-block-size: 10rem;
+    min-inline-size: 0;
+    overflow: auto;
+    padding: 1rem;
+    border: 1px dashed var(--ikasue-line);
+    background: var(--ikasue-surface);
+    color: var(--ikasue-ink);
+  }
+  .demo-preview > * {
+    min-inline-size: 0;
+  }
+  .demo-fallback,
+  .demo-status,
+  .demo-code-caption {
+    margin: 0;
+    color: var(--ikasue-muted);
+    font-size: 0.85rem;
+  }
+  .demo-code {
+    max-block-size: 34rem;
+    margin: 0;
+    overflow: auto;
+    border: 1px solid var(--ikasue-line);
+    padding: 1rem;
+    background: var(--ikasue-code-surface);
+    color: var(--ikasue-code-ink);
+    font-size: 0.78rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .demo-code code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .table-wrap {
+    min-inline-size: 0;
+    overflow-x: auto;
   }
   table {
-    width: 100%;
+    inline-size: 100%;
     border-collapse: collapse;
   }
   th,
   td {
-    padding: 0.6rem;
-    border-block-end: 1px solid var(--sl-color-gray-5);
+    padding: 0.65rem;
+    border-block-end: 1px solid var(--ikasue-line);
     text-align: start;
+    vertical-align: top;
   }
-  pre {
-    overflow-x: auto;
+  th {
+    font-weight: 650;
+  }
+  code {
+    overflow-wrap: anywhere;
+  }
+  @container (min-width: 42rem) {
+    .demo-workbench {
+      grid-template-columns: minmax(14rem, 0.34fr) minmax(0, 1fr);
+    }
+    .demo-options {
+      align-content: start;
+      border-block-end: 0;
+      border-inline-end: 1px solid var(--ikasue-line);
+    }
+    .demo-control-list {
+      grid-template-columns: 1fr;
+    }
   }
 </style>

@@ -14,6 +14,7 @@ import {
   isIkaJsonValue,
   isIkaMessage,
   isIkaRowRequest,
+  isIkaTabsItem,
   type IkaView,
 } from "./contract";
 import { renderIkaView } from "./view";
@@ -157,6 +158,25 @@ describe("ikasue Web ABI", () => {
         kind: "text",
         text: "ambiguous",
         props: { content: "other" },
+      }),
+    ).toBe(false);
+    expect(
+      isIkaTabsItem({
+        id: "overview",
+        label: "Overview",
+        content: "The selected panel is visible.",
+      }),
+    ).toBe(true);
+    expect(
+      isIkaView({
+        version: IKASUE_ABI_VERSION,
+        kind: "tabs",
+        props: {
+          items: [
+            { id: "overview", label: "Overview" },
+            { id: "overview", label: "Another label" },
+          ],
+        },
       }),
     ).toBe(false);
   });
