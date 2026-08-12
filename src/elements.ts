@@ -1432,15 +1432,15 @@ export class IkaTabsElement extends IkaElement {
 
   protected override render(): void {
     const root = this.renderRoot;
+    const value = this.effectiveProps;
+    const orientation = propertyText(value, "orientation") || "horizontal";
+    this.dataset.orientation = orientation;
+    this.dataset.variant = propertyText(value, "variant") || "default";
     if (serializedChildrenForElement.has(this)) {
       clearInternalContent(root);
       return;
     }
-    const value = this.effectiveProps;
     clearInternalContent(root);
-    const orientation = propertyText(value, "orientation") || "horizontal";
-    this.dataset.orientation = orientation;
-    this.dataset.variant = propertyText(value, "variant") || "default";
     const active =
       this.#items.find(
         (item) => item.id === this.#activeId && item.disabled !== true,

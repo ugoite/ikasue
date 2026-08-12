@@ -336,12 +336,24 @@ ika-history-timeline [part="timeline"] {
   padding-inline-start: 1.25rem;
 }
 
+ika-history-timeline[data-orientation="horizontal"] [part="timeline"] {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  padding-inline-start: 0;
+  list-style: none;
+}
+
 ika-dialog [part="dialog"] {
   max-inline-size: min(32rem, calc(100vw - 2rem));
   border: 1px solid var(--ikasue-line);
   padding: 1rem;
   background: var(--ikasue-surface);
   color: var(--ikasue-ink);
+}
+
+ika-dialog[data-modal="false"] [part="dialog"] {
+  position: static;
+  margin: 0;
 }
 
 button,
