@@ -253,7 +253,7 @@ const propertyKeysByTag: Readonly<
   ]),
   "ika-scroll-area": new Set(["content", "axis", "overscroll"]),
   "ika-separator": new Set(["orientation", "role"]),
-  "ika-sidebar": new Set(["items", "activeId", "collapsed"]),
+  "ika-sidebar": new Set(["main", "items", "activeId", "collapsed"]),
   "ika-toolbar": new Set(["items", "overflow"]),
   "ika-icon-button": new Set([
     "id",
@@ -1380,19 +1380,15 @@ export class IkaElement extends HTMLElementBase {
   private nextTabTarget(current: HTMLElement): HTMLElement | undefined {
     const parent = this.parentElement;
     if (!parent) return undefined;
-    const siblings = Array.from(parent.children);
-    const index = siblings.indexOf(this);
-    for (const candidate of siblings.slice(index + 1)) {
-      if (!(candidate instanceof HTMLElement) || candidate === current)
-        continue;
-      if (
-        candidate.matches(
-          'button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex="-1"])',
-        )
-      )
-        return candidate;
-    }
-    return undefined;
+    const focusable =
+      'button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex="-1"])';
+    const candidates = Array.from(
+      parent.querySelectorAll<HTMLElement>(focusable),
+    );
+    const index = candidates.indexOf(current);
+    return candidates
+      .slice(index + 1)
+      .find((candidate) => candidate !== current);
   }
 
   protected get effectiveProps(): IkaJsonRecord {
@@ -2116,7 +2112,16 @@ export class IkaSplitViewElement extends IkaElement {
       );
       section.tabIndex = 0;
       section.addEventListener("click", () => {
-        if (propertyText(this.effectiveProps, "activePane")) return;
+        if (propertyText(this.effectiveProps, "activePane")) {
+          this.dispatchEvent(
+            new CustomEvent("ika-active-pane-change", {
+              bubbles: true,
+              composed: true,
+              detail: { id: pane.id },
+            }),
+          );
+          return;
+        }
         this.#activePane = pane.id;
         this.render();
         this.dispatchEvent(

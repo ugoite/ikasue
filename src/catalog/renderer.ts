@@ -1059,7 +1059,6 @@ function renderComponentDemo(
           document,
           "tabs",
           {
-            main: "Workspace content remains visible beside the navigation rail.",
             items: [
               { id: "overview", label: "Overview", content: "Overview" },
               { id: "details", label: "Details", content: "Details" },
@@ -1244,7 +1243,6 @@ function renderComponentDemo(
             rows: [
               {
                 id: "one",
-                label: "One",
                 cells: {
                   name: { value: "ikasue", state: "modified" },
                   status: { value: "Ready", state: "clean" },
@@ -1252,7 +1250,6 @@ function renderComponentDemo(
               },
               {
                 id: "two",
-                label: "Two",
                 cells: {
                   name: { value: "Catalog", state: "created" },
                   status: { value: "Review", state: "error" },

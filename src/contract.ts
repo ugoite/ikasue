@@ -236,8 +236,12 @@ const isHistoryEntry = (value: IkaJsonValue): boolean =>
   (value.tone === undefined ||
     ["default", "muted", "success", "danger"].includes(value.tone as string));
 const isDataGridCellValue = (value: IkaJsonValue): boolean =>
-  !isIkaJsonRecord(value) ||
-  (hasOnlyKeys(value, ["value", "state"]) &&
+  value === null ||
+  typeof value === "string" ||
+  typeof value === "number" ||
+  typeof value === "boolean" ||
+  (isIkaJsonRecord(value) &&
+    hasOnlyKeys(value, ["value", "state"]) &&
     typeof value.value === "string" &&
     (value.state === undefined ||
       ["clean", "created", "modified", "deleted", "error"].includes(
