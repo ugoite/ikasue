@@ -85,6 +85,12 @@ test.describe("ikasue identity contracts", () => {
     await expect(
       tabs.locator('[part="panel"][data-active="true"]'),
     ).toHaveAttribute("data-motion", "backward");
+    await tabs.evaluate((node) => {
+      node.setAttribute("activeId", "details");
+    });
+    await expect(
+      tabs.locator('[part="tab"][aria-selected="true"]'),
+    ).toHaveAttribute("data-tab-id", "details");
 
     await page.goto("/components/loading-region/");
     const loading = page.locator("ika-loading-region").first();
