@@ -1,5 +1,23 @@
 import { expect, test } from "@playwright/test";
 
+const P0_COMPONENT_ROUTES = [
+  "editable-text",
+  "tabs",
+  "sidebar",
+  "toolbar",
+  "icon-button",
+  "text-field",
+  "checkbox",
+  "segmented-control",
+  "form",
+  "data-grid",
+  "history-timeline",
+  "split-view",
+  "side-panel",
+  "bottom-panel",
+  "loading-region",
+] as const;
+
 test.describe("ikasue identity contracts", () => {
   test("EditableText stays read-first and commits modified state", async ({
     page,
@@ -28,6 +46,18 @@ test.describe("ikasue identity contracts", () => {
     await editor.locator('[part="input"]').press("Tab");
     await expect(editor).toHaveAttribute("data-state", "modified");
     await expect(page.locator(`#${continuation}`)).toBeFocused();
+    await editor.evaluate((node) => {
+      (node as HTMLElement & { props: Record<string, unknown> }).props = {
+        id: "controlled",
+        value: "host update",
+        editor: "text",
+        state: "error",
+      };
+    });
+    await expect(editor.locator('[part="read-value"]')).toHaveText(
+      "host update",
+    );
+    await expect(editor).toHaveAttribute("data-state", "error");
   });
 
   test("elastic Tabs transfer area and loading keeps content", async ({
@@ -243,6 +273,23 @@ test.describe("ikasue identity contracts", () => {
       };
     });
     await expect(split).toHaveAttribute("data-active-pane", "list");
+    await split.evaluate((node) => {
+      (node as HTMLElement & { props: Record<string, unknown> }).props = {
+        panes: [
+          { id: "list", label: "List", content: "Items", basis: 1 },
+          { id: "detail", label: "Detail", content: "Selection", basis: 2 },
+        ],
+        orientation: "horizontal",
+        collapsible: true,
+      };
+    });
+    await page.setViewportSize({ width: 320, height: 800 });
+    await expect(split.locator('[part="mobile-nav"]')).toBeVisible();
+    await expect(split.locator("[data-pane-id]:visible")).toHaveCount(1);
+    await expect(split.locator('[part="mobile-next"]')).toBeEnabled();
+    await split.locator('[part="mobile-next"]').click();
+    await expect(split).toHaveAttribute("data-active-pane", "detail");
+    await expect(split.locator("[data-pane-id]:visible")).toHaveCount(1);
 
     await page.goto("/components/data-grid/");
     const grid = page.locator("ika-data-grid").first();
@@ -352,13 +399,77 @@ test.describe("ikasue identity contracts", () => {
     expect(motion.animationDuration).toBe("0s");
     expect(motion.transitionDuration).toContain("0s");
 
-    const selectionColor = await activeTab.evaluate(
-      (node) => getComputedStyle(node).backgroundColor,
-    );
-    expect(selectionColor).not.toMatch(/blue|green|red|yellow/i);
+    const selectionColors = await activeTab.evaluate((node) => {
+      const style = getComputedStyle(node);
+      const root = getComputedStyle(document.documentElement);
+      return {
+        actual: style.backgroundColor,
+        semantic: [
+          "--ikasue-info",
+          "--ikasue-success",
+          "--ikasue-warning",
+          "--ikasue-danger",
+        ].map((name) => root.getPropertyValue(name).trim()),
+      };
+    });
+    expect(selectionColors.actual).not.toBe("");
+    expect(selectionColors.semantic).not.toContain(selectionColors.actual);
     await expect(page).toHaveScreenshot("tabs-reduced-motion.png", {
       animations: "disabled",
       maxDiffPixelRatio: 0.05,
     });
+  });
+
+  test("P0 components keep a responsive visual and keyboard baseline", async ({
+    page,
+  }) => {
+    for (const width of [320, 600, 1280]) {
+      await page.setViewportSize({ width, height: 800 });
+      for (const route of P0_COMPONENT_ROUTES) {
+        await page.goto(`/components/${route}/`);
+        const component = page.locator(`ika-${route}`).first();
+        await expect(component).toBeVisible();
+        const focusable =
+          route === "split-view"
+            ? component.locator('[data-pane-id][data-active="true"]').first()
+            : component
+                .locator(
+                  'button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]',
+                )
+                .first();
+        if ((await focusable.count()) > 0) {
+          await focusable.focus();
+          await expect(focusable).toBeFocused();
+        }
+        await expect(component).toHaveScreenshot(
+          `p0-${route}-${String(width)}.png`,
+          {
+            animations: "disabled",
+            maxDiffPixelRatio: 0.05,
+          },
+        );
+      }
+    }
+
+    await page.setViewportSize({ width: 600, height: 800 });
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    for (const route of P0_COMPONENT_ROUTES) {
+      await page.goto(`/components/${route}/`);
+      await expect(page.locator(`ika-${route}`).first()).toHaveScreenshot(
+        `p0-${route}-zoom.png`,
+        { animations: "disabled", maxDiffPixelRatio: 0.05 },
+      );
+    }
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    for (const route of P0_COMPONENT_ROUTES) {
+      await page.goto(`/components/${route}/`);
+      await expect(page.locator(`ika-${route}`).first()).toHaveScreenshot(
+        `p0-${route}-reduced.png`,
+        { animations: "disabled", maxDiffPixelRatio: 0.05 },
+      );
+    }
   });
 });

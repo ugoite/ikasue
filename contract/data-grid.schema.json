@@ -16,6 +16,7 @@
     },
     "selection": { "$ref": "#/$defs/selection" },
     "editing": { "$ref": "#/$defs/selection" },
+    "selectionMode": { "enum": ["cell", "context"] },
     "editable": { "type": "boolean" },
     "density": { "enum": ["default", "compact"] }
   },
