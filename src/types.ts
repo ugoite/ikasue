@@ -70,12 +70,14 @@ export interface ScrollAreaSpec {
 
 export interface SeparatorOptions {
   readonly orientation?: "horizontal" | "vertical";
+  readonly weight?: "hairline" | "standard";
   readonly role?: "separator";
 }
 
 export interface SeparatorSpec {
   readonly kind: "separator";
   readonly orientation: "horizontal" | "vertical";
+  readonly weight: "hairline" | "standard";
   readonly role?: "separator";
 }
 

@@ -106,6 +106,7 @@ const IKA_VIEW_PROPERTY_KEYS = new Set([
   "axis",
   "overscroll",
   "orientation",
+  "weight",
   "role",
   "items",
   "activeId",
@@ -315,6 +316,7 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
   },
   separator: {
     orientation: isEnum("horizontal", "vertical"),
+    weight: isEnum("hairline", "standard"),
     role: isEnum("separator"),
   },
   tabs: {

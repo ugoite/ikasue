@@ -1045,11 +1045,16 @@ function renderComponentDemo(
       return;
     }
     case "separator": {
-      const spec = separator({ orientation: "horizontal", role: "separator" });
+      const spec = separator({
+        orientation: "horizontal",
+        weight: "hairline",
+        role: "separator",
+      });
       const node = element(document, "div");
       node.className = "ikasue-separator";
       node.setAttribute("role", spec.role ?? "separator");
       node.dataset.orientation = spec.orientation;
+      node.dataset.weight = spec.weight;
       target.append(node);
       return;
     }

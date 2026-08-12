@@ -480,6 +480,7 @@
       "additionalProperties": false,
       "properties": {
         "orientation": { "enum": ["horizontal", "vertical"] },
+        "weight": { "enum": ["hairline", "standard"] },
         "role": { "const": "separator" }
       }
     },

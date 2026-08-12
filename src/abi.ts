@@ -159,6 +159,7 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
   ]),
   separator: contract("separator", [
     property("orientation", "horizontal | vertical", "horizontal"),
+    property("weight", "hairline | standard", "hairline"),
     property("role", "separator", "separator"),
   ]),
   tabs: contract(

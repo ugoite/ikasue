@@ -282,7 +282,10 @@ const componentProperties: Record<
     property("axis", "x | y | both", "y"),
     property("overscroll", "auto | contain", "auto"),
   ],
-  separator: [property("orientation", "horizontal | vertical", "horizontal")],
+  separator: [
+    property("orientation", "horizontal | vertical", "horizontal"),
+    property("weight", "hairline | standard", "hairline"),
+  ],
   tabs: [
     property("items", "Item[]", "[]"),
     property("activeId", "string", ""),
@@ -588,7 +591,7 @@ const componentDefaults: Record<
     justify: "start",
   },
   "scroll-area": { axis: "y", overscroll: "auto" },
-  separator: { orientation: "horizontal" },
+  separator: { orientation: "horizontal", weight: "hairline" },
   tabs: {
     items: "[]",
     activeId: "",
