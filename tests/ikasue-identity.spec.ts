@@ -631,6 +631,30 @@ test.describe("ikasue identity contracts", () => {
     expect(copied).toBe("changed");
   });
 
+  test("Sidebar keeps its open track on a narrow viewport", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.goto("/components/sidebar/");
+    const sidebar = page.locator("ika-sidebar").first();
+    await sidebar.evaluate((node) => {
+      (node as HTMLElement & { props: Record<string, unknown> }).props = {
+        main: "Workspace content",
+        items: [{ id: "home", label: "Home", icon: "⌂" }],
+        activeId: "home",
+        collapsed: false,
+        railWidth: "44px",
+        openWidth: "18rem",
+      };
+    });
+    await expect
+      .poll(() =>
+        sidebar.evaluate((node) => getComputedStyle(node).gridTemplateColumns),
+      )
+      .toContain("288px");
+    await expect(sidebar.locator('[part="label"]')).toBeVisible();
+  });
+
   test("Alert returns attention to its target region", async ({ page }) => {
     await page.goto("/components/alert/");
     const alert = page.locator("ika-alert").first();

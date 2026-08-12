@@ -163,6 +163,8 @@ describe("public contract", () => {
     expect(css).toContain('[part="read-value"]');
     expect(css).toContain('[data-row-peer="true"]');
     expect(css).toContain("ikasue-loading-wave");
+    expect(css).toContain('ika-theme-root[data-variant="dense"]');
+    expect(css).toContain('ika-data-grid[data-density="compact"]');
     expect(css).not.toContain("#dfeeff");
     expect(css).not.toContain("box-shadow");
   });

@@ -21,6 +21,9 @@
   --ikasue-motion-slow: 480ms;
   --ikasue-motion-duration: var(--ikasue-motion-fast);
   --ikasue-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ikasue-density-control: 38px;
+  --ikasue-density-block: 14px;
+  --ikasue-density-gap: 2px;
   --ikasue-font-ja:
     "BIZ UDPGothic", "Yu Gothic UI", "Yu Gothic", "Hiragino Sans",
     "Noto Sans JP", sans-serif;
@@ -116,6 +119,18 @@ ika-theme-root {
   min-height: 100vh;
   background: var(--ikasue-canvas);
   color-scheme: light;
+}
+
+ika-theme-root[data-variant="quiet"] {
+  --ikasue-density-control: 34px;
+  --ikasue-density-block: 10px;
+  --ikasue-density-gap: 1px;
+}
+
+ika-theme-root[data-variant="dense"] {
+  --ikasue-density-control: 30px;
+  --ikasue-density-block: 8px;
+  --ikasue-density-gap: 0;
 }
 
 ika-text[data-selectable="false"] {
@@ -303,16 +318,16 @@ ika-text-field [part="error"] {
 
 ika-icon-button {
   display: inline-block;
-  inline-size: 38px;
-  block-size: 38px;
+  inline-size: var(--ikasue-density-control);
+  block-size: var(--ikasue-density-control);
 }
 
 ika-icon-button [part="button"] {
   position: relative;
   display: grid;
   place-items: center;
-  inline-size: 38px;
-  block-size: 38px;
+  inline-size: var(--ikasue-density-control);
+  block-size: var(--ikasue-density-control);
   color: var(--ikasue-muted);
   transition:
     background var(--ikasue-motion-fast),
@@ -371,8 +386,8 @@ ika-toolbar [part="item"] {
   position: relative;
   display: grid;
   place-items: center;
-  inline-size: 38px;
-  block-size: 38px;
+  inline-size: var(--ikasue-density-control);
+  block-size: var(--ikasue-density-control);
   color: var(--ikasue-muted);
 }
 
@@ -467,7 +482,7 @@ ika-sidebar[data-collapsed="true"] {
 
 ika-sidebar nav {
   display: grid;
-  gap: 2px;
+  gap: var(--ikasue-density-gap);
   min-block-size: 100%;
   padding: 8px;
 }
@@ -756,7 +771,7 @@ ika-field legend {
 ika-form [part="field"] {
   display: grid;
   gap: 7px;
-  padding-block: 14px;
+  padding-block: var(--ikasue-density-block);
   border-block-end: 1px solid var(--ikasue-line);
 }
 
@@ -816,6 +831,10 @@ ika-data-grid [part="cell"][data-state="deleted"] {
 
 ika-data-grid [part="cell"][data-state="error"] {
   background: var(--ikasue-error-fill);
+}
+
+ika-data-grid[data-density="compact"] {
+  --ikasue-grid-cell-padding: 0.35rem;
 }
 
 ika-data-grid [part="cell"][data-selected="true"] {
@@ -1349,10 +1368,7 @@ ika-scroll-area.ikasue-main {
 }
 
 @media (max-width: 600px) {
-  ika-sidebar {
-    grid-template-columns: 44px minmax(0, 1fr);
-  }
-  ika-sidebar nav button [part="label"] {
+  ika-sidebar[data-collapsed="true"] nav button [part="label"] {
     display: none;
   }
   ika-side-panel {
