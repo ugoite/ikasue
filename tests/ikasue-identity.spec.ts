@@ -669,6 +669,21 @@ test.describe("ikasue identity contracts", () => {
     const timeline = page.locator("ika-history-timeline").first();
     const current = timeline.locator('[part="entry"][aria-current="true"]');
     await expect(current).toHaveAttribute("tabindex", "0");
+    await timeline.evaluate((node) => {
+      node.setAttribute("selectedId", "one");
+    });
+    await expect(
+      timeline.locator('[part="entry"][aria-current="true"]'),
+    ).toContainText("Created");
+    await timeline.evaluate((node) => {
+      node.setAttribute("selectedId", "missing");
+    });
+    await expect(
+      timeline.locator('[part="entry"][aria-current="true"]'),
+    ).toHaveCount(1);
+    await expect(
+      timeline.locator('[part="entry"][aria-current="true"]'),
+    ).toHaveAttribute("tabindex", "0");
     await current.focus();
     await page.keyboard.press("ArrowUp");
     await expect(
