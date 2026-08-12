@@ -34,10 +34,12 @@ describe("data grid state", () => {
   it("distinguishes omitted domains from explicit empty domains", () => {
     const derived = dataGrid({
       cells: [{ row: "r", column: "c", value: "x" }],
+      editable: true,
     });
     expect(derived.columnsProvided).toBe(false);
     expect(derived.rowsProvided).toBe(false);
     expect(derived.columns).toEqual([{ id: "c", label: "c" }]);
+    expect(derived.editable).toBe(true);
     const empty = dataGrid({
       columns: [],
       rows: [],
