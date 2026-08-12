@@ -28,76 +28,185 @@ type Guidance = {
   state: string;
   live: string;
 };
+const localized = (ja: string, en: string): string =>
+  locale === "ja" ? ja : en;
 const identityGuidance = (
   {
     "editable-text": {
-      use: "読んでからEnter/F2またはdouble clickで編集し、一本線のdraftとしてcommitします。",
-      avoid:
+      use: localized(
+        "読んでからEnter/F2またはdouble clickで編集し、一本線のdraftとしてcommitします。",
+        "Read first, then edit with Enter/F2 or double click and commit the single-line draft.",
+      ),
+      avoid: localized(
         "常時textareaにせず、読む状態と編集状態を同じ情報の連続として扱います。",
-      keyboard:
+        "Do not turn the page into permanent textareas; keep reading and editing as one information flow.",
+      ),
+      keyboard: localized(
         "Enter/F2/double clickで編集、Escapeで取消、Enter/Tabでcommitします。",
-      state: "read → editing → modifiedの順で、破線から実線へ意味を変えます。",
-      live: "commit後も内容を残し、modified stateをその場で示します。",
+        "Enter/F2/double click edits, Escape cancels, and Enter/Tab commits.",
+      ),
+      state: localized(
+        "read → editing → modifiedの順で、破線から実線へ意味を変えます。",
+        "read → editing → modified changes the underline from dashed to solid.",
+      ),
+      live: localized(
+        "commit後も内容を残し、modified stateをその場で示します。",
+        "Keep the value after commit and show modified state in place.",
+      ),
     },
     tabs: {
-      use: "選択中のtabへ面積とpanelの方向を渡し、作業の現在地を明確にします。",
-      avoid:
+      use: localized(
+        "選択中のtabへ面積とpanelの方向を渡し、作業の現在地を明確にします。",
+        "Give area and panel direction to the selected tab so the current work is clear.",
+      ),
+      avoid: localized(
         "色やunderlineだけでactiveを示さず、elastic variantを最初の選択肢にします。",
-      keyboard:
+        "Do not rely on color or an underline alone; use the elastic variant first.",
+      ),
+      keyboard: localized(
         "Arrowはorientationに沿って移動し、Home/Endはtab群の端へ移動します。",
-      state:
+        "Arrow keys follow orientation; Home/End reach the edges of the tab set.",
+      ),
+      state: localized(
         "inactive → selected → disabledを面積、背景、操作可能性で分けます。",
-      live: "panelは選択方向から入り、内容を消して待たせません。",
+        "inactive → selected → disabled differ through area, background, and operability.",
+      ),
+      live: localized(
+        "panelは選択方向から入り、内容を消して待たせません。",
+        "The panel enters from the selection direction without clearing content while waiting.",
+      ),
     },
     "segmented-control": {
-      use: "密接した選択肢のうち、現在の選択へ面積を譲るelastic choiceです。",
-      avoid:
+      use: localized(
+        "密接した選択肢のうち、現在の選択へ面積を譲るelastic choiceです。",
+        "An elastic choice where the current option owns more area among related choices.",
+      ),
+      avoid: localized(
         "小さな丸や同じ幅のbox列にせず、selected optionを仕事の起点にします。",
-      keyboard: "Arrow/Home/Endで視覚方向と同じ順序を移動します。",
-      state:
+        "Avoid tiny circles or equal boxes; make the selected option the work origin.",
+      ),
+      keyboard: localized(
+        "Arrow/Home/Endで視覚方向と同じ順序を移動します。",
+        "Arrow/Home/End move in the same order as the visual direction.",
+      ),
+      state: localized(
         "selected optionだけがgrowし、disabledは順序を壊さず操作から外れます。",
-      live: "選択の面積変化を短いspring motionで伝えます。",
+        "Only the selected option grows; disabled options leave interaction without breaking order.",
+      ),
+      live: localized(
+        "選択の面積変化を短いspring motionで伝えます。",
+        "A short spring motion communicates the change in owned area.",
+      ),
     },
     "data-grid": {
-      use: "cell、row peer、column peerを同時に見せ、差分をその場で編集します。",
-      avoid:
+      use: localized(
+        "cell、row peer、column peerを同時に見せ、差分をその場で編集します。",
+        "Show the cell, row peer, and column peer together, and edit differences in place.",
+      ),
+      avoid: localized(
         "選択cellだけを強調して周辺文脈を消したり、編集時に表全体を置き換えたりしません。",
-      keyboard:
+        "Do not erase surrounding context by highlighting only one cell or replacing the table while editing.",
+      ),
+      keyboard: localized(
         "Arrow/Home/Endはcellの視覚方向へ移動し、F2/Enterで編集、copy/pasteも同じcellを所有します。",
-      state:
+        "Arrow/Home/End follow the cell direction; F2/Enter edit, and copy/paste stay with that cell.",
+      ),
+      state: localized(
         "clean/created/modified/errorはcellのstateとして表面と下線に反映します。",
-      live: "編集内容を残したままcommitし、selectionとpeerを再計算します。",
+        "clean/created/modified/error appear as cell state through surface and underline.",
+      ),
+      live: localized(
+        "編集内容を残したままcommitし、selectionとpeerを再計算します。",
+        "Commit without losing the edit, then recalculate selection and peers.",
+      ),
     },
     "split-view": {
-      use: "active paneへ面積を渡し、divider上のcontrolで閉じる/戻すworkspaceです。",
-      avoid: "pane上にfloating controlを置くResizableSplitPaneにはしません。",
-      keyboard:
+      use: localized(
+        "active paneへ面積を渡し、divider上のcontrolで閉じる/戻すworkspaceです。",
+        "A workspace that gives area to the active pane and collapses or restores it from the divider.",
+      ),
+      avoid: localized(
+        "pane上にfloating controlを置くResizableSplitPaneにはしません。",
+        "Do not turn it into a ResizableSplitPane with floating controls over the pane.",
+      ),
+      keyboard: localized(
         "paneをfocusしてEnter/Space、dividerはorientationの方向で操作します。",
-      state: "active/collapsedは面積とdividerのgeometryとして表します。",
-      live: "active paneのtrack比率をspringで再配分します。",
+        "Focus a pane and use Enter/Space; operate the divider along its orientation.",
+      ),
+      state: localized(
+        "active/collapsedは面積とdividerのgeometryとして表します。",
+        "active/collapsed are expressed through area and divider geometry.",
+      ),
+      live: localized(
+        "active paneのtrack比率をspringで再配分します。",
+        "Reallocate track ratios toward the active pane with a spring motion.",
+      ),
     },
     "side-panel": {
-      use: "mainとpanelを同じtrackに置き、開くとmainを押して情報を追加します。",
-      avoid:
+      use: localized(
+        "mainとpanelを同じtrackに置き、開くとmainを押して情報を追加します。",
+        "Place main and panel in sibling tracks; opening pushes main to add information.",
+      ),
+      avoid: localized(
         "mainの上へoverlayせず、side=start/endとmotion originを一致させます。",
-      keyboard:
+        "Do not overlay main; match side=start/end with the motion origin.",
+      ),
+      keyboard: localized(
         "mainからpanelへTab順を保ち、Escapeなどhostのclose操作へ戻します。",
-      state: "closed/openは0frからpanel trackへの変化として表します。",
-      live: "panelは指定edgeから入り、mainは同時に狭くなります。",
+        "Keep Tab order from main to panel and return to the host close action such as Escape.",
+      ),
+      state: localized(
+        "closed/openは0frからpanel trackへの変化として表します。",
+        "closed/open changes the panel track from 0fr to its working size.",
+      ),
+      live: localized(
+        "panelは指定edgeから入り、mainは同時に狭くなります。",
+        "The panel enters from the chosen edge while main narrows at the same time.",
+      ),
     },
     "bottom-panel": {
-      use: "mainの下にrowを増やし、outputや補助情報を上の仕事と同時に残します。",
-      avoid: "画面中央のmodalやoverlayで上の情報を隠しません。",
-      keyboard: "mainからbottom rowへ自然なTab順で到達できるようにします。",
-      state: "closed/openは0frからcontent rowへの変化として表します。",
-      live: "panelは下端から入り、mainの内容を消さずに押し上げます。",
+      use: localized(
+        "mainの下にrowを増やし、outputや補助情報を上の仕事と同時に残します。",
+        "Add a row below main so output and supporting information remain with the work above.",
+      ),
+      avoid: localized(
+        "画面中央のmodalやoverlayで上の情報を隠しません。",
+        "Do not hide the information above with a centered modal or overlay.",
+      ),
+      keyboard: localized(
+        "mainからbottom rowへ自然なTab順で到達できるようにします。",
+        "Keep a natural Tab order from main to the bottom row.",
+      ),
+      state: localized(
+        "closed/openは0frからcontent rowへの変化として表します。",
+        "closed/open changes the panel row from 0fr to its content size.",
+      ),
+      live: localized(
+        "panelは下端から入り、mainの内容を消さずに押し上げます。",
+        "The panel enters from the bottom and pushes up without clearing main content.",
+      ),
     },
     "loading-region": {
-      use: "同じcontentを残したまま、対象regionだけをneutral waveでbusyにします。",
-      avoid: "中央spinnerや空のplaceholderへ置き換えません。",
-      keyboard: "busy中も読み取り可能なcontentとfocus順を維持します。",
-      state: "idle/busyはaria-busyとwaveだけを変え、情報のstateを消しません。",
-      live: "waveはpointer-events:noneで、読みながら処理の対象を確認できます。",
+      use: localized(
+        "同じcontentを残したまま、対象regionだけをneutral waveでbusyにします。",
+        "Keep the same content and mark only the target region busy with a neutral wave.",
+      ),
+      avoid: localized(
+        "中央spinnerや空のplaceholderへ置き換えません。",
+        "Do not replace the work with a centered spinner or empty placeholder.",
+      ),
+      keyboard: localized(
+        "busy中も読み取り可能なcontentとfocus順を維持します。",
+        "Keep readable content and focus order while busy.",
+      ),
+      state: localized(
+        "idle/busyはaria-busyとwaveだけを変え、情報のstateを消しません。",
+        "idle/busy changes aria-busy and the wave only; it does not erase information state.",
+      ),
+      live: localized(
+        "waveはpointer-events:noneで、読みながら処理の対象を確認できます。",
+        "The wave uses pointer-events:none so the work target stays readable.",
+      ),
     },
   } as Partial<Record<CatalogComponentId, Guidance>>
 )[id];

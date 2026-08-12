@@ -7,6 +7,7 @@ import {
   defineIkaSue,
   tagNameForKind,
 } from "./elements";
+import { IKA_ELEMENT_CONTRACTS } from "./abi";
 import {
   IKASUE_ABI_VERSION,
   isIkaView,
@@ -224,6 +225,12 @@ describe("ikasue Web ABI", () => {
       );
       expect(schema.$id).toContain("ikasue");
     }
+  });
+
+  it("keeps editable cancellation in the public ABI", () => {
+    expect(IKA_ELEMENT_CONTRACTS["editable-text"].events).toContain(
+      "ika-cancel",
+    );
   });
 
   it("keeps the MessagePort envelope aligned with the row contract", () => {
