@@ -11,7 +11,9 @@
       "type": "array",
       "items": { "$ref": "#/$defs/item" }
     },
-    "activeId": { "type": "string" }
+    "activeId": { "type": "string" },
+    "variant": { "enum": ["default", "elastic"] },
+    "orientation": { "enum": ["horizontal", "vertical"] }
   },
   "$defs": {
     "item": {

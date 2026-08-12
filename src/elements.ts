@@ -135,6 +135,11 @@ const primitiveAttributes = new Set([
   "content",
   "title",
   "message",
+  "editor",
+  "state",
+  "compact",
+  "selectedId",
+  "activePane",
   "placeholder",
   "axis",
   "direction",
@@ -162,6 +167,9 @@ const primitiveAttributes = new Set([
   "severity",
   "dismissible",
   "side",
+  "target",
+  "targetId",
+  "action",
   "value",
   "max",
 ]);
@@ -179,6 +187,7 @@ const booleanAttributes = new Set([
   "collapsible",
   "busy",
   "dismissible",
+  "compact",
 ]);
 
 const registryForElement = new WeakMap<HTMLElement, CustomElementRegistry>();
@@ -203,12 +212,16 @@ const nextTabsInstanceId = (): number => {
   return next;
 };
 
+const editableEditing = new WeakSet<HTMLElement>();
+const editableDrafts = new WeakMap<HTMLElement, string>();
+const editableValues = new WeakMap<HTMLElement, string>();
+
 const propertyKeysByTag: Readonly<
   Record<IkaElementTagName, ReadonlySet<string>>
 > = Object.freeze({
   "ika-theme-root": new Set(["tokens", "variant"]),
   "ika-text": new Set(["content", "tone", "selectable"]),
-  "ika-editable-text": new Set(["id", "value", "disabled"]),
+  "ika-editable-text": new Set(["id", "value", "editor", "state", "disabled"]),
   "ika-text-field": new Set([
     "id",
     "label",
@@ -257,7 +270,14 @@ const propertyKeysByTag: Readonly<
     "disabled",
     "variant",
   ]),
-  "ika-field": new Set(["id", "label", "required", "content"]),
+  "ika-field": new Set([
+    "id",
+    "label",
+    "required",
+    "content",
+    "editor",
+    "state",
+  ]),
   "ika-form": new Set(["fields", "values", "status"]),
   "ika-data-grid": new Set([
     "columns",
@@ -266,11 +286,17 @@ const propertyKeysByTag: Readonly<
     "editable",
     "density",
   ]),
-  "ika-history-timeline": new Set(["entries", "orientation"]),
+  "ika-history-timeline": new Set([
+    "entries",
+    "orientation",
+    "selectedId",
+    "compact",
+  ]),
   "ika-tabs": new Set(["items", "activeId", "variant", "orientation"]),
   "ika-split-view": new Set([
     "panes",
     "orientation",
+    "activePane",
     "sizes",
     "collapsible",
     "motionOrigin",
@@ -279,8 +305,20 @@ const propertyKeysByTag: Readonly<
   "ika-bottom-panel": new Set(["title", "content", "open"]),
   "ika-loading-region": new Set(["content", "busy", "label"]),
   "ika-dialog": new Set(["title", "content", "open", "modal"]),
-  "ika-status-indicator": new Set(["label", "status"]),
-  "ika-alert": new Set(["message", "severity", "dismissible"]),
+  "ika-status-indicator": new Set([
+    "id",
+    "label",
+    "status",
+    "icon",
+    "targetId",
+  ]),
+  "ika-alert": new Set([
+    "message",
+    "severity",
+    "dismissible",
+    "target",
+    "action",
+  ]),
   "ika-progress": new Set(["value", "max", "label"]),
 });
 
@@ -478,6 +516,17 @@ function cellText(value: unknown): string {
   return JSON.stringify(value);
 }
 
+function gridCellValue(value: unknown): string {
+  if (isIkaJsonRecord(value) && typeof value.value === "string")
+    return value.value;
+  return cellText(value);
+}
+
+function gridCellState(value: unknown): string {
+  if (!isIkaJsonRecord(value)) return "clean";
+  return typeof value.state === "string" ? value.state : "clean";
+}
+
 export class IkaElement extends HTMLElementBase {
   static readonly observedAttributes = [
     "aria-label",
@@ -661,21 +710,7 @@ export class IkaElement extends HTMLElementBase {
         });
         break;
       case "ika-editable-text":
-        appendInternal(root, "textarea", (element) => {
-          const input = element as HTMLTextAreaElement;
-          input.part = "input";
-          input.value = propertyText(value, "value");
-          input.disabled = propertyBoolean(value, "disabled");
-          input.addEventListener("change", () =>
-            this.dispatchEvent(
-              new CustomEvent("ika-commit", {
-                bubbles: true,
-                composed: true,
-                detail: { value: input.value },
-              }),
-            ),
-          );
-        });
+        this.renderEditableText(root, value);
         break;
       case "ika-text-field":
         appendInternal(root, "label", (element) => {
@@ -723,7 +758,13 @@ export class IkaElement extends HTMLElementBase {
           button.part = "button";
           button.disabled = propertyBoolean(value, "disabled");
           button.setAttribute("aria-pressed", String(value.pressed === true));
-          button.textContent = propertyText(value, "icon") || label;
+          button.setAttribute("aria-label", label);
+          button.title = label;
+          const icon = this.ownerDocument.createElement("span");
+          icon.part = "icon";
+          icon.setAttribute("aria-hidden", "true");
+          icon.textContent = propertyText(value, "icon") || "•";
+          button.append(icon);
           button.addEventListener("click", () =>
             this.dispatchEvent(
               new CustomEvent("ika-action", {
@@ -742,23 +783,49 @@ export class IkaElement extends HTMLElementBase {
           input.id = propertyText(value, "id");
           input.checked = propertyBoolean(value, "checked");
           input.disabled = propertyBoolean(value, "disabled");
-          input.addEventListener("change", () =>
+          element.dataset.checked = String(input.checked);
+          const check = this.ownerDocument.createElement("span");
+          check.part = "check";
+          check.setAttribute("aria-hidden", "true");
+          check.textContent = input.checked ? "✓" : "";
+          const copy = this.ownerDocument.createElement("span");
+          copy.part = "label";
+          copy.textContent = label;
+          input.addEventListener("change", () => {
+            element.dataset.checked = String(input.checked);
+            check.textContent = input.checked ? "✓" : "";
             this.dispatchEvent(
               new CustomEvent("ika-change", {
                 bubbles: true,
                 composed: true,
                 detail: { checked: input.checked },
               }),
-            ),
-          );
-          element.append(input, this.ownerDocument.createTextNode(` ${label}`));
+            );
+          });
+          element.append(input, check, copy);
         });
         break;
       case "ika-status-indicator":
         appendInternal(root, "output", (element) => {
           element.part = "status";
           element.dataset.status = propertyText(value, "status") || "neutral";
-          element.textContent = label;
+          element.setAttribute("role", "status");
+          const icon = this.ownerDocument.createElement("span");
+          icon.part = "icon";
+          icon.setAttribute("aria-hidden", "true");
+          icon.textContent = propertyText(value, "icon") || "•";
+          const copy = this.ownerDocument.createElement("span");
+          copy.part = "label";
+          copy.textContent = label;
+          element.setAttribute("aria-label", label);
+          const targetId = propertyText(value, "targetId");
+          if (targetId) {
+            element.tabIndex = 0;
+            element.addEventListener("click", () =>
+              this.ownerDocument.getElementById(targetId)?.focus(),
+            );
+          }
+          element.append(icon, copy);
         });
         break;
       case "ika-alert":
@@ -782,6 +849,27 @@ export class IkaElement extends HTMLElementBase {
           message.part = "message";
           message.textContent = propertyText(value, "message") || label;
           element.append(icon, message);
+          const target = propertyText(value, "target");
+          const action = propertyText(value, "action");
+          if (target || action) {
+            element.tabIndex = 0;
+            element.dataset.target = target;
+            const actionButton = this.ownerDocument.createElement("button");
+            actionButton.type = "button";
+            actionButton.part = "alert-action";
+            actionButton.textContent = action || "View";
+            actionButton.addEventListener("click", () => {
+              if (target) this.ownerDocument.getElementById(target)?.focus();
+              this.dispatchEvent(
+                new CustomEvent("ika-action", {
+                  bubbles: true,
+                  composed: true,
+                  detail: { target, action: action || "View" },
+                }),
+              );
+            });
+            element.append(actionButton);
+          }
           if (value.dismissible === true) {
             const dismiss = this.ownerDocument.createElement("button");
             dismiss.type = "button";
@@ -846,6 +934,7 @@ export class IkaElement extends HTMLElementBase {
       case "ika-side-panel":
       case "ika-bottom-panel":
         this.dataset.side = propertyText(value, "side") || "end";
+        this.dataset.open = String(propertyBoolean(value, "open"));
         appendInternal(root, "aside", (element) => {
           element.hidden = !propertyBoolean(value, "open");
           element.part = "panel";
@@ -867,6 +956,7 @@ export class IkaElement extends HTMLElementBase {
         });
         break;
       case "ika-loading-region":
+        this.dataset.busy = String(propertyBoolean(value, "busy"));
         appendInternal(root, "div", (element) => {
           element.setAttribute(
             "aria-busy",
@@ -885,6 +975,7 @@ export class IkaElement extends HTMLElementBase {
           root,
           kind === "ika-sidebar" ? "nav" : "div",
           (element) => {
+            element.part = kind === "ika-sidebar" ? "nav" : "toolbar";
             element.setAttribute(
               "role",
               kind === "ika-sidebar" ? "navigation" : "toolbar",
@@ -895,10 +986,38 @@ export class IkaElement extends HTMLElementBase {
                 continue;
               const button = this.ownerDocument.createElement("button");
               button.type = "button";
-              button.textContent = textValue(item.label) || item.id;
+              const itemLabel = textValue(item.label) || item.id;
+              const itemIcon =
+                textValue(item.icon) ||
+                (kind === "ika-toolbar"
+                  ? item.id === "save"
+                    ? "↓"
+                    : item.id === "refresh"
+                      ? "↻"
+                      : "•"
+                  : item.id.slice(0, 1).toUpperCase());
+              button.setAttribute("aria-label", itemLabel);
+              button.title = itemLabel;
+              button.part = kind === "ika-toolbar" ? "item" : "nav-item";
               button.disabled = item.disabled === true;
+              button.setAttribute(
+                "aria-pressed",
+                String(item.pressed === true),
+              );
+              button.dataset.busy = String(item.busy === true);
               if (item.id === value.activeId)
                 button.setAttribute("aria-current", "page");
+              const icon = this.ownerDocument.createElement("span");
+              icon.part = "icon";
+              icon.setAttribute("aria-hidden", "true");
+              icon.textContent = itemIcon;
+              button.append(icon);
+              if (kind === "ika-sidebar") {
+                const itemText = this.ownerDocument.createElement("span");
+                itemText.part = "label";
+                itemText.textContent = itemLabel;
+                button.append(itemText);
+              }
               button.addEventListener("click", () =>
                 this.dispatchEvent(
                   new CustomEvent("ika-select", {
@@ -918,27 +1037,67 @@ export class IkaElement extends HTMLElementBase {
         this.dataset.variant = propertyText(value, "variant") || "default";
         appendInternal(root, "fieldset", (element) => {
           const options = Array.isArray(value.options) ? value.options : [];
+          const buttons: HTMLButtonElement[] = [];
           for (const option of options) {
             if (!isIkaJsonRecord(option) || typeof option.id !== "string")
               continue;
             const button = this.ownerDocument.createElement("button");
             button.type = "button";
             button.textContent = textValue(option.label) || option.id;
+            button.setAttribute("role", "radio");
             button.disabled =
               propertyBoolean(value, "disabled") || option.disabled === true;
             button.setAttribute(
-              "aria-pressed",
+              "aria-checked",
               String(option.id === value.value),
             );
-            button.addEventListener("click", () =>
+            button.tabIndex = option.id === value.value ? 0 : -1;
+            button.addEventListener("click", () => {
+              buttons.forEach((candidate) => {
+                const selected = candidate === button;
+                candidate.setAttribute("aria-checked", String(selected));
+                candidate.tabIndex = selected ? 0 : -1;
+              });
               this.dispatchEvent(
                 new CustomEvent("ika-change", {
                   bubbles: true,
                   composed: true,
                   detail: { value: option.id },
                 }),
-              ),
-            );
+              );
+            });
+            button.addEventListener("keydown", (event) => {
+              if (
+                ![
+                  "ArrowLeft",
+                  "ArrowRight",
+                  "ArrowUp",
+                  "ArrowDown",
+                  "Home",
+                  "End",
+                ].includes(event.key)
+              )
+                return;
+              event.preventDefault();
+              const enabled = buttons.filter(
+                (candidate) => !candidate.disabled,
+              );
+              const current = enabled.indexOf(button);
+              const next =
+                event.key === "Home"
+                  ? 0
+                  : event.key === "End"
+                    ? enabled.length - 1
+                    : (current +
+                        (event.key === "ArrowLeft" || event.key === "ArrowUp"
+                          ? -1
+                          : 1) +
+                        enabled.length) %
+                      enabled.length;
+              enabled[next]?.click();
+              enabled[next]?.focus();
+            });
+            buttons.push(button);
             element.append(button);
           }
         });
@@ -951,8 +1110,15 @@ export class IkaElement extends HTMLElementBase {
           );
           const legend = this.ownerDocument.createElement("legend");
           legend.textContent = label;
-          const content = this.ownerDocument.createElement("div");
-          content.textContent = propertyText(value, "content");
+          const content = this.ownerDocument.createElement(
+            "ika-editable-text",
+          ) as HTMLElement & { props?: IkaJsonRecord };
+          content.setAttribute("part", "content");
+          content.props = {
+            value: propertyText(value, "content"),
+            editor: propertyText(value, "editor") || "text",
+            state: propertyText(value, "state") || "clean",
+          };
           element.append(legend, content);
         });
         break;
@@ -969,23 +1135,32 @@ export class IkaElement extends HTMLElementBase {
         });
         for (const field of Array.isArray(value.fields) ? value.fields : []) {
           if (!isIkaJsonRecord(field)) continue;
-          const label = this.ownerDocument.createElement("label");
-          label.dataset.ikaInternal = "true";
-          label.textContent = textValue(field.label);
-          const input = this.ownerDocument.createElement("input");
-          input.id = textValue(field.id);
-          input.type = "text";
+          const row = this.ownerDocument.createElement("div");
+          row.dataset.ikaInternal = "true";
+          row.part = "field";
+          const fieldLabel = this.ownerDocument.createElement("span");
+          fieldLabel.part = "label";
+          fieldLabel.textContent = textValue(field.label);
           const explicitValue = isIkaJsonRecord(value.values)
             ? value.values[textValue(field.id)]
             : undefined;
-          input.value = textValue(
+          const currentValue = textValue(
             typeof explicitValue === "string"
               ? explicitValue
               : field.initialValue,
           );
-          input.required = field.required === true;
-          label.append(input);
-          form.append(label);
+          const editor = this.ownerDocument.createElement(
+            "ika-editable-text",
+          ) as HTMLElement & { props?: IkaJsonRecord };
+          editor.id = textValue(field.id);
+          editor.props = {
+            id: textValue(field.id),
+            value: currentValue,
+            editor: propertyText(field, "editor") || "text",
+            state: propertyText(field, "state") || "clean",
+          };
+          row.append(fieldLabel, editor);
+          form.append(row);
         }
         for (const child of Array.from(this.children)) {
           if (child !== form && !child.hasAttribute("data-ika-internal"))
@@ -1006,6 +1181,156 @@ export class IkaElement extends HTMLElementBase {
 
   protected propertyValue(key: string): IkaJsonValue | undefined {
     return this.#props[key];
+  }
+
+  private renderEditableText(
+    root: HTMLElement | ShadowRoot,
+    value: IkaJsonRecord,
+  ): void {
+    const disabled = propertyBoolean(value, "disabled");
+    const editor = propertyText(value, "editor") || "text";
+    const state = propertyText(value, "state") || "clean";
+    const controlledValue = propertyText(value, "value");
+    if (!editableValues.has(this)) editableValues.set(this, controlledValue);
+    const currentValue = editableValues.get(this) ?? controlledValue;
+    this.dataset.editable = String(!disabled);
+    this.dataset.editing = String(editableEditing.has(this));
+    this.dataset.state = state;
+    if (!editableEditing.has(this)) {
+      appendInternal(root, "span", (element) => {
+        element.part = "read-value";
+        element.tabIndex = disabled ? -1 : 0;
+        element.textContent = currentValue;
+        const start = (): void => {
+          this.beginEditableTextEditing();
+        };
+        element.addEventListener("dblclick", start);
+        element.addEventListener("keydown", (event) => {
+          if (disabled) return;
+          if (event.key === "Enter" || event.key === "F2") {
+            event.preventDefault();
+            start();
+          }
+        });
+      });
+      if (editor !== "text")
+        appendInternal(root, "span", (element) => {
+          element.part = "editor-icon";
+          element.setAttribute("aria-hidden", "true");
+          element.textContent =
+            editor === "textarea"
+              ? "¶"
+              : editor === "select"
+                ? "⌄"
+                : editor.slice(0, 1).toUpperCase();
+        });
+      return;
+    }
+    const tag =
+      editor === "textarea"
+        ? "textarea"
+        : editor === "select"
+          ? "select"
+          : "input";
+    const input = appendInternal(root, tag, (element) => {
+      element.part = "input";
+      element.setAttribute(
+        "aria-label",
+        propertyText(value, "id") || "Edit value",
+      );
+      if (tag === "input")
+        (element as HTMLInputElement).type =
+          editor === "email" || editor === "number" || editor === "date"
+            ? editor
+            : "text";
+      if (tag === "select") {
+        const option = this.ownerDocument.createElement("option");
+        option.value = currentValue;
+        option.textContent = currentValue;
+        (element as HTMLSelectElement).append(option);
+      }
+      (
+        element as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+      ).value = editableDrafts.get(this) ?? currentValue;
+      (
+        element as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+      ).disabled = disabled;
+      element.addEventListener("input", () => {
+        editableDrafts.set(
+          this,
+          (
+            element as
+              HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+          ).value,
+        );
+      });
+      element.addEventListener("change", () => {
+        editableDrafts.set(
+          this,
+          (
+            element as
+              HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+          ).value,
+        );
+        if (editor === "select") this.commitEditableText();
+      });
+      element.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          this.cancelEditableText();
+        } else if (event.key === "Enter" || event.key === "Tab") {
+          event.preventDefault();
+          this.commitEditableText();
+        }
+      });
+    });
+    queueMicrotask(() => {
+      (
+        input as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+      ).focus();
+    });
+  }
+
+  private beginEditableTextEditing(): void {
+    if (
+      this.localName !== "ika-editable-text" ||
+      propertyBoolean(this.effectiveProps, "disabled")
+    )
+      return;
+    if (!editableEditing.has(this)) {
+      editableEditing.add(this);
+      editableDrafts.set(
+        this,
+        editableValues.get(this) ?? propertyText(this.effectiveProps, "value"),
+      );
+      this.render();
+    }
+  }
+
+  private commitEditableText(): void {
+    if (!editableEditing.has(this)) return;
+    const next = editableDrafts.get(this) ?? editableValues.get(this) ?? "";
+    editableEditing.delete(this);
+    editableDrafts.delete(this);
+    editableValues.set(this, next);
+    this.render();
+    this.dispatchEvent(
+      new CustomEvent("ika-commit", {
+        bubbles: true,
+        composed: true,
+        detail: { value: next },
+      }),
+    );
+  }
+
+  private cancelEditableText(): void {
+    if (!editableEditing.has(this)) return;
+    editableEditing.delete(this);
+    editableDrafts.delete(this);
+    this.render();
+    this.dispatchEvent(
+      new CustomEvent("ika-cancel", { bubbles: true, composed: true }),
+    );
   }
 
   protected get effectiveProps(): IkaJsonRecord {
@@ -1037,6 +1362,7 @@ export class IkaDataGridElement extends IkaElement {
   #columns: readonly IkaDataGridColumn[] = [];
   #rows: readonly IkaDataGridRow[] = [];
   #selection: IkaDataGridSelection | undefined;
+  #editing: IkaDataGridSelection | undefined;
   #model: IkaDataGridModel | undefined;
   #requestController: AbortController | undefined;
   #connectedPort: MessagePort | undefined;
@@ -1233,6 +1559,9 @@ export class IkaDataGridElement extends IkaElement {
       this.reportInvalidContract();
       return;
     }
+    this.#editing = request;
+    this.#selection = request;
+    this.render();
     this.dispatchEvent(
       new CustomEvent("ika-edit-start", {
         bubbles: true,
@@ -1243,9 +1572,7 @@ export class IkaDataGridElement extends IkaElement {
   }
 
   protected override get renderRoot(): HTMLElement | ShadowRoot {
-    if (!this.shadowRoot && typeof this.attachShadow === "function")
-      this.attachShadow({ mode: "open" });
-    return this.shadowRoot ?? this;
+    return this;
   }
 
   protected override render(): void {
@@ -1290,7 +1617,17 @@ export class IkaDataGridElement extends IkaElement {
         cell.style.padding = "var(--ikasue-grid-cell-padding, 0.5rem)";
         cell.dataset.rowId = row.id;
         cell.dataset.columnId = column.id;
-        cell.textContent = cellText(row.cells[column.id]);
+        const rawValue = row.cells[column.id];
+        const selection = this.#selection;
+        const selected =
+          selection?.row === row.id && selection.column === column.id;
+        cell.dataset.selected = String(selected);
+        cell.dataset.rowPeer = String(selection?.row === row.id && !selected);
+        cell.dataset.columnPeer = String(
+          selection?.column === column.id && !selected,
+        );
+        cell.dataset.state = gridCellState(rawValue);
+        cell.textContent = gridCellValue(rawValue);
         cell.tabIndex = 0;
         cell.addEventListener("click", () => {
           this.selection = { row: row.id, column: column.id };
@@ -1302,6 +1639,36 @@ export class IkaDataGridElement extends IkaElement {
             }),
           );
         });
+        cell.addEventListener("dblclick", () => {
+          this.startEditing({ row: row.id, column: column.id });
+        });
+        cell.addEventListener("keydown", (event) => {
+          if (event.key === "F2" || event.key === "Enter") {
+            event.preventDefault();
+            this.startEditing({ row: row.id, column: column.id });
+          }
+        });
+        if (
+          this.#editing?.row === row.id &&
+          this.#editing.column === column.id &&
+          value.editable === true
+        ) {
+          const input = this.ownerDocument.createElement("input");
+          input.part = "input";
+          input.value = gridCellValue(rawValue);
+          cell.replaceChildren(input);
+          input.focus();
+          input.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              this.#editing = undefined;
+              this.render();
+            } else if (event.key === "Enter" || event.key === "Tab") {
+              event.preventDefault();
+              this.commitGridCell(row.id, column.id, input.value);
+            }
+          });
+        }
         rowNode.append(cell);
       }
       body.append(rowNode);
@@ -1310,6 +1677,28 @@ export class IkaDataGridElement extends IkaElement {
     root.append(table);
     if (this.#model && this.#rows.length === 0 && !this.#requestController)
       void this.loadModelRows(this.#rowRequest);
+  }
+
+  private commitGridCell(rowId: string, columnId: string, next: string): void {
+    this.#rows = this.#rows.map((row) => {
+      if (row.id !== rowId) return row;
+      return {
+        ...row,
+        cells: {
+          ...row.cells,
+          [columnId]: { value: next, state: "modified" },
+        },
+      };
+    });
+    this.#editing = undefined;
+    this.render();
+    this.dispatchEvent(
+      new CustomEvent("ika-edit-commit", {
+        bubbles: true,
+        composed: true,
+        detail: { row: rowId, column: columnId, value: next },
+      }),
+    );
   }
 
   async loadModelRows(
@@ -1523,6 +1912,7 @@ export class IkaSplitViewElement extends IkaElement {
   #instanceId = nextSplitViewInstanceId();
   #panes: readonly IkaSplitViewPane[] = [];
   #collapsed = new Set<string>();
+  #activePane: string | undefined;
 
   override get props(): IkaJsonRecord {
     return super.props;
@@ -1534,13 +1924,20 @@ export class IkaSplitViewElement extends IkaElement {
       return;
     }
     let panes = this.#panes;
+    let activePane = this.#activePane;
     try {
       if (value.panes !== undefined) panes = asSplitPanes(value.panes);
+      if (value.activePane !== undefined) {
+        if (typeof value.activePane !== "string")
+          throw new Error("invalid activePane");
+        activePane = value.activePane;
+      }
     } catch {
       this.reportInvalidContract();
       return;
     }
     this.#panes = panes;
+    this.#activePane = activePane;
     super.props = value;
   }
 
@@ -1568,6 +1965,8 @@ export class IkaSplitViewElement extends IkaElement {
     clearInternalContent(root);
     const orientation = propertyText(value, "orientation") || "horizontal";
     this.dataset.orientation = orientation;
+    this.dataset.activePane =
+      propertyText(value, "activePane") || this.#activePane || "";
     this.dataset.collapsible = String(value.collapsible === true);
     this.dataset.motionOrigin =
       propertyText(value, "motionOrigin") ||
@@ -1584,21 +1983,15 @@ export class IkaSplitViewElement extends IkaElement {
     container.style.minWidth = "0";
     container.style.gap = "0.75rem";
     container.part = "panes";
-    const controls = this.ownerDocument.createElement("div");
-    controls.dataset.ikaInternal = "true";
-    controls.part = "controls";
-    controls.style.position = "absolute";
-    controls.style.insetInlineStart = "0";
-    controls.style.insetBlockStart = "0";
-    controls.style.zIndex = "1";
-    controls.style.display = "flex";
-    controls.style.gap = "0.25rem";
     for (const [index, pane] of this.#panes.entries()) {
       const section = this.ownerDocument.createElement("section");
       section.dataset.paneId = textValue(pane.id);
       section.id = `ika-split-view-${String(this.#instanceId)}-pane-${String(index + 1)}`;
       section.dataset.collapsible = String(value.collapsible === true);
       section.dataset.collapsed = String(this.#collapsed.has(pane.id));
+      section.dataset.active = String(
+        (propertyText(value, "activePane") || this.#activePane) === pane.id,
+      );
       section.setAttribute("aria-hidden", String(this.#collapsed.has(pane.id)));
       if (this.#collapsed.has(pane.id)) {
         section.style.flex = "0 0 0";
@@ -1624,6 +2017,11 @@ export class IkaSplitViewElement extends IkaElement {
       if (!pane.label && !pane.content)
         section.append(this.ownerDocument.createTextNode(pane.id));
       if (value.collapsible === true) {
+        const divider = this.ownerDocument.createElement("div");
+        divider.dataset.ikaInternal = "true";
+        divider.dataset.paneDivider = "true";
+        divider.part = "divider";
+        divider.setAttribute("role", "separator");
         const control = this.ownerDocument.createElement("button");
         control.type = "button";
         control.part = "collapse-control";
@@ -1648,11 +2046,13 @@ export class IkaSplitViewElement extends IkaElement {
             }),
           );
         });
-        controls.append(control);
+        divider.append(control);
+        container.append(section, divider);
+      } else {
+        container.append(section);
       }
-      container.append(section);
     }
-    root.append(container, controls);
+    root.append(container);
   }
 }
 
@@ -1670,9 +2070,20 @@ export class IkaHistoryTimelineElement extends IkaElement {
     list.part = "timeline";
     const entries = Array.isArray(value.entries) ? value.entries : [];
     this.dataset.orientation = propertyText(value, "orientation") || "vertical";
+    this.dataset.compact = String(value.compact === true);
+    const selectedId = propertyText(value, "selectedId");
     for (const entry of entries) {
       if (!isIkaJsonRecord(entry)) continue;
       const item = this.ownerDocument.createElement("li");
+      item.part = "entry";
+      item.setAttribute(
+        "aria-current",
+        String(
+          selectedId
+            ? textValue(entry.id) === selectedId
+            : entries.indexOf(entry) === entries.length - 1,
+        ),
+      );
       item.textContent = `${textValue(entry.label)}: ${textValue(entry.content)}`;
       list.append(item);
     }

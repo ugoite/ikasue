@@ -34,6 +34,10 @@ const primitiveAttributeNames = new Set([
   "placeholder",
   "orientation",
   "variant",
+  "editor",
+  "state",
+  "compact",
+  "selectedId",
   "gap",
   "direction",
   "wrap",
@@ -57,6 +61,9 @@ const primitiveAttributeNames = new Set([
   "severity",
   "dismissible",
   "side",
+  "target",
+  "targetId",
+  "action",
   "max",
   "value",
 ]);
@@ -94,6 +101,16 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
     [
       property("id", "string", ""),
       property("value", "string", ""),
+      property(
+        "editor",
+        "text | email | number | date | textarea | select",
+        "text",
+      ),
+      property(
+        "state",
+        "clean | created | modified | deleted | error",
+        "clean",
+      ),
       property("disabled", "boolean", false),
     ],
     ["ika-commit"],
@@ -219,6 +236,12 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
     property("label", "string", ""),
     property("required", "boolean", false),
     property("content", "string", ""),
+    property(
+      "editor",
+      "text | email | number | date | textarea | select",
+      "text",
+    ),
+    property("state", "clean | created | modified | deleted | error", "clean"),
   ]),
   form: contract("form", [
     property("fields", "FormField[]", "[]"),
@@ -255,12 +278,15 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
   "history-timeline": contract("history-timeline", [
     property("entries", "HistoryEntry[]", "[]"),
     property("orientation", "horizontal | vertical", "vertical"),
+    property("selectedId", "string"),
+    property("compact", "boolean", false),
   ]),
   "split-view": contract(
     "split-view",
     [
       property("panes", "SplitViewPane[]", "[]"),
       property("orientation", "horizontal | vertical", "horizontal"),
+      property("activePane", "string"),
       property("sizes", "CSS track list[]", "[]"),
       property("collapsible", "boolean", false),
       property("motionOrigin", "start | end | top | bottom", "start"),
@@ -290,12 +316,15 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
     property("modal", "boolean", true),
   ]),
   "status-indicator": contract("status-indicator", [
+    property("id", "string", ""),
     property("label", "string", ""),
     property(
       "status",
       "neutral | info | success | warning | danger",
       "neutral",
     ),
+    property("icon", "string", ""),
+    property("targetId", "string"),
   ]),
   alert: contract(
     "alert",
@@ -303,6 +332,8 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
       property("message", "string", ""),
       property("severity", "info | success | warning | danger", "info"),
       property("dismissible", "boolean", false),
+      property("target", "string"),
+      property("action", "string"),
     ],
     ["ika-dismiss"],
   ),

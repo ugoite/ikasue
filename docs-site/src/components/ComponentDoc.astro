@@ -37,6 +37,12 @@ const copy =
         source: "現在の設定から生成したコード",
         attributes: "Attributes",
         eventsMethods: "Events and methods",
+        design: "設計思想",
+        use: "使う",
+        avoid: "避ける",
+        keyboard: "Keyboard",
+        state: "State",
+        live: "Live behavior",
         name: "名前",
         type: "型",
         defaultValue: "既定値",
@@ -56,6 +62,12 @@ const copy =
         source: "Code generated from the current options",
         attributes: "Attributes",
         eventsMethods: "Events and methods",
+        design: "Design rationale",
+        use: "Use",
+        avoid: "Avoid",
+        keyboard: "Keyboard",
+        state: "State",
+        live: "Live behavior",
         name: "Name",
         type: "Type",
         defaultValue: "Default",
@@ -68,6 +80,63 @@ const copy =
     <p class="eyebrow">{entry?.group ?? "component"}</p>
     <p>{entry?.summary[locale] ?? ""}</p>
   </header>
+
+  <section class="identity-guidance" aria-labelledby={`${id}-identity`}>
+    <h2 id={`${id}-identity`}>{copy.design}</h2>
+    <p>{entry?.summary[locale] ?? ""}</p>
+    <div class="identity-guidance-grid">
+      <div>
+        <h3>{copy.use}</h3>
+        <p>
+          {
+            locale === "ja"
+              ? "読む状態を主役にし、選択・編集・更新が必要な面だけへ場所と注意を渡します。"
+              : "Keep the readable state primary, then give area and attention to the surface that needs work."
+          }
+        </p>
+      </div>
+      <div>
+        <h3>{copy.avoid}</h3>
+        <p>
+          {
+            locale === "ja"
+              ? "常設の入力box、意味のないcard、overlay、通常選択への意味色を増やしません。"
+              : "Avoid permanent input chrome, ornamental cards, overlays, and semantic color for ordinary selection."
+          }
+        </p>
+      </div>
+      <div>
+        <h3>{copy.keyboard}</h3>
+        <p>
+          {
+            locale === "ja"
+              ? "Tabは順序、Arrowは視覚方向、Home/Endは範囲の端へ一致させます。編集はEnter/F2、取消はEscapeです。"
+              : "Tab follows order, arrows follow visual direction, and Home/End reach the edges. Enter/F2 edits and Escape cancels."
+          }
+        </p>
+      </div>
+      <div>
+        <h3>{copy.state}</h3>
+        <p>
+          {
+            locale === "ja"
+              ? "cleanを基準に、created/modified/deleted/errorだけが下線・淡い面・意味色を持ちます。"
+              : "Clean is the baseline; created, modified, deleted, and error states own the underline, quiet area, or semantic color."
+          }
+        </p>
+      </div>
+      <div>
+        <h3>{copy.live}</h3>
+        <p>
+          {
+            locale === "ja"
+              ? "内容を消さず、選択の面積・出現方向・対象regionのmotionで仕事の変化を示します。"
+              : "Keep content present and express change through selection area, directional origin, and motion on the target region."
+          }
+        </p>
+      </div>
+    </div>
+  </section>
 
   <section class="demo-section" aria-labelledby={`${id}-demo`}>
     <div class="section-heading">
@@ -619,6 +688,7 @@ const copy =
     max-width: 64rem;
   }
   .docs-component-heading,
+  .identity-guidance,
   .demo-section,
   .contract-section,
   .contract-details {
@@ -627,6 +697,29 @@ const copy =
   }
   .demo-section {
     container-type: inline-size;
+  }
+  .identity-guidance {
+    padding-block: 1.25rem;
+    border-block: 1px solid var(--ikasue-line);
+  }
+  .identity-guidance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+    gap: 1rem;
+    margin-block-start: 1rem;
+  }
+  .identity-guidance-grid > div {
+    padding-block-start: 0.75rem;
+    border-block-start: 1px solid var(--ikasue-line);
+  }
+  .identity-guidance h3 {
+    margin-block: 0 0 0.35rem;
+    font-size: 0.85rem;
+  }
+  .identity-guidance p {
+    margin: 0;
+    color: var(--ikasue-muted);
+    font-size: 0.88rem;
   }
   .eyebrow {
     margin: 0;
@@ -657,14 +750,14 @@ const copy =
     display: grid;
     min-width: 0;
     overflow: hidden;
-    border: 1px solid var(--ikasue-line);
+    border-block: 1px solid var(--ikasue-line);
     background: var(--ikasue-surface);
   }
   .demo-options {
     display: grid;
     gap: 0.75rem;
     min-width: 0;
-    padding: 1rem;
+    padding: 1rem 0;
     border-block-end: 1px solid var(--ikasue-line);
     background: var(--ikasue-surface-raised);
   }
@@ -691,10 +784,10 @@ const copy =
   :global(.demo-control textarea) {
     inline-size: 100%;
     min-inline-size: 0;
-    border: 1px solid var(--ikasue-line);
-    border-radius: 0.25rem;
-    padding: 0.45rem 0.55rem;
-    background: var(--ikasue-surface);
+    border: 0;
+    border-block-end: 1px solid var(--ikasue-line-strong);
+    padding: 0.45rem 0.1rem;
+    background: transparent;
     color: var(--ikasue-ink);
   }
   :global(.demo-control textarea) {
@@ -706,7 +799,7 @@ const copy =
     display: grid;
     gap: 0.75rem;
     min-width: 0;
-    padding: 1rem;
+    padding: 1rem 0;
   }
   .demo-view-tabs,
   .demo-provider-tabs {
@@ -719,6 +812,7 @@ const copy =
   }
   .demo-view-tabs button,
   .demo-provider-tabs button {
+    flex: 1 1 auto;
     border: 0;
     border-block-end: 2px solid transparent;
     padding: 0.5rem 0.75rem;
@@ -730,6 +824,8 @@ const copy =
   .demo-provider-tabs button[aria-selected="true"] {
     border-color: currentColor;
     background: var(--ikasue-selection);
+    flex-grow: 1.35;
+    transform: translateY(-1px);
   }
   .demo-preview {
     display: grid;
@@ -738,7 +834,7 @@ const copy =
     min-inline-size: 0;
     overflow: auto;
     padding: 1rem;
-    border: 1px dashed var(--ikasue-line);
+    border-block: 1px solid var(--ikasue-line);
     background: var(--ikasue-surface);
     color: var(--ikasue-ink);
   }
@@ -756,7 +852,7 @@ const copy =
     max-block-size: 34rem;
     margin: 0;
     overflow: auto;
-    border: 1px solid var(--ikasue-line);
+    border-block: 1px solid var(--ikasue-line);
     padding: 1rem;
     background: var(--ikasue-code-surface);
     color: var(--ikasue-code-ink);

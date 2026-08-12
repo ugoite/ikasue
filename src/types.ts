@@ -213,6 +213,7 @@ type Item = {
   readonly id: string;
   readonly label: string;
   readonly content: string;
+  readonly icon?: string;
   readonly disabled?: boolean;
 };
 
@@ -256,7 +257,10 @@ export interface ToolbarOptions {
   readonly items?: readonly {
     readonly id: string;
     readonly label: string;
+    readonly icon?: string;
     readonly disabled?: boolean;
+    readonly pressed?: boolean;
+    readonly busy?: boolean;
     readonly onSelect?: () => void;
   }[];
   readonly overflow?: "none" | "menu";
@@ -267,7 +271,10 @@ export interface ToolbarSpec {
   readonly items: readonly {
     readonly id: string;
     readonly label: string;
+    readonly icon?: string;
     readonly disabled: boolean;
+    readonly pressed: boolean;
+    readonly busy: boolean;
     readonly onSelect?: () => void;
   }[];
   readonly overflow: "none" | "menu";
@@ -335,6 +342,8 @@ export interface TextFieldSpec {
 export interface EditableTextOptions {
   readonly id?: string;
   readonly value?: string;
+  readonly editor?: EditableTextEditor;
+  readonly state?: EditableTextState;
   readonly disabled?: boolean;
   readonly onCommit?: (value: string) => void;
   readonly onCancel?: () => void;
@@ -344,10 +353,17 @@ export interface EditableTextSpec {
   readonly kind: "editable-text";
   readonly id?: string;
   readonly value: string;
+  readonly editor: EditableTextEditor;
+  readonly state: EditableTextState;
   readonly disabled: boolean;
   readonly onCommit?: (value: string) => void;
   readonly onCancel?: () => void;
 }
+
+export type EditableTextEditor =
+  "text" | "email" | "number" | "date" | "textarea" | "select";
+export type EditableTextState =
+  "clean" | "created" | "modified" | "deleted" | "error";
 
 export interface CheckboxOptions {
   readonly id: string;
@@ -413,6 +429,8 @@ export interface FieldOptions {
   readonly error?: string;
   readonly required?: boolean;
   readonly content?: string;
+  readonly editor?: EditableTextEditor;
+  readonly state?: EditableTextState;
 }
 
 export interface FieldSpec {
@@ -423,6 +441,8 @@ export interface FieldSpec {
   readonly error?: string;
   readonly required: boolean;
   readonly content: string;
+  readonly editor: EditableTextEditor;
+  readonly state: EditableTextState;
 }
 
 export interface FormField {
@@ -430,6 +450,8 @@ export interface FormField {
   readonly label: string;
   readonly initialValue?: string;
   readonly required?: boolean;
+  readonly editor?: EditableTextEditor;
+  readonly state?: EditableTextState;
 }
 
 export type FormStateStatus =
@@ -468,6 +490,7 @@ export interface DataGridCell {
   readonly column: string;
   readonly value: string;
   readonly status?: "clean" | "dirty" | "error";
+  readonly state?: EditableTextState;
 }
 
 export interface DataGridSelection {
@@ -541,6 +564,8 @@ export interface AlertOptions {
   readonly message: string;
   readonly severity?: "info" | "success" | "warning" | "danger";
   readonly dismissible?: boolean;
+  readonly target?: string;
+  readonly action?: string;
   readonly onDismiss?: () => void;
 }
 
@@ -550,6 +575,8 @@ export interface AlertSpec {
   readonly message: string;
   readonly severity: "info" | "success" | "warning" | "danger";
   readonly dismissible: boolean;
+  readonly target?: string;
+  readonly action?: string;
   readonly onDismiss?: () => void;
 }
 
@@ -574,6 +601,8 @@ export interface HistoryTimelineOptions {
     readonly tone?: "default" | "muted" | "success" | "danger";
   }[];
   readonly orientation?: "horizontal" | "vertical";
+  readonly selectedId?: string;
+  readonly compact?: boolean;
 }
 
 export interface HistoryTimelineSpec {
@@ -585,4 +614,6 @@ export interface HistoryTimelineSpec {
     readonly tone: "default" | "muted" | "success" | "danger";
   }[];
   readonly orientation: "horizontal" | "vertical";
+  readonly selectedId?: string;
+  readonly compact: boolean;
 }

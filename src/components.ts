@@ -69,6 +69,9 @@ const items = (value: unknown): NormalizedItem[] => {
         id,
         label,
         content: source.content,
+        ...(typeof source.icon === "string"
+          ? { icon: source.icon.trim() }
+          : {}),
         disabled: source.disabled === true,
       },
     ];
@@ -157,7 +160,10 @@ export function toolbar(options?: ToolbarOptions): ToolbarSpec {
     const result: Mutable<ToolbarSpec["items"][number]> = {
       id,
       label: item.label.trim(),
+      ...(typeof item.icon === "string" ? { icon: item.icon.trim() } : {}),
       disabled: item.disabled === true,
+      pressed: item.pressed === true,
+      busy: item.busy === true,
     };
     if (typeof item.onSelect === "function")
       result.onSelect = item.onSelect as () => void;
@@ -218,6 +224,21 @@ export function editableText(options?: EditableTextOptions): EditableTextSpec {
   const result: Mutable<EditableTextSpec> = {
     kind: "editable-text",
     value: content(options?.value),
+    editor:
+      options?.editor === "email" ||
+      options?.editor === "number" ||
+      options?.editor === "date" ||
+      options?.editor === "textarea" ||
+      options?.editor === "select"
+        ? options.editor
+        : "text",
+    state:
+      options?.state === "created" ||
+      options?.state === "modified" ||
+      options?.state === "deleted" ||
+      options?.state === "error"
+        ? options.state
+        : "clean",
     disabled: options?.disabled === true,
   };
   if (text(options?.id)) result.id = text(options?.id);
@@ -288,6 +309,21 @@ export function field(options: FieldOptions): FieldSpec {
     label: text(options?.label),
     required: options?.required === true,
     content: content(options?.content),
+    editor:
+      options?.editor === "email" ||
+      options?.editor === "number" ||
+      options?.editor === "date" ||
+      options?.editor === "textarea" ||
+      options?.editor === "select"
+        ? options.editor
+        : "text",
+    state:
+      options?.state === "created" ||
+      options?.state === "modified" ||
+      options?.state === "deleted" ||
+      options?.state === "error"
+        ? options.state
+        : "clean",
   };
   if (typeof options?.description === "string")
     result.description = options.description;
@@ -306,6 +342,21 @@ export function form(options?: FormOptions): FormSpec {
     if (typeof source?.initialValue === "string")
       field.initialValue = source.initialValue;
     if (source?.required === true) field.required = true;
+    if (
+      source?.editor === "email" ||
+      source?.editor === "number" ||
+      source?.editor === "date" ||
+      source?.editor === "textarea" ||
+      source?.editor === "select"
+    )
+      field.editor = source.editor;
+    if (
+      source?.state === "created" ||
+      source?.state === "modified" ||
+      source?.state === "deleted" ||
+      source?.state === "error"
+    )
+      field.state = source.state;
     return [field];
   });
   const values: Record<string, string> = Object.create(null) as Record<
@@ -380,7 +431,16 @@ export function dataGrid(options?: DataGridOptions): DataGridSpec {
       source?.status === "dirty" || source?.status === "error"
         ? source.status
         : "clean";
-    return [{ row, column, value: cellValue, status }];
+    const state: DataGridCell["state"] =
+      source?.state === "created" ||
+      source?.state === "modified" ||
+      source?.state === "deleted" ||
+      source?.state === "error"
+        ? source.state
+        : status === "dirty"
+          ? "modified"
+          : status;
+    return [{ row, column, value: cellValue, status, state }];
   });
   const materializedColumns = columnsProvided
     ? columns
@@ -463,6 +523,8 @@ export function alert(options: AlertOptions): AlertSpec {
     dismissible: options?.dismissible === true,
   };
   if (text(options?.id)) result.id = text(options?.id);
+  if (text(options?.target)) result.target = text(options?.target);
+  if (text(options?.action)) result.action = text(options?.action);
   if (typeof options?.onDismiss === "function")
     result.onDismiss = options.onDismiss;
   return Object.freeze(result);
@@ -519,5 +581,9 @@ export function historyTimeline(
     entries,
     orientation:
       options?.orientation === "horizontal" ? "horizontal" : "vertical",
+    ...(typeof options?.selectedId === "string" && text(options.selectedId)
+      ? { selectedId: text(options.selectedId) }
+      : {}),
+    compact: options?.compact === true,
   });
 }

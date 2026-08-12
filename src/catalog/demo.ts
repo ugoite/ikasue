@@ -68,11 +68,6 @@ const gridColumns = [
   { id: "name", label: "Name" },
   { id: "status", label: "Status" },
 ] as const;
-const gridRows = [
-  { id: "one", cells: { name: "ikasue", status: "Ready" } },
-  { id: "two", cells: { name: "Catalog", status: "Review" } },
-] as const;
-
 const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
   "theme-root": {
     props: {
@@ -106,10 +101,31 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
     ],
   },
   "editable-text": {
-    props: { id: "title", value: "Editable title", disabled: false },
+    props: {
+      id: "title",
+      value: "Editable title",
+      editor: "text",
+      state: "modified",
+      disabled: false,
+    },
     controls: [
       text("id", "ID", "ID"),
       text("value", "値", "Value"),
+      select("editor", "編集種別", "Editor", [
+        "text",
+        "email",
+        "number",
+        "date",
+        "textarea",
+        "select",
+      ]),
+      select("state", "状態", "State", [
+        "clean",
+        "created",
+        "modified",
+        "deleted",
+        "error",
+      ]),
       boolean("disabled", "無効", "Disabled"),
     ],
   },
@@ -228,8 +244,8 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
   sidebar: {
     props: {
       items: [
-        { id: "home", label: "Home" },
-        { id: "settings", label: "Settings" },
+        { id: "home", label: "Home", icon: "⌂" },
+        { id: "settings", label: "Settings", icon: "⚙" },
       ],
       activeId: "home",
       collapsed: false,
@@ -243,8 +259,8 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
   toolbar: {
     props: {
       items: [
-        { id: "save", label: "Save" },
-        { id: "refresh", label: "Refresh" },
+        { id: "save", label: "Save", icon: "↓", pressed: true },
+        { id: "refresh", label: "Refresh", icon: "↻", busy: true },
       ],
       overflow: "none",
     },
@@ -318,7 +334,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
       options: choiceOptions,
       value: "one",
       disabled: false,
-      variant: "default",
+      variant: "elastic",
     },
     controls: [
       text("id", "ID", "ID"),
@@ -329,18 +345,34 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
     ],
   },
   field: {
-    props: { id: "name", label: "Name", required: true, content: "ikasue" },
+    props: {
+      id: "name",
+      label: "Name",
+      required: true,
+      content: "ikasue",
+      editor: "text",
+      state: "modified",
+    },
     controls: [
       text("id", "ID", "ID"),
       text("label", "ラベル", "Label"),
       text("content", "内容", "Content"),
       boolean("required", "必須", "Required"),
+      select("editor", "編集種別", "Editor", ["text", "textarea", "select"]),
+      select("state", "状態", "State", ["clean", "modified", "error"]),
     ],
   },
   form: {
     props: {
       fields: [
-        { id: "name", label: "Name", initialValue: "ikasue", required: true },
+        {
+          id: "name",
+          label: "Name",
+          initialValue: "ikasue",
+          required: true,
+          editor: "text",
+          state: "modified",
+        },
       ],
       values: { name: "ikasue" },
       status: "idle",
@@ -361,7 +393,22 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
   "data-grid": {
     props: {
       columns: gridColumns,
-      rows: gridRows,
+      rows: [
+        {
+          id: "one",
+          cells: {
+            name: { value: "ikasue", state: "modified" },
+            status: "Ready",
+          },
+        },
+        {
+          id: "two",
+          cells: {
+            name: "Catalog",
+            status: { value: "Review", state: "error" },
+          },
+        },
+      ],
       selection: { row: "one", column: "name" },
       editable: false,
       density: "default",
@@ -375,9 +422,10 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
     ],
   },
   "status-indicator": {
-    props: { label: "Ready", status: "success" },
+    props: { label: "Ready", status: "success", icon: "✓" },
     controls: [
       text("label", "ラベル", "Label"),
+      text("icon", "アイコン", "Icon"),
       select("status", "状態", "Status", [
         "neutral",
         "info",
@@ -392,6 +440,8 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
       message: "Attention required: review the selected item.",
       severity: "warning",
       dismissible: true,
+      target: "selected-work",
+      action: "Focus selected work",
     },
     controls: [
       text("message", "メッセージ", "Message"),
@@ -402,6 +452,8 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
         "danger",
       ]),
       boolean("dismissible", "閉じる", "Dismissible"),
+      text("target", "対象ID", "Target"),
+      text("action", "操作", "Action"),
     ],
   },
   progress: {
@@ -433,6 +485,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
         { id: "detail", label: "Detail", content: "Selection", basis: 2 },
       ],
       orientation: "horizontal",
+      activePane: "detail",
       sizes: ["1fr", "2fr"],
       collapsible: true,
       motionOrigin: "start",
@@ -440,6 +493,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
     controls: [
       json("panes", "ペイン", "Panes"),
       select("orientation", "方向", "Orientation", ["horizontal", "vertical"]),
+      select("activePane", "選択中", "Active pane", ["list", "detail"]),
       json("sizes", "サイズ", "Sizes"),
       boolean("collapsible", "折りたたみ", "Collapsible"),
       select("motionOrigin", "モーション起点", "Motion origin", [
@@ -505,10 +559,14 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
         },
       ],
       orientation: "vertical",
+      selectedId: "two",
+      compact: false,
     },
     controls: [
       json("entries", "履歴", "Entries"),
       select("orientation", "方向", "Orientation", ["vertical", "horizontal"]),
+      select("selectedId", "選択中", "Selected", ["one", "two"]),
+      boolean("compact", "コンパクト", "Compact"),
     ],
   },
 };

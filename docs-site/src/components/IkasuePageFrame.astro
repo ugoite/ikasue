@@ -59,7 +59,9 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 <style>
   @layer starlight.core {
     .page {
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto auto minmax(0, 1fr);
       min-height: 100vh;
       color: var(--ikasue-ink);
       background: var(--ikasue-surface);
@@ -67,9 +69,9 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 
     .header {
       display: flex;
-      flex: 0 0 auto;
+      grid-column: 1;
+      grid-row: 1;
       align-items: center;
-      z-index: var(--sl-z-index-navbar);
       position: sticky;
       inset-block-start: 0;
       width: 100%;
@@ -89,18 +91,25 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 
     .sidebar-pane {
       visibility: var(--sl-sidebar-visibility, hidden);
-      position: fixed;
-      z-index: var(--sl-z-index-menu);
-      inset-block: var(--sl-nav-height) 0;
-      inset-inline-start: 0;
-      width: 100%;
+      position: static;
+      width: auto;
+      max-block-size: 0;
       background-color: var(--sl-color-bg-sidebar);
-      overflow-y: auto;
+      overflow: hidden;
       scrollbar-gutter: stable;
+    }
+
+    .sidebar {
+      grid-column: 1;
+      grid-row: 2;
+      min-block-size: 0;
+      width: auto;
     }
 
     :global([aria-expanded="true"]) ~ .sidebar-pane {
       --sl-sidebar-visibility: visible;
+      max-block-size: 50vh;
+      overflow-y: auto;
     }
 
     .sidebar-content {
@@ -119,6 +128,8 @@ const { hasSidebar } = Astro.locals.starlightRoute;
     }
 
     .main-frame {
+      grid-column: 1;
+      grid-row: 2;
       display: block;
       min-width: 0;
       min-height: 0;
@@ -128,6 +139,10 @@ const { hasSidebar } = Astro.locals.starlightRoute;
       background: var(--ikasue-surface);
     }
 
+    .page:has(.sidebar) .main-frame {
+      grid-row: 3;
+    }
+
     @media (min-width: 50rem) {
       :global([data-has-sidebar]) .header {
         padding-inline-end: var(--sl-nav-pad-x);
@@ -135,13 +150,25 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 
       .sidebar-pane {
         --sl-sidebar-visibility: visible;
+        max-block-size: 100%;
+        overflow-y: auto;
         width: var(--sl-sidebar-width);
         background-color: var(--sl-color-bg-sidebar);
         border-inline-end: 1px solid var(--sl-color-hairline-shade);
       }
 
+      .sidebar {
+        width: var(--sl-sidebar-width);
+      }
+
       .main-frame {
-        margin-inline-start: var(--sl-sidebar-width);
+        grid-column: 2;
+        grid-row: 2;
+      }
+
+      .page:has(.sidebar) {
+        grid-template-columns: var(--sl-sidebar-width) minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
       }
     }
   }
