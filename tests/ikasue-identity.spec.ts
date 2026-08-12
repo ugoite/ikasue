@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const P0_COMPONENT_ROUTES = [
   "editable-text",
+  "theme-root",
   "tabs",
   "sidebar",
   "toolbar",
@@ -427,7 +428,10 @@ test.describe("ikasue identity contracts", () => {
       await page.setViewportSize({ width, height: 800 });
       for (const route of P0_COMPONENT_ROUTES) {
         await page.goto(`/components/${route}/`);
-        const component = page.locator(`ika-${route}`).first();
+        const component =
+          route === "theme-root"
+            ? page.locator('[data-kind="theme-root"]').first()
+            : page.locator(`ika-${route}`).first();
         await expect(component).toBeVisible();
         const focusable =
           route === "split-view"
@@ -452,24 +456,32 @@ test.describe("ikasue identity contracts", () => {
     }
 
     await page.setViewportSize({ width: 600, height: 800 });
-    await page.evaluate(() => {
-      document.documentElement.style.fontSize = "200%";
-    });
     for (const route of P0_COMPONENT_ROUTES) {
       await page.goto(`/components/${route}/`);
-      await expect(page.locator(`ika-${route}`).first()).toHaveScreenshot(
-        `p0-${route}-zoom.png`,
-        { animations: "disabled", maxDiffPixelRatio: 0.05 },
-      );
+      await page.evaluate(() => {
+        document.documentElement.style.fontSize = "200%";
+      });
+      const component =
+        route === "theme-root"
+          ? page.locator('[data-kind="theme-root"]').first()
+          : page.locator(`ika-${route}`).first();
+      await expect(component).toHaveScreenshot(`p0-${route}-zoom.png`, {
+        animations: "disabled",
+        maxDiffPixelRatio: 0.05,
+      });
     }
 
     await page.emulateMedia({ reducedMotion: "reduce" });
     for (const route of P0_COMPONENT_ROUTES) {
       await page.goto(`/components/${route}/`);
-      await expect(page.locator(`ika-${route}`).first()).toHaveScreenshot(
-        `p0-${route}-reduced.png`,
-        { animations: "disabled", maxDiffPixelRatio: 0.05 },
-      );
+      const component =
+        route === "theme-root"
+          ? page.locator('[data-kind="theme-root"]').first()
+          : page.locator(`ika-${route}`).first();
+      await expect(component).toHaveScreenshot(`p0-${route}-reduced.png`, {
+        animations: "disabled",
+        maxDiffPixelRatio: 0.05,
+      });
     }
   });
 });

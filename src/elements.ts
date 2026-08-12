@@ -1140,8 +1140,18 @@ export class IkaElement extends HTMLElementBase {
               option.disabled !== true &&
               typeof option.id === "string",
           );
+          const requestedId = textValue(value.value);
+          const requestedOption = options.find(
+            (option) =>
+              isIkaJsonRecord(option) &&
+              option.id === requestedId &&
+              option.disabled !== true,
+          );
           const selectedId =
-            textValue(value.value) ||
+            (isIkaJsonRecord(requestedOption) &&
+            typeof requestedOption.id === "string"
+              ? requestedOption.id
+              : undefined) ??
             (isIkaJsonRecord(firstEnabled) &&
             typeof firstEnabled.id === "string"
               ? firstEnabled.id
@@ -1260,6 +1270,7 @@ export class IkaElement extends HTMLElementBase {
           row.part = "field";
           const fieldLabel = this.ownerDocument.createElement("span");
           fieldLabel.part = "label";
+          fieldLabel.id = `${textValue(field.id)}-label`;
           fieldLabel.textContent = textValue(field.label);
           const explicitValue = isIkaJsonRecord(value.values)
             ? value.values[textValue(field.id)]
@@ -1281,6 +1292,7 @@ export class IkaElement extends HTMLElementBase {
             "ika-editable-text",
           ) as HTMLElement & { props?: IkaJsonRecord };
           editor.id = textValue(field.id);
+          editor.setAttribute("aria-labelledby", fieldLabel.id);
           editor.props = {
             id: textValue(field.id),
             value: currentValue,
@@ -2316,8 +2328,22 @@ export class IkaSplitViewElement extends IkaElement {
       } else {
         const size =
           sizes[index] ??
-          (pane.basis === undefined ? "1fr" : `${String(pane.basis)}fr`);
+          pane.size ??
+          (pane.basis === undefined
+            ? "1fr"
+            : typeof pane.basis === "number"
+              ? `${String(pane.basis)}fr`
+              : pane.basis);
         applySplitSize(section, size, activePane === pane.id);
+        if (pane.grow !== undefined) section.style.flexGrow = String(pane.grow);
+        if (pane.shrink !== undefined)
+          section.style.flexShrink = String(pane.shrink);
+        if (pane.minSize) {
+          section.style.minInlineSize =
+            orientation === "horizontal" ? pane.minSize : "0";
+          section.style.minBlockSize =
+            orientation === "vertical" ? pane.minSize : "0";
+        }
       }
       if (pane.label) {
         const heading = this.ownerDocument.createElement("h3");
