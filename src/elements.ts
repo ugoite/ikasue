@@ -1825,6 +1825,7 @@ export class IkaTabsElement extends IkaElement {
   #instanceId = nextTabsInstanceId();
   #items: readonly IkaTabsItem[] = [];
   #activeId: string | undefined;
+  #motion: "forward" | "backward" = "forward";
 
   override get props(): IkaJsonRecord {
     return super.props;
@@ -1879,6 +1880,14 @@ export class IkaTabsElement extends IkaElement {
   select(id: string): void {
     const item = this.#items.find((candidate) => candidate.id === id);
     if (!item || item.disabled === true) return;
+    const previous = this.#items.findIndex(
+      (candidate) => candidate.id === this.#activeId,
+    );
+    const next = this.#items.findIndex((candidate) => candidate.id === id);
+    if (previous >= 0 && next >= 0 && next < previous)
+      this.#motion = "backward";
+    else if (previous >= 0 && next >= 0 && next > previous)
+      this.#motion = "forward";
     this.#activeId = id;
     this.render();
     this.dispatchEvent(
@@ -1973,8 +1982,7 @@ export class IkaTabsElement extends IkaElement {
       panel.setAttribute("aria-labelledby", tabId);
       panel.hidden = item.id !== this.#activeId;
       panel.dataset.active = String(item.id === this.#activeId);
-      panel.dataset.motion =
-        orientation === "vertical" ? "from-bottom" : "from-end";
+      panel.dataset.motion = this.#motion;
       panel.textContent = item.content ?? "";
       panels.append(panel);
     }

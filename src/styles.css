@@ -538,6 +538,15 @@ ika-tabs[data-orientation="vertical"] [part="panel"][data-active="true"] {
   animation-name: ikasue-tab-from-bottom;
 }
 
+ika-tabs [part="panel"][data-motion="backward"][data-active="true"] {
+  animation-name: ikasue-tab-from-start;
+}
+
+ika-tabs[data-orientation="vertical"]
+  [part="panel"][data-motion="backward"][data-active="true"] {
+  animation-name: ikasue-tab-from-top;
+}
+
 @keyframes ikasue-tab-from-end {
   from {
     opacity: 0;
@@ -553,6 +562,28 @@ ika-tabs[data-orientation="vertical"] [part="panel"][data-active="true"] {
   from {
     opacity: 0;
     transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ikasue-tab-from-start {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ikasue-tab-from-top {
+  from {
+    opacity: 0;
+    transform: translateY(-18px);
   }
   to {
     opacity: 1;
@@ -922,6 +953,7 @@ ika-side-panel[data-side="start"] {
 }
 
 ika-side-panel [part="panel"] {
+  grid-column: 2;
   min-inline-size: 0;
   overflow: hidden;
   padding: 0.75rem;
@@ -937,12 +969,18 @@ ika-side-panel [part="workspace"] {
 }
 
 ika-side-panel [part="main"] {
+  grid-column: 1;
   min-inline-size: 0;
   padding: 0.75rem;
 }
 
 ika-side-panel[data-side="start"] [part="panel"] {
+  grid-column: 1;
   animation-name: ikasue-from-start;
+}
+
+ika-side-panel[data-side="start"] [part="main"] {
+  grid-column: 2;
 }
 
 ika-bottom-panel {
