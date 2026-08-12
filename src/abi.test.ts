@@ -235,6 +235,15 @@ describe("ikasue Web ABI", () => {
     );
   });
 
+  it("keeps DataGrid editing available as an imperative property", () => {
+    const descriptor = Object.getOwnPropertyDescriptor(
+      IkaDataGridElement.prototype,
+      "editing",
+    );
+    expect(typeof descriptor?.get).toBe("function");
+    expect(typeof descriptor?.set).toBe("function");
+  });
+
   it("keeps primitive attributes and split geometry aligned", () => {
     const attributes = new Set<string>(IKA_PRIMITIVE_ATTRIBUTE_NAMES);
     expect(attributes.has("activeId")).toBe(true);
