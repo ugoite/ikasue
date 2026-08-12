@@ -422,10 +422,18 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
     ],
   },
   "status-indicator": {
-    props: { label: "Ready", status: "success", icon: "✓" },
+    props: {
+      id: "status",
+      label: "Ready",
+      status: "success",
+      icon: "✓",
+      targetId: "",
+    },
     controls: [
+      text("id", "ID", "ID"),
       text("label", "ラベル", "Label"),
       text("icon", "アイコン", "Icon"),
+      text("targetId", "対象ID", "Target ID"),
       select("status", "状態", "Status", [
         "neutral",
         "info",

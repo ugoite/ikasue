@@ -15,7 +15,8 @@
       "items": { "$ref": "#/$defs/row" }
     },
     "selection": { "$ref": "#/$defs/selection" },
-    "editable": { "type": "boolean" }
+    "editable": { "type": "boolean" },
+    "density": { "enum": ["default", "compact"] }
   },
   "$defs": {
     "column": {

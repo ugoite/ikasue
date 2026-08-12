@@ -763,7 +763,7 @@ export class IkaElement extends HTMLElementBase {
           const icon = this.ownerDocument.createElement("span");
           icon.part = "icon";
           icon.setAttribute("aria-hidden", "true");
-          icon.textContent = propertyText(value, "icon") || "•";
+          icon.textContent = propertyText(value, "icon") || "i";
           button.append(icon);
           button.addEventListener("click", () =>
             this.dispatchEvent(
@@ -813,7 +813,7 @@ export class IkaElement extends HTMLElementBase {
           const icon = this.ownerDocument.createElement("span");
           icon.part = "icon";
           icon.setAttribute("aria-hidden", "true");
-          icon.textContent = propertyText(value, "icon") || "•";
+          icon.textContent = propertyText(value, "icon") || "⋯";
           const copy = this.ownerDocument.createElement("span");
           copy.part = "label";
           copy.textContent = label;
@@ -994,8 +994,10 @@ export class IkaElement extends HTMLElementBase {
                     ? "↓"
                     : item.id === "refresh"
                       ? "↻"
-                      : "•"
-                  : item.id.slice(0, 1).toUpperCase());
+                      : "⋯"
+                  : item.id === "settings"
+                    ? "⚙"
+                    : "⌂");
               button.setAttribute("aria-label", itemLabel);
               button.title = itemLabel;
               button.part = kind === "ika-toolbar" ? "item" : "nav-item";

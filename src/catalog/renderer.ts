@@ -1,6 +1,6 @@
-import { historyTimeline, tabs, textComponent, themeRoot } from "../components";
+import { historyTimeline, textComponent, themeRoot } from "../components";
 import { flex, grid, scrollArea, separator, stack } from "../layout";
-import { bottomPanel, dialog, loadingRegion, sidePanel } from "../workspace";
+import { bottomPanel, loadingRegion, sidePanel } from "../workspace";
 import type {
   DataGridSpec,
   DialogSpec,
@@ -987,15 +987,16 @@ function renderDialog(
 
 // Kept for the catalog's direct-DOM fallback; the primary demo path uses the
 // same custom elements and semantic states as the public runtime.
+void renderTabs;
 void renderSplitView;
 void renderField;
 void renderDataGrid;
+void renderDialog;
 
 function renderComponentDemo(
   document: Document,
   target: HTMLElement,
   id: CatalogComponentId,
-  allocator: DomAllocator,
 ): Cleanup | undefined {
   switch (id) {
     case "theme-root": {
@@ -1053,16 +1054,21 @@ function renderComponentDemo(
       return;
     }
     case "tabs":
-      renderTabs(
-        document,
-        target,
-        tabs({
-          items: [
-            { id: "overview", label: "Overview", content: "Overview" },
-            { id: "details", label: "Details", content: "Details" },
-          ],
-        }),
-        allocator,
+      target.append(
+        ikaDemoElement(
+          document,
+          "tabs",
+          {
+            items: [
+              { id: "overview", label: "Overview", content: "Overview" },
+              { id: "details", label: "Details", content: "Details" },
+            ],
+            activeId: "overview",
+            variant: "elastic",
+            orientation: "horizontal",
+          },
+          "Tabs",
+        ),
       );
       return;
     case "sidebar": {
@@ -1290,11 +1296,18 @@ function renderComponentDemo(
       return;
     }
     case "dialog":
-      renderDialog(
-        document,
-        target,
-        dialog({ title: "Confirm", content: "Continue?", modal: true }),
-        allocator,
+      target.append(
+        ikaDemoElement(
+          document,
+          "dialog",
+          {
+            title: "Confirm",
+            content: "Continue?",
+            open: true,
+            modal: false,
+          },
+          "Confirm",
+        ),
       );
       return;
     case "split-view":
@@ -1404,7 +1417,6 @@ export function renderCatalogComponent(
   target: HTMLElement,
   id: CatalogComponentId,
   locale: CatalogLocale,
-  allocator: DomAllocator,
 ): Cleanup | undefined {
   const entry = findRegistryEntry(id);
   const page = element(document, "article");
@@ -1420,7 +1432,7 @@ export function renderCatalogComponent(
   const content = element(document, "div");
   content.className = "ikasue-layout-container";
   surface.append(content);
-  const cleanup = renderComponentDemo(document, content, id, allocator);
+  const cleanup = renderComponentDemo(document, content, id);
   demo.append(surface);
   page.append(demo);
   target.append(page);

@@ -358,12 +358,15 @@ const componentProperties: Record<
     property("density", "default | compact", "default"),
   ],
   "status-indicator": [
+    property("id", "string", ""),
     property("label", "string", ""),
     property(
       "status",
       "neutral | info | success | warning | danger",
       "neutral",
     ),
+    property("icon", "string", "i"),
+    property("targetId", "string"),
   ],
   alert: [
     property("message", "string", ""),
@@ -623,7 +626,13 @@ const componentDefaults: Record<
     editable: false,
     density: "default",
   },
-  "status-indicator": { label: "", status: "neutral", icon: "i" },
+  "status-indicator": {
+    id: "",
+    label: "",
+    status: "neutral",
+    icon: "i",
+    targetId: "",
+  },
   alert: { message: "", severity: "info", dismissible: false },
   progress: { value: "0", max: "100", label: "" },
   dialog: { title: "", content: "", open: false, modal: true },
