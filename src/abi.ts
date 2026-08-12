@@ -21,7 +21,12 @@ const property = (
 ): IkaElementPropertyContract =>
   defaultValue === undefined ? { name, type } : { name, type, defaultValue };
 
-const primitiveAttributeNames = new Set([
+/**
+ * Primitive properties may be reflected to attributes by the DOM binding.
+ * Keep this inventory shared with the runtime element implementation so the
+ * generated ABI and custom-element surface cannot drift apart.
+ */
+export const IKA_PRIMITIVE_ATTRIBUTE_NAMES = [
   "id",
   "density",
   "editable",
@@ -33,6 +38,8 @@ const primitiveAttributeNames = new Set([
   "main",
   "message",
   "placeholder",
+  "description",
+  "error",
   "orientation",
   "weight",
   "variant",
@@ -40,7 +47,11 @@ const primitiveAttributeNames = new Set([
   "state",
   "compact",
   "selectedId",
+  "activeId",
   "activePane",
+  "icon",
+  "selectionMode",
+  "motionOrigin",
   "gap",
   "direction",
   "wrap",
@@ -70,7 +81,11 @@ const primitiveAttributeNames = new Set([
   "action",
   "max",
   "value",
-]);
+] as const;
+
+const primitiveAttributeNames: ReadonlySet<string> = new Set(
+  IKA_PRIMITIVE_ATTRIBUTE_NAMES,
+);
 
 const contract = (
   kind: IkaViewKind,
@@ -80,7 +95,10 @@ const contract = (
 ): IkaElementContract => ({
   tag: `ika-${kind}`,
   attributes: properties
-    .filter(({ name }) => primitiveAttributeNames.has(name))
+    .filter(
+      ({ name, type }) =>
+        primitiveAttributeNames.has(name) && !type.startsWith("JSON"),
+    )
     .map(({ name }) => name),
   properties,
   events,
@@ -190,6 +208,8 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
     "toolbar",
     [
       property("items", "Item[]", "[]"),
+      property("activeId", "string"),
+      property("collapsed", "boolean", false),
       property("overflow", "none | menu", "none"),
     ],
     ["ika-select"],
@@ -240,6 +260,8 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
   field: contract("field", [
     property("id", "string", ""),
     property("label", "string", ""),
+    property("description", "string", ""),
+    property("error", "string", ""),
     property("required", "boolean", false),
     property("content", "string", ""),
     property(
@@ -304,6 +326,7 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
       property("activePane", "string"),
       property("sizes", "CSS track list[]", "[]"),
       property("collapsible", "boolean", false),
+      property("collapsed", "JSON boolean map", "{}"),
       property("motionOrigin", "start | end | top | bottom", "start"),
     ],
     ["ika-collapse-change", "ika-active-pane-change"],

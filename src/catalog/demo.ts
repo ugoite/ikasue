@@ -351,6 +351,8 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
     props: {
       id: "name",
       label: "Name",
+      description: "Used for the workspace title",
+      error: "",
       required: true,
       content: "ikasue",
       editor: "text",

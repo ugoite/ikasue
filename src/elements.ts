@@ -23,6 +23,7 @@ import {
   type IkaViewKind,
 } from "./contract";
 import { IkaSueError } from "./errors";
+import { IKA_PRIMITIVE_ATTRIBUTE_NAMES } from "./abi";
 import {
   assertIkaRowPage,
   createDataGridPortModel,
@@ -125,57 +126,7 @@ function textValue(value: unknown): string {
   return "";
 }
 
-const primitiveAttributes = new Set([
-  "id",
-  "density",
-  "editable",
-  "disabled",
-  "required",
-  "label",
-  "content",
-  "title",
-  "main",
-  "message",
-  "editor",
-  "state",
-  "compact",
-  "selectedId",
-  "activePane",
-  "placeholder",
-  "axis",
-  "direction",
-  "orientation",
-  "weight",
-  "variant",
-  "fit",
-  "gap",
-  "wrap",
-  "align",
-  "justify",
-  "tone",
-  "selectable",
-  "overscroll",
-  "role",
-  "overflow",
-  "type",
-  "pressed",
-  "checked",
-  "collapsed",
-  "open",
-  "modal",
-  "collapsible",
-  "busy",
-  "status",
-  "severity",
-  "dismissible",
-  "side",
-  "target",
-  "targetId",
-  "showLabel",
-  "action",
-  "value",
-  "max",
-]);
+const primitiveAttributes = new Set(IKA_PRIMITIVE_ATTRIBUTE_NAMES);
 
 const booleanAttributes = new Set([
   "editable",
@@ -214,6 +165,26 @@ const nextTabsInstanceId = (): number => {
   const next = (scope.__ikasue_tabs_instance_id__ ?? 0) + 1;
   scope.__ikasue_tabs_instance_id__ = next;
   return next;
+};
+const elementInstanceIds = new WeakMap<HTMLElement, number>();
+let nextElementInstanceId = 0;
+const domToken = (value: string): string =>
+  value
+    .normalize("NFKC")
+    .replace(/[^A-Za-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase() || "field";
+const domIdFor = (
+  element: HTMLElement,
+  role: string,
+  value: string,
+): string => {
+  let instance = elementInstanceIds.get(element);
+  if (instance === undefined) {
+    instance = ++nextElementInstanceId;
+    elementInstanceIds.set(element, instance);
+  }
+  return `ikasue-${role}-${domToken(value)}-${String(instance)}`;
 };
 
 const editableEditing = new WeakSet<HTMLElement>();
@@ -259,7 +230,7 @@ const propertyKeysByTag: Readonly<
   "ika-scroll-area": new Set(["content", "axis", "overscroll"]),
   "ika-separator": new Set(["orientation", "weight", "role"]),
   "ika-sidebar": new Set(["main", "items", "activeId", "collapsed"]),
-  "ika-toolbar": new Set(["items", "overflow"]),
+  "ika-toolbar": new Set(["items", "activeId", "collapsed", "overflow"]),
   "ika-icon-button": new Set([
     "id",
     "label",
@@ -280,6 +251,8 @@ const propertyKeysByTag: Readonly<
   "ika-field": new Set([
     "id",
     "label",
+    "description",
+    "error",
     "required",
     "content",
     "editor",
@@ -308,6 +281,7 @@ const propertyKeysByTag: Readonly<
     "activePane",
     "sizes",
     "collapsible",
+    "collapsed",
     "motionOrigin",
   ]),
   "ika-side-panel": new Set([
@@ -555,6 +529,8 @@ function gridCellState(value: unknown): string {
 export class IkaElement extends HTMLElementBase {
   static readonly observedAttributes = [
     "aria-label",
+    "aria-labelledby",
+    "aria-describedby",
     "class",
     "hidden",
     ...primitiveAttributes,
@@ -1222,22 +1198,55 @@ export class IkaElement extends HTMLElementBase {
         break;
       case "ika-field":
         appendInternal(root, "fieldset", (element) => {
+          const fieldId = propertyText(value, "id");
+          const legendId = domIdFor(this, "field-label", fieldId);
+          const description = propertyText(value, "description");
+          const error = propertyText(value, "error");
           element.setAttribute(
             "aria-required",
             String(propertyBoolean(value, "required")),
           );
           const legend = this.ownerDocument.createElement("legend");
+          legend.id = legendId;
           legend.textContent = label;
           const content = this.ownerDocument.createElement(
             "ika-editable-text",
           ) as HTMLElement & { props?: IkaJsonRecord };
           content.setAttribute("part", "content");
+          content.setAttribute("aria-labelledby", legendId);
+          content.setAttribute(
+            "aria-required",
+            String(propertyBoolean(value, "required")),
+          );
+          const describedBy: string[] = [];
+          if (description) {
+            const descriptionNode = this.ownerDocument.createElement("p");
+            descriptionNode.id = domIdFor(this, "field-description", fieldId);
+            descriptionNode.part = "description";
+            descriptionNode.textContent = description;
+            describedBy.push(descriptionNode.id);
+            element.append(descriptionNode);
+          }
+          if (error) {
+            const errorNode = this.ownerDocument.createElement("p");
+            errorNode.id = domIdFor(this, "field-error", fieldId);
+            errorNode.part = "error";
+            errorNode.setAttribute("role", "alert");
+            errorNode.textContent = error;
+            describedBy.push(errorNode.id);
+            element.append(errorNode);
+            content.setAttribute("aria-invalid", "true");
+          }
+          if (describedBy.length > 0)
+            content.setAttribute("aria-describedby", describedBy.join(" "));
           content.props = {
+            id: fieldId,
             value: propertyText(value, "content"),
             editor: propertyText(value, "editor") || "text",
-            state: propertyText(value, "state") || "clean",
+            state: error ? "error" : propertyText(value, "state") || "clean",
           };
-          element.append(legend, content);
+          element.prepend(legend);
+          element.append(content);
         });
         break;
       case "ika-form":
@@ -1270,7 +1279,8 @@ export class IkaElement extends HTMLElementBase {
           row.part = "field";
           const fieldLabel = this.ownerDocument.createElement("span");
           fieldLabel.part = "label";
-          fieldLabel.id = `${textValue(field.id)}-label`;
+          const fieldId = textValue(field.id);
+          fieldLabel.id = domIdFor(this, "form-label", fieldId);
           fieldLabel.textContent = textValue(field.label);
           const explicitValue = isIkaJsonRecord(value.values)
             ? value.values[textValue(field.id)]
@@ -1286,13 +1296,14 @@ export class IkaElement extends HTMLElementBase {
             typeof draftValue === "string" ? draftValue : baseValue,
           );
           const fieldError = isIkaJsonRecord(value.errors)
-            ? textValue(value.errors[textValue(field.id)])
+            ? textValue(value.errors[fieldId])
             : "";
           const editor = this.ownerDocument.createElement(
             "ika-editable-text",
           ) as HTMLElement & { props?: IkaJsonRecord };
-          editor.id = textValue(field.id);
+          editor.id = fieldId;
           editor.setAttribute("aria-labelledby", fieldLabel.id);
+          editor.setAttribute("aria-required", String(field.required === true));
           editor.props = {
             id: textValue(field.id),
             value: currentValue,
@@ -1314,8 +1325,19 @@ export class IkaElement extends HTMLElementBase {
               }),
             ),
           );
-          if (fieldError) row.dataset.error = "true";
-          row.append(fieldLabel, editor);
+          if (fieldError) {
+            const errorNode = this.ownerDocument.createElement("p");
+            errorNode.id = domIdFor(this, "form-error", fieldId);
+            errorNode.part = "error";
+            errorNode.setAttribute("role", "alert");
+            errorNode.textContent = fieldError;
+            editor.setAttribute("aria-describedby", errorNode.id);
+            editor.setAttribute("aria-invalid", "true");
+            row.dataset.error = "true";
+            row.append(fieldLabel, editor, errorNode);
+          } else {
+            row.append(fieldLabel, editor);
+          }
           form.append(row);
         }
         for (const child of Array.from(this.children)) {
@@ -1376,11 +1398,17 @@ export class IkaElement extends HTMLElementBase {
     this.dataset.editing = String(editableEditing.has(this));
     this.dataset.state = state;
     const labelledBy = this.getAttribute("aria-labelledby");
+    const describedBy = this.getAttribute("aria-describedby");
+    const invalid = this.getAttribute("aria-invalid");
+    const required = this.getAttribute("aria-required");
     if (!editableEditing.has(this)) {
       appendInternal(root, "span", (element) => {
         element.part = "read-value";
         element.tabIndex = disabled ? -1 : 0;
         if (labelledBy) element.setAttribute("aria-labelledby", labelledBy);
+        if (describedBy) element.setAttribute("aria-describedby", describedBy);
+        if (invalid) element.setAttribute("aria-invalid", invalid);
+        if (required) element.setAttribute("aria-required", required);
         element.textContent = currentValue;
         const start = (): void => {
           this.beginEditableTextEditing();
@@ -1416,6 +1444,9 @@ export class IkaElement extends HTMLElementBase {
     const input = appendInternal(root, tag, (element) => {
       element.part = "input";
       if (labelledBy) element.setAttribute("aria-labelledby", labelledBy);
+      if (describedBy) element.setAttribute("aria-describedby", describedBy);
+      if (invalid) element.setAttribute("aria-invalid", invalid);
+      if (required) element.setAttribute("aria-required", required);
       element.setAttribute(
         "aria-label",
         propertyText(value, "id") || "Edit value",
@@ -2196,6 +2227,7 @@ export class IkaSplitViewElement extends IkaElement {
     }
     let panes = this.#panes;
     let activePane = this.#activePane;
+    let collapsed = new Set(this.#collapsed);
     try {
       if (value.panes !== undefined) panes = asSplitPanes(value.panes);
       if (value.activePane !== undefined) {
@@ -2203,17 +2235,66 @@ export class IkaSplitViewElement extends IkaElement {
           throw new Error("invalid activePane");
         activePane = value.activePane;
       }
+      if (value.collapsed !== undefined) {
+        if (!isIkaJsonRecord(value.collapsed))
+          throw new Error("invalid collapsed map");
+        collapsed = new Set(
+          Object.entries(value.collapsed)
+            .filter(([id, isCollapsed]) => {
+              const pane = panes.find((candidate) => candidate.id === id);
+              return (
+                isCollapsed === true &&
+                pane !== undefined &&
+                pane.disabled !== true &&
+                pane.collapsible !== false
+              );
+            })
+            .map(([id]) => id),
+        );
+      }
     } catch {
       this.reportInvalidContract();
       return;
     }
     this.#panes = panes;
     this.#activePane = activePane;
+    this.#collapsed = collapsed;
     super.props = value;
   }
 
   get panes(): readonly IkaSplitViewPane[] {
     return this.#panes;
+  }
+
+  get collapsed(): Readonly<Record<string, boolean>> {
+    const result: Record<string, boolean> = Object.create(null) as Record<
+      string,
+      boolean
+    >;
+    for (const pane of this.#panes)
+      result[pane.id] = this.#collapsed.has(pane.id);
+    return Object.freeze(result);
+  }
+
+  set collapsed(value: Readonly<Record<string, boolean>>) {
+    if (!isIkaJsonRecord(value)) {
+      this.reportInvalidContract();
+      return;
+    }
+    this.#collapsed = new Set(
+      Object.entries(value)
+        .filter(([id, isCollapsed]) => {
+          const pane = this.#panes.find((candidate) => candidate.id === id);
+          return (
+            isCollapsed &&
+            pane !== undefined &&
+            pane.disabled !== true &&
+            pane.collapsible !== false
+          );
+        })
+        .map(([id]) => id),
+    );
+    this.render();
   }
 
   set panes(value: readonly IkaSplitViewPane[]) {

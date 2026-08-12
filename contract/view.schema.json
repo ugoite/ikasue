@@ -221,12 +221,12 @@
         "id": { "type": "string", "minLength": 1 },
         "label": { "type": "string" },
         "content": { "type": "string" },
-        "size": { "type": "string" },
-        "minSize": { "type": "string" },
+        "size": { "$ref": "#/$defs/splitBasis" },
+        "minSize": { "$ref": "#/$defs/minSize" },
         "basis": {
           "oneOf": [
             { "type": "number", "minimum": 0 },
-            { "type": "string", "minLength": 1 }
+            { "$ref": "#/$defs/splitBasis" }
           ]
         },
         "grow": { "type": "number", "minimum": 0 },
@@ -234,6 +234,14 @@
         "collapsible": { "type": "boolean" },
         "disabled": { "type": "boolean" }
       }
+    },
+    "splitBasis": {
+      "type": "string",
+      "pattern": "^(?:auto|0|(?:0|[0-9]+(?:\\.[0-9]+)?)(?:px|rem|em|ch|vw|vh|%|fr))$"
+    },
+    "minSize": {
+      "type": "string",
+      "pattern": "^(?:0|(?:0|[0-9]+(?:\\.[0-9]+)?)(?:px|rem|em|ch|vw|vh|%))$"
     },
     "kindProps": {
       "allOf": [
@@ -523,6 +531,8 @@
       "additionalProperties": false,
       "properties": {
         "items": { "type": "array", "items": { "$ref": "#/$defs/item" } },
+        "activeId": { "type": "string" },
+        "collapsed": { "type": "boolean" },
         "overflow": { "enum": ["none", "menu"] }
       }
     },
@@ -583,6 +593,8 @@
         "label": { "type": "string" },
         "required": { "type": "boolean" },
         "content": { "type": "string" },
+        "description": { "type": "string" },
+        "error": { "type": "string" },
         "editor": {
           "enum": ["text", "email", "number", "date", "textarea", "select"]
         },
@@ -639,8 +651,12 @@
       "properties": {
         "panes": { "type": "array", "items": { "$ref": "#/$defs/splitPane" } },
         "orientation": { "enum": ["horizontal", "vertical"] },
-        "sizes": { "type": "array", "items": { "type": "string" } },
+        "sizes": { "type": "array", "items": { "$ref": "#/$defs/splitBasis" } },
         "collapsible": { "type": "boolean" },
+        "collapsed": {
+          "type": "object",
+          "additionalProperties": { "type": "boolean" }
+        },
         "motionOrigin": { "enum": ["start", "end", "top", "bottom"] },
         "activePane": { "type": "string" }
       }
