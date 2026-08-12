@@ -121,6 +121,7 @@ const IKA_VIEW_PROPERTY_KEYS = new Set([
   "values",
   "status",
   "selection",
+  "editing",
   "editable",
   "entries",
   "panes",
@@ -128,6 +129,7 @@ const IKA_VIEW_PROPERTY_KEYS = new Set([
   "collapsible",
   "motionOrigin",
   "title",
+  "main",
   "open",
   "side",
   "busy",
@@ -359,6 +361,7 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
     columns: isArrayOf(isIkaDataGridColumn),
     rows: isArrayOf(isIkaDataGridRow),
     selection: isIkaDataGridSelection,
+    editing: isIkaDataGridSelection,
     editable: isBoolean,
     density: isEnum("default", "compact"),
   },
@@ -377,12 +380,18 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
     motionOrigin: isEnum("start", "end", "top", "bottom"),
   },
   "side-panel": {
+    main: isString,
     title: isString,
     content: isString,
     side: isEnum("start", "end"),
     open: isBoolean,
   },
-  "bottom-panel": { title: isString, content: isString, open: isBoolean },
+  "bottom-panel": {
+    main: isString,
+    title: isString,
+    content: isString,
+    open: isBoolean,
+  },
   "loading-region": { content: isString, busy: isBoolean, label: isString },
   dialog: {
     title: isString,
@@ -446,6 +455,7 @@ export interface IkaDataGridSpec {
   readonly columns: readonly IkaDataGridColumn[];
   readonly rows?: readonly IkaDataGridRow[];
   readonly selection?: IkaDataGridSelection;
+  readonly editing?: IkaDataGridSelection;
   readonly editable?: boolean;
 }
 

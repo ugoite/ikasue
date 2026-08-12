@@ -231,7 +231,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
     props: {
       items: commonItems,
       activeId: "overview",
-      variant: "default",
+      variant: "elastic",
       orientation: "horizontal",
     },
     controls: [
@@ -410,13 +410,15 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
         },
       ],
       selection: { row: "one", column: "name" },
-      editable: false,
+      editing: { row: "one", column: "name" },
+      editable: true,
       density: "default",
     },
     controls: [
       json("columns", "列", "Columns"),
       json("rows", "行", "Rows"),
       json("selection", "選択", "Selection"),
+      json("editing", "編集中", "Editing"),
       boolean("editable", "編集可能", "Editable"),
       select("density", "密度", "Density", ["default", "compact"]),
     ],
@@ -480,6 +482,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
       modal: false,
     },
     controls: [
+      text("main", "main内容", "Main content"),
       text("title", "タイトル", "Title"),
       text("content", "内容", "Content"),
       boolean("open", "開く", "Open"),
@@ -514,12 +517,14 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
   },
   "side-panel": {
     props: {
+      main: "Selected work remains visible while the inspector opens.",
       title: "Inspector",
       content: "Details remain alongside the work.",
       side: "end",
       open: true,
     },
     controls: [
+      text("main", "main内容", "Main content"),
       text("title", "タイトル", "Title"),
       text("content", "内容", "Content"),
       select("side", "位置", "Side", ["start", "end"]),
@@ -528,11 +533,13 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
   },
   "bottom-panel": {
     props: {
+      main: "The working document stays above the output region.",
       title: "Output",
       content: "Logs stay in the page plane.",
       open: true,
     },
     controls: [
+      text("main", "main内容", "Main content"),
       text("title", "タイトル", "Title"),
       text("content", "内容", "Content"),
       boolean("open", "開く", "Open"),

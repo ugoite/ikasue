@@ -395,12 +395,14 @@ const componentProperties: Record<
     property("motionOrigin", "start | end | top | bottom", "start"),
   ],
   "side-panel": [
+    property("main", "string", ""),
     property("title", "string", ""),
     property("content", "string", ""),
     property("side", "start | end", "end"),
     property("open", "boolean", false),
   ],
   "bottom-panel": [
+    property("main", "string", ""),
     property("title", "string", ""),
     property("content", "string", ""),
     property("open", "boolean", false),
@@ -643,8 +645,8 @@ const componentDefaults: Record<
     collapsible: false,
     motionOrigin: "start",
   },
-  "side-panel": { title: "", content: "", side: "end", open: false },
-  "bottom-panel": { title: "", content: "", open: false },
+  "side-panel": { main: "", title: "", content: "", side: "end", open: false },
+  "bottom-panel": { main: "", title: "", content: "", open: false },
   "loading-region": { content: "", busy: false, label: "Loading" },
   "history-timeline": { entries: "[]", orientation: "vertical" },
 };
