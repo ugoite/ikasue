@@ -867,7 +867,19 @@ export class IkaElement extends HTMLElementBase {
             actionButton.part = "alert-action";
             actionButton.textContent = action || "View";
             actionButton.addEventListener("click", () => {
-              if (target) this.ownerDocument.getElementById(target)?.focus();
+              if (target) {
+                const targetElement = this.ownerDocument.getElementById(target);
+                if (targetElement) {
+                  if (!targetElement.hasAttribute("tabindex"))
+                    targetElement.tabIndex = -1;
+                  targetElement.focus();
+                  targetElement.dataset.ikaAttention = "true";
+                  this.ownerDocument.defaultView?.setTimeout(() => {
+                    if (targetElement.isConnected)
+                      delete targetElement.dataset.ikaAttention;
+                  }, 900);
+                }
+              }
               this.dispatchEvent(
                 new CustomEvent("ika-action", {
                   bubbles: true,
@@ -1016,7 +1028,9 @@ export class IkaElement extends HTMLElementBase {
             itemText.textContent = itemLabel;
             button.append(icon, itemText);
             button.addEventListener("click", () => {
-              if (!Object.prototype.hasOwnProperty.call(this.#props, "activeId"))
+              if (
+                !Object.prototype.hasOwnProperty.call(this.#props, "activeId")
+              )
                 this.props = { ...this.#props, activeId: itemId };
               this.dispatchEvent(
                 new CustomEvent("ika-select", {

@@ -954,6 +954,13 @@ const copy =
         }
         addDemoChildren(id, element);
         preview.append(element);
+        if (id === "alert") {
+          const target = preview.ownerDocument.createElement("div");
+          target.id = "selected-work";
+          target.textContent =
+            locale === "ja" ? "対象のwork region" : "Selected work region";
+          preview.append(target);
+        }
         element.addEventListener("ika-active-change", (event) => {
           const next = (event as CustomEvent<{ readonly id?: unknown }>).detail
             ?.id;
