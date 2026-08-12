@@ -593,7 +593,14 @@ export class IkaElement extends HTMLElementBase {
     this.appendSerializedChildren();
   }
 
-  attributeChangedCallback(): void {
+  attributeChangedCallback(
+    _name: string,
+    _oldValue: string | null,
+    _newValue: string | null,
+  ): void {
+    void _name;
+    void _oldValue;
+    void _newValue;
     if (this.isConnected && !this.#reflectingAttributes) {
       this.render();
       this.appendSerializedChildren();
@@ -2191,6 +2198,21 @@ export class IkaTabsElement extends IkaElement {
   #items: readonly IkaTabsItem[] = [];
   #activeId: string | undefined;
   #motion: "forward" | "backward" = "forward";
+
+  override attributeChangedCallback(
+    name: string,
+    _oldValue: string | null,
+    newValue: string | null,
+  ): void {
+    if (name === "activeid") {
+      this.#activeId =
+        newValue ??
+        (typeof this.props.activeId === "string"
+          ? this.props.activeId
+          : undefined);
+    }
+    super.attributeChangedCallback(name, _oldValue, newValue);
+  }
 
   override get props(): IkaJsonRecord {
     return super.props;
