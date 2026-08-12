@@ -96,6 +96,31 @@ test.describe("ikasue identity contracts", () => {
     const loading = page.locator("ika-loading-region").first();
     await expect(loading).toHaveAttribute("data-busy", "true");
     await expect(loading).toContainText("Original content remains readable");
+    await loading.evaluate((node) => {
+      (node as HTMLElement & { props: Record<string, unknown> }).props = {
+        content: "Original content remains readable",
+        busy: false,
+      };
+    });
+    await expect(loading).toHaveAttribute("data-busy", "false");
+    await expect
+      .poll(() =>
+        loading.evaluate((node) =>
+          getComputedStyle(node, "::before").getPropertyValue("content"),
+        ),
+      )
+      .toBe("none");
+
+    await page.goto("/components/theme-root/");
+    const themeRoot = page.locator("ika-theme-root").first();
+    await expect(themeRoot).toHaveCSS("background-color", "rgb(255, 255, 255)");
+    await expect
+      .poll(() =>
+        themeRoot.evaluate((node) =>
+          getComputedStyle(node).getPropertyValue("--ikasue-ink").trim(),
+        ),
+      )
+      .toBe("#111");
   });
 
   test("workspace panels push their main track", async ({ page }) => {
@@ -229,12 +254,13 @@ test.describe("ikasue identity contracts", () => {
       ),
     );
     expect(sidebarParts).toEqual(["nav", "main"]);
+    await expect(sidebar.locator('[part="icon"] svg')).toHaveCount(2);
     await sidebar.evaluate((node) => {
       (node as HTMLElement & { props: Record<string, unknown> }).props = {
         main: "Workspace content",
         items: [
-          { id: "home", label: "Home", icon: "⌂" },
-          { id: "settings", label: "Settings", icon: "⚙" },
+          { id: "home", label: "Home", icon: "home" },
+          { id: "settings", label: "Settings", icon: "settings" },
         ],
         collapsed: true,
       };
@@ -244,8 +270,8 @@ test.describe("ikasue identity contracts", () => {
       (node as HTMLElement & { props: Record<string, unknown> }).props = {
         main: "Workspace content",
         items: [
-          { id: "home", label: "Home", icon: "⌂" },
-          { id: "settings", label: "Settings", icon: "⚙" },
+          { id: "home", label: "Home", icon: "home" },
+          { id: "settings", label: "Settings", icon: "settings" },
         ],
         collapsed: false,
       };
@@ -644,7 +670,7 @@ test.describe("ikasue identity contracts", () => {
     await sidebar.evaluate((node) => {
       (node as HTMLElement & { props: Record<string, unknown> }).props = {
         main: "Workspace content",
-        items: [{ id: "home", label: "Home", icon: "⌂" }],
+        items: [{ id: "home", label: "Home", icon: "home" }],
         activeId: "home",
         collapsed: false,
         railWidth: "44px",
@@ -666,6 +692,24 @@ test.describe("ikasue identity contracts", () => {
     await alert.locator('[part="alert-action"]').click();
     await expect(target).toBeFocused();
     await expect(target).toHaveAttribute("data-ika-attention", "true");
+  });
+
+  test("action and status icons use deterministic line SVGs", async ({
+    page,
+  }) => {
+    for (const [route, selector] of [
+      ["toolbar", 'ika-toolbar [part="icon"]'],
+      ["icon-button", 'ika-icon-button [part="icon"]'],
+      ["status-indicator", 'ika-status-indicator [part="icon"]'],
+      ["alert", 'ika-alert [part="icon"]'],
+    ] as const) {
+      await page.goto(`/components/${route}/`);
+      await expect(page.locator(`${selector} svg`).first()).toBeVisible();
+      const iconText = await page
+        .locator(selector)
+        .evaluateAll((nodes) => nodes.map((node) => node.textContent).join(""));
+      expect(iconText).toBe("");
+    }
   });
 
   test("HistoryTimeline keeps the selected revision keyboard reachable", async ({
@@ -832,7 +876,7 @@ test.describe("ikasue identity contracts", () => {
       .evaluate((node) =>
         getComputedStyle(node).getPropertyValue("--ikasue-surface"),
       );
-    expect(inheritedSurface.trim()).toBe("#f5f7fb");
+    expect(inheritedSurface.trim()).toBe("#fff");
     await theme.evaluate((node) => {
       (node as HTMLElement & { props: Record<string, unknown> }).props = {
         tokens: { "ikasue-surface": "#010203" },
