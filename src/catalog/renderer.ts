@@ -1450,7 +1450,6 @@ function renderComponentDemo(
       const spec: LoadingRegionSpec = loadingRegion({
         content: "Original content remains readable while work continues.",
         busy: true,
-        progress: 48,
       });
       target.append(
         ikaDemoElement(

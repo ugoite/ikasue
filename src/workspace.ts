@@ -320,13 +320,6 @@ export function loadingRegion(
     label: clean(options?.label) || "Loading",
   };
   if (clean(options?.id)) result.id = clean(options?.id);
-  if (
-    typeof options?.progress === "number" &&
-    Number.isFinite(options.progress) &&
-    options.progress >= 0 &&
-    options.progress <= 100
-  )
-    result.progress = options.progress;
   return Object.freeze(result);
 }
 export function dialog(options?: DialogOptions): DialogSpec {
