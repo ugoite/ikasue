@@ -6,6 +6,8 @@
  * remain JSON values.
  */
 
+import { isMinSize, isSplitBasis } from "./layout";
+
 export const IKASUE_ABI_VERSION = "ikasue-web/1" as const;
 
 export type IkaJsonPrimitive = null | boolean | number | string;
@@ -79,6 +81,10 @@ export const IKA_VIEW_KINDS: readonly IkaViewKind[] = [
 const IKA_VIEW_PROPERTY_KEYS = new Set([
   "tokens",
   "variant",
+  "editor",
+  "state",
+  "compact",
+  "selectedId",
   "content",
   "density",
   "tone",
@@ -102,9 +108,11 @@ const IKA_VIEW_PROPERTY_KEYS = new Set([
   "axis",
   "overscroll",
   "orientation",
+  "weight",
   "role",
   "items",
   "activeId",
+  "activePane",
   "collapsed",
   "overflow",
   "icon",
@@ -116,6 +124,8 @@ const IKA_VIEW_PROPERTY_KEYS = new Set([
   "values",
   "status",
   "selection",
+  "editing",
+  "selectionMode",
   "editable",
   "entries",
   "panes",
@@ -123,12 +133,22 @@ const IKA_VIEW_PROPERTY_KEYS = new Set([
   "collapsible",
   "motionOrigin",
   "title",
+  "main",
   "open",
+  "railWidth",
+  "openWidth",
   "side",
+  "drafts",
+  "errors",
   "busy",
   "message",
+  "target",
+  "action",
+  "targetId",
+  "showLabel",
   "severity",
   "dismissible",
+  "openerId",
   "loading",
   "max",
 ]);
@@ -157,12 +177,21 @@ const isArrayOf =
     Array.isArray(value) && value.every(guard);
 const isStringRecord = (value: IkaJsonValue): boolean =>
   isIkaJsonRecord(value) && Object.values(value).every(isString);
+const isBooleanRecord = (value: IkaJsonValue): boolean =>
+  isIkaJsonRecord(value) && Object.values(value).every(isBoolean);
 const isViewArray = (value: IkaJsonValue): boolean =>
   Array.isArray(value) && value.every(isIkaView);
 const isFormField = (value: IkaJsonValue): boolean => {
   if (
     !isIkaJsonRecord(value) ||
-    !hasOnlyKeys(value, ["id", "label", "initialValue", "required"])
+    !hasOnlyKeys(value, [
+      "id",
+      "label",
+      "initialValue",
+      "required",
+      "editor",
+      "state",
+    ])
   )
     return false;
   return (
@@ -172,7 +201,15 @@ const isFormField = (value: IkaJsonValue): boolean => {
     value.label.length > 0 &&
     (value.initialValue === undefined ||
       typeof value.initialValue === "string") &&
-    (value.required === undefined || typeof value.required === "boolean")
+    (value.required === undefined || typeof value.required === "boolean") &&
+    (value.editor === undefined ||
+      ["text", "email", "number", "date", "textarea", "select"].includes(
+        value.editor as string,
+      )) &&
+    (value.state === undefined ||
+      ["clean", "created", "modified", "deleted", "error"].includes(
+        value.state as string,
+      ))
   );
 };
 const isChoiceOption = (value: IkaJsonValue): boolean =>
@@ -182,7 +219,25 @@ const isChoiceOption = (value: IkaJsonValue): boolean =>
   value.id.length > 0 &&
   typeof value.label === "string" &&
   (value.disabled === undefined || typeof value.disabled === "boolean");
-const isItem = isChoiceOption;
+const isItem = (value: IkaJsonValue): boolean =>
+  isIkaJsonRecord(value) &&
+  hasOnlyKeys(value, [
+    "id",
+    "label",
+    "content",
+    "disabled",
+    "icon",
+    "pressed",
+    "busy",
+  ]) &&
+  typeof value.id === "string" &&
+  value.id.length > 0 &&
+  typeof value.label === "string" &&
+  (value.content === undefined || typeof value.content === "string") &&
+  (value.disabled === undefined || typeof value.disabled === "boolean") &&
+  (value.icon === undefined || typeof value.icon === "string") &&
+  (value.pressed === undefined || typeof value.pressed === "boolean") &&
+  (value.busy === undefined || typeof value.busy === "boolean");
 const isHistoryEntry = (value: IkaJsonValue): boolean =>
   isIkaJsonRecord(value) &&
   hasOnlyKeys(value, ["id", "label", "content", "tone"]) &&
@@ -192,6 +247,18 @@ const isHistoryEntry = (value: IkaJsonValue): boolean =>
   typeof value.content === "string" &&
   (value.tone === undefined ||
     ["default", "muted", "success", "danger"].includes(value.tone as string));
+const isDataGridCellValue = (value: IkaJsonValue): boolean =>
+  value === null ||
+  typeof value === "string" ||
+  typeof value === "number" ||
+  typeof value === "boolean" ||
+  (isIkaJsonRecord(value) &&
+    hasOnlyKeys(value, ["value", "state"]) &&
+    typeof value.value === "string" &&
+    (value.state === undefined ||
+      ["clean", "created", "modified", "deleted", "error"].includes(
+        value.state as string,
+      )));
 const isUniqueTabsItems = (value: IkaJsonValue): boolean => {
   if (!Array.isArray(value)) return false;
   const ids = new Set<string>();
@@ -214,7 +281,13 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
     tone: isEnum("default", "muted", "danger", "success"),
     selectable: isBoolean,
   },
-  "editable-text": { id: isString, value: isString, disabled: isBoolean },
+  "editable-text": {
+    id: isString,
+    value: isString,
+    editor: isEnum("text", "email", "number", "date", "textarea", "select"),
+    state: isEnum("clean", "created", "modified", "deleted", "error"),
+    disabled: isBoolean,
+  },
   "text-field": {
     id: isString,
     label: isString,
@@ -254,6 +327,7 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
   },
   separator: {
     orientation: isEnum("horizontal", "vertical"),
+    weight: isEnum("hairline", "standard"),
     role: isEnum("separator"),
   },
   tabs: {
@@ -263,11 +337,19 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
     orientation: isEnum("horizontal", "vertical"),
   },
   sidebar: {
+    main: isString,
     items: isArrayOf(isItem),
     activeId: isString,
     collapsed: isBoolean,
+    railWidth: isMinSize,
+    openWidth: isMinSize,
   },
-  toolbar: { items: isArrayOf(isItem), overflow: isEnum("none", "menu") },
+  toolbar: {
+    items: isArrayOf(isItem),
+    activeId: isString,
+    collapsed: isBoolean,
+    overflow: isEnum("none", "menu"),
+  },
   "icon-button": {
     id: isString,
     label: isString,
@@ -275,6 +357,7 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
     type: isEnum("button", "submit", "reset"),
     disabled: isBoolean,
     pressed: isBoolean,
+    busy: isBoolean,
   },
   checkbox: {
     id: isString,
@@ -298,54 +381,81 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
   field: {
     id: isString,
     label: isString,
+    description: isString,
+    error: isString,
     required: isBoolean,
     content: isString,
+    editor: isEnum("text", "email", "number", "date", "textarea", "select"),
+    state: isEnum("clean", "created", "modified", "deleted", "error"),
   },
   form: {
     fields: isArrayOf(isFormField),
     values: isStringRecord,
+    drafts: isStringRecord,
+    errors: isStringRecord,
     status: isEnum("idle", "clean", "dirty", "submitting", "success", "error"),
   },
   "data-grid": {
     columns: isArrayOf(isIkaDataGridColumn),
     rows: isArrayOf(isIkaDataGridRow),
     selection: isIkaDataGridSelection,
+    editing: isIkaDataGridSelection,
+    selectionMode: isEnum("cell", "context"),
     editable: isBoolean,
     density: isEnum("default", "compact"),
   },
   "history-timeline": {
     entries: isArrayOf(isHistoryEntry),
     orientation: isEnum("horizontal", "vertical"),
+    selectedId: isString,
+    compact: isBoolean,
   },
   "split-view": {
     panes: isArrayOf(isIkaSplitViewPane),
     orientation: isEnum("horizontal", "vertical"),
-    sizes: isArrayOf(isString),
+    activePane: isString,
+    sizes: isArrayOf(isSplitBasis),
     collapsible: isBoolean,
+    collapsed: isBooleanRecord,
     motionOrigin: isEnum("start", "end", "top", "bottom"),
   },
   "side-panel": {
+    main: isString,
+    children: isViewArray,
     title: isString,
     content: isString,
     side: isEnum("start", "end"),
     open: isBoolean,
   },
-  "bottom-panel": { title: isString, content: isString, open: isBoolean },
+  "bottom-panel": {
+    main: isString,
+    children: isViewArray,
+    title: isString,
+    content: isString,
+    open: isBoolean,
+  },
   "loading-region": { content: isString, busy: isBoolean, label: isString },
   dialog: {
     title: isString,
     content: isString,
     open: isBoolean,
     modal: isBoolean,
+    openerId: isString,
   },
   "status-indicator": {
+    id: isString,
     label: isString,
     status: isEnum("neutral", "info", "success", "warning", "danger"),
+    icon: isString,
+    showLabel: isBoolean,
+    targetId: isString,
   },
   alert: {
     message: isString,
     severity: isEnum("info", "success", "warning", "danger"),
     dismissible: isBoolean,
+    target: isString,
+    action: isString,
   },
   progress: { value: isNumber, max: isNumber, label: isString },
 };
@@ -389,7 +499,10 @@ export interface IkaDataGridSpec {
   readonly columns: readonly IkaDataGridColumn[];
   readonly rows?: readonly IkaDataGridRow[];
   readonly selection?: IkaDataGridSelection;
+  readonly editing?: IkaDataGridSelection;
+  readonly selectionMode?: "cell" | "context";
   readonly editable?: boolean;
+  readonly density?: "default" | "compact";
 }
 
 export interface IkaTabsItem {
@@ -402,17 +515,31 @@ export interface IkaTabsItem {
 export interface IkaTabsSpec {
   readonly items: readonly IkaTabsItem[];
   readonly activeId?: string;
+  readonly variant?: "default" | "elastic";
+  readonly orientation?: "horizontal" | "vertical";
 }
 
 export interface IkaSplitViewPane {
   readonly id: string;
   readonly label?: string;
   readonly content?: string;
-  readonly basis?: number;
+  readonly size?: string;
+  readonly minSize?: string;
+  readonly basis?: number | string;
+  readonly grow?: number;
+  readonly shrink?: number;
+  readonly collapsible?: boolean;
+  readonly disabled?: boolean;
 }
 
 export interface IkaSplitViewSpec {
   readonly panes: readonly IkaSplitViewPane[];
+  readonly orientation?: "horizontal" | "vertical";
+  readonly activePane?: string;
+  readonly sizes?: readonly string[];
+  readonly collapsible?: boolean;
+  readonly collapsed?: Readonly<Record<string, boolean>>;
+  readonly motionOrigin?: "start" | "end" | "top" | "bottom";
 }
 
 export interface IkaError {
@@ -693,7 +820,8 @@ export function isIkaDataGridRow(value: unknown): value is IkaDataGridRow {
   return (
     typeof value.id === "string" &&
     value.id.length > 0 &&
-    isIkaJsonRecord(value.cells)
+    isIkaJsonRecord(value.cells) &&
+    Object.values(value.cells).every(isDataGridCellValue)
   );
 }
 
@@ -715,7 +843,18 @@ export function isIkaTabsItem(value: unknown): value is IkaTabsItem {
 export function isIkaSplitViewPane(value: unknown): value is IkaSplitViewPane {
   if (
     !isIkaJsonRecord(value) ||
-    !hasOnlyKeys(value, ["id", "label", "content", "basis"])
+    !hasOnlyKeys(value, [
+      "id",
+      "label",
+      "content",
+      "size",
+      "minSize",
+      "basis",
+      "grow",
+      "shrink",
+      "collapsible",
+      "disabled",
+    ])
   )
     return false;
   return (
@@ -723,9 +862,23 @@ export function isIkaSplitViewPane(value: unknown): value is IkaSplitViewPane {
     value.id.length > 0 &&
     (value.label === undefined || typeof value.label === "string") &&
     (value.content === undefined || typeof value.content === "string") &&
+    (value.size === undefined || isSplitBasis(value.size)) &&
+    (value.minSize === undefined || isMinSize(value.minSize)) &&
     (value.basis === undefined ||
+      (typeof value.basis === "string" && isSplitBasis(value.basis)) ||
       (typeof value.basis === "number" &&
         Number.isFinite(value.basis) &&
-        value.basis >= 0))
+        value.basis >= 0)) &&
+    (value.grow === undefined ||
+      (typeof value.grow === "number" &&
+        Number.isFinite(value.grow) &&
+        value.grow >= 0)) &&
+    (value.shrink === undefined ||
+      (typeof value.shrink === "number" &&
+        Number.isFinite(value.shrink) &&
+        value.shrink >= 0)) &&
+    (value.collapsible === undefined ||
+      typeof value.collapsible === "boolean") &&
+    (value.disabled === undefined || typeof value.disabled === "boolean")
   );
 }

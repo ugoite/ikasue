@@ -95,14 +95,128 @@ const componentSourceFor = (id: CatalogComponentId) => {
     ].join("\n"),
   };
 };
+const rationales: Record<CatalogComponentId, { ja: string; en: string }> = {
+  "theme-root": {
+    ja: "白い平面と意味色を共有する視覚基盤。",
+    en: "The shared visual baseline: a white surface and semantic color only.",
+  },
+  text: {
+    ja: "読むことを先に置く、装飾のない情報テキスト。",
+    en: "Plain information text that keeps reading first.",
+  },
+  "editable-text": {
+    ja: "破線の読み状態から、必要な時だけ一本線の編集へ移る。",
+    en: "Moves from a dashed read state to one-line editing only when needed.",
+  },
+  flex: {
+    ja: "標準CSSの順序と軸だけを担当する薄いprimitive。",
+    en: "A thin primitive for predictable CSS order and axis.",
+  },
+  stack: {
+    ja: "縦の順序だけを明示する、予測可能なprimitive。",
+    en: "A predictable primitive for vertical order.",
+  },
+  grid: {
+    ja: "標準Gridをそのまま使い、独自の面積調停を持ち込まない。",
+    en: "Uses standard Grid without inventing a focus resolver.",
+  },
+  "scroll-area": {
+    ja: "用途ごとの有限なviewportとoverflowを所有する。",
+    en: "Owns a finite viewport and its intentional overflow.",
+  },
+  separator: {
+    ja: "箱を増やさず、一枚の線で意味の切れ目を示す。",
+    en: "Marks a semantic break with one quiet line instead of a box.",
+  },
+  tabs: {
+    ja: "選択された面へ少しだけ面積と地理を譲る。",
+    en: "Transfers a little area and directional motion to the selected panel.",
+  },
+  sidebar: {
+    ja: "閉じても現在地を残し、開けばmainを押すedge navigation。",
+    en: "An edge rail that keeps context when closed and pushes the main surface open.",
+  },
+  toolbar: {
+    ja: "反復操作を文字列の箱ではなく線アイコンで並べる。",
+    en: "Presents repeated work as line icons, not a row of text boxes.",
+  },
+  "icon-button": {
+    ja: "hover/focus時だけ操作面が現れる軽量なaction。",
+    en: "A light action surface that appears on hover or focus.",
+  },
+  "text-field": {
+    ja: "検索など常時入力が必要な場所だけに使う下線入力。",
+    en: "An underlined field reserved for values that must stay editable.",
+  },
+  checkbox: {
+    ja: "空boxではなく文章そのものをbooleanの主役にする。",
+    en: "Makes the sentence, not an empty box, the boolean control.",
+  },
+  "radio-group": {
+    ja: "選択値へ面積を譲る、circleを描かない単一選択。",
+    en: "A radio contract where the chosen option owns area instead of a circle.",
+  },
+  "segmented-control": {
+    ja: "選択肢の面積差で現在地を知らせるchoice。",
+    en: "A choice control whose selected option visibly owns more area.",
+  },
+  field: {
+    ja: "labelと情報を順序で結び、囲い箱を作らない一行。",
+    en: "A single information row joined by order, not a fieldset box.",
+  },
+  form: {
+    ja: "読める情報の順序とdraft/validationを所有する。",
+    en: "Owns readable information order plus draft and validation state.",
+  },
+  "data-grid": {
+    ja: "cell選択とrow/column文脈を同時に見せる作業面。",
+    en: "A work surface that keeps cell selection and row/column context visible.",
+  },
+  "status-indicator": {
+    ja: "意味色のline iconを主役にし、labelは説明へ退避する。",
+    en: "Makes a semantic line icon primary and keeps text as explanation.",
+  },
+  alert: {
+    ja: "対象regionへ注意を返す、リンクしたメッセージ行。",
+    en: "A linked message row that returns attention to its target region.",
+  },
+  progress: {
+    ja: "意味色を足さず、細い構造線だけで進捗を示す。",
+    en: "Shows determinate progress with a thin structural line.",
+  },
+  dialog: {
+    ja: "判断根拠を隠さない、下端起点のplanar dialog。",
+    en: "A planar dialog that keeps decision context visible from the bottom edge.",
+  },
+  "split-view": {
+    ja: "focusされたpaneへ面積を譲り、divider上で操作する。",
+    en: "Negotiates area toward focus and keeps controls on the divider.",
+  },
+  "side-panel": {
+    ja: "同じ平面のtrackを増やし、mainを押して情報を出す。",
+    en: "Adds a sibling track to push the main surface aside.",
+  },
+  "bottom-panel": {
+    ja: "下端のrowを展開し、上の情報を残したまま補助面を出す。",
+    en: "Expands a bottom row while keeping the work above readable.",
+  },
+  "loading-region": {
+    ja: "内容を消さず、対象regionだけをneutral waveで示す。",
+    en: "Keeps content readable and marks only the busy region with a neutral wave.",
+  },
+  "history-timeline": {
+    ja: "番号付きlistではなくgutterの線と点でrevisionを読む。",
+    en: "Reads revisions through a gutter line and dots, not a numbered list.",
+  },
+};
 const component = (id: CatalogComponentId): CatalogEntry => ({
   kind: "component",
   id,
   group: groupFor(id),
   title: names[id],
   summary: {
-    ja: `${names[id].ja} の標準的な契約`,
-    en: `The standard contract for ${names[id].en}.`,
+    ja: rationales[id].ja,
+    en: rationales[id].en,
   },
   source: componentSourceFor(id),
   properties: componentProperties[id],
@@ -137,6 +251,12 @@ const componentProperties: Record<
   "editable-text": [
     property("id", "string", ""),
     property("value", "string", ""),
+    property(
+      "editor",
+      "text | email | number | date | textarea | select",
+      "text",
+    ),
+    property("state", "clean | created | modified | deleted | error", "clean"),
     property("disabled", "boolean", false),
   ],
   flex: [
@@ -162,7 +282,10 @@ const componentProperties: Record<
     property("axis", "x | y | both", "y"),
     property("overscroll", "auto | contain", "auto"),
   ],
-  separator: [property("orientation", "horizontal | vertical", "horizontal")],
+  separator: [
+    property("orientation", "horizontal | vertical", "horizontal"),
+    property("weight", "hairline | standard", "hairline"),
+  ],
   tabs: [
     property("items", "Item[]", "[]"),
     property("activeId", "string", ""),
@@ -170,9 +293,12 @@ const componentProperties: Record<
     property("orientation", "horizontal | vertical", "horizontal"),
   ],
   sidebar: [
+    property("main", "string", ""),
     property("items", "Item[]", "[]"),
     property("activeId", "string", ""),
     property("collapsed", "boolean", false),
+    property("railWidth", "CSS length", "44px"),
+    property("openWidth", "CSS length", "18rem"),
   ],
   toolbar: [
     property("items", "ToolbarItem[]", "[]"),
@@ -185,6 +311,7 @@ const componentProperties: Record<
     property("type", "button | submit | reset", "button"),
     property("disabled", "boolean", false),
     property("pressed", "boolean", false),
+    property("busy", "boolean", false),
   ],
   "text-field": [
     property("id", "string", ""),
@@ -218,31 +345,47 @@ const componentProperties: Record<
     property("label", "string", ""),
     property("required", "boolean", false),
     property("content", "string", ""),
+    property(
+      "editor",
+      "text | email | number | date | textarea | select",
+      "text",
+    ),
+    property("state", "clean | created | modified | deleted | error", "clean"),
   ],
   form: [
     property("fields", "FormField[]", "[]"),
     property("values", "Record<string, string>", "{}"),
+    property("drafts", "Record<string, string>", "{}"),
+    property("errors", "Record<string, string>", "{}"),
     property("status", "FormStateStatus", "idle"),
   ],
   "data-grid": [
     property("columns", "DataGridColumn[]", "[]"),
     property("rows", "DataGridRow[]", "[]"),
     property("selection", "DataGridSelection"),
+    property("editing", "DataGridSelection"),
+    property("selectionMode", "cell | context", "context"),
     property("editable", "boolean", false),
     property("density", "default | compact", "default"),
   ],
   "status-indicator": [
+    property("id", "string", ""),
     property("label", "string", ""),
     property(
       "status",
       "neutral | info | success | warning | danger",
       "neutral",
     ),
+    property("icon", "string", "i"),
+    property("showLabel", "boolean", false),
+    property("targetId", "string"),
   ],
   alert: [
     property("message", "string", ""),
     property("severity", "info | success | warning | danger", "info"),
     property("dismissible", "boolean", false),
+    property("target", "string"),
+    property("action", "string"),
   ],
   progress: [
     property("value", "number", "0"),
@@ -254,21 +397,27 @@ const componentProperties: Record<
     property("content", "string", ""),
     property("open", "boolean", false),
     property("modal", "boolean", true),
+    property("openerId", "string"),
   ],
   "split-view": [
     property("panes", "SplitPane[]", "[]"),
     property("orientation", "horizontal | vertical", "horizontal"),
+    property("activePane", "string"),
     property("sizes", "string[]", "[]"),
     property("collapsible", "boolean", false),
     property("motionOrigin", "start | end | top | bottom", "start"),
   ],
   "side-panel": [
+    property("main", "string", ""),
+    property("children", "IkaView[]", "[]"),
     property("title", "string", ""),
     property("content", "string", ""),
     property("side", "start | end", "end"),
     property("open", "boolean", false),
   ],
   "bottom-panel": [
+    property("main", "string", ""),
+    property("children", "IkaView[]", "[]"),
     property("title", "string", ""),
     property("content", "string", ""),
     property("open", "boolean", false),
@@ -281,6 +430,8 @@ const componentProperties: Record<
   "history-timeline": [
     property("entries", "HistoryEntry[]", "[]"),
     property("orientation", "horizontal | vertical", "vertical"),
+    property("selectedId", "string"),
+    property("compact", "boolean", false),
   ],
 };
 const philosophy: CatalogEntry = {
@@ -450,14 +601,21 @@ const componentDefaults: Record<
     justify: "start",
   },
   "scroll-area": { axis: "y", overscroll: "auto" },
-  separator: { orientation: "horizontal" },
+  separator: { orientation: "horizontal", weight: "hairline" },
   tabs: {
     items: "[]",
     activeId: "",
     variant: "default",
     orientation: "horizontal",
   },
-  sidebar: { items: "[]", activeId: "", collapsed: false },
+  sidebar: {
+    main: "",
+    items: "[]",
+    activeId: "",
+    collapsed: false,
+    railWidth: "44px",
+    openWidth: "18rem",
+  },
   toolbar: { items: "[]", overflow: "none" },
   "icon-button": {
     id: "",
@@ -466,6 +624,7 @@ const componentDefaults: Record<
     type: "button",
     disabled: false,
     pressed: false,
+    busy: false,
   },
   "text-field": {
     id: "",
@@ -485,17 +644,37 @@ const componentDefaults: Record<
     variant: "default",
   },
   field: { id: "", label: "", required: false, content: "" },
-  form: { fields: "[]", values: "{}", status: "idle" },
+  form: {
+    fields: "[]",
+    values: "{}",
+    drafts: "{}",
+    errors: "{}",
+    status: "idle",
+  },
   "data-grid": {
     columns: "[]",
     rows: "[]",
+    selectionMode: "context",
     editable: false,
     density: "default",
   },
-  "status-indicator": { label: "", status: "neutral" },
+  "status-indicator": {
+    id: "",
+    label: "",
+    status: "neutral",
+    icon: "i",
+    showLabel: false,
+    targetId: "",
+  },
   alert: { message: "", severity: "info", dismissible: false },
   progress: { value: "0", max: "100", label: "" },
-  dialog: { title: "", content: "", open: false, modal: true },
+  dialog: {
+    title: "",
+    content: "",
+    open: false,
+    modal: true,
+    openerId: "",
+  },
   "split-view": {
     panes: "[]",
     orientation: "horizontal",
@@ -503,8 +682,21 @@ const componentDefaults: Record<
     collapsible: false,
     motionOrigin: "start",
   },
-  "side-panel": { title: "", content: "", side: "end", open: false },
-  "bottom-panel": { title: "", content: "", open: false },
+  "side-panel": {
+    main: "",
+    children: "[]",
+    title: "",
+    content: "",
+    side: "end",
+    open: false,
+  },
+  "bottom-panel": {
+    main: "",
+    children: "[]",
+    title: "",
+    content: "",
+    open: false,
+  },
   "loading-region": { content: "", busy: false, label: "Loading" },
   "history-timeline": { entries: "[]", orientation: "vertical" },
 };

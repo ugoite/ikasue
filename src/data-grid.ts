@@ -14,14 +14,23 @@ const validCell = (value: unknown): DataGridCell | undefined => {
     typeof cell.value !== "string"
   )
     return undefined;
+  const status: DataGridCell["status"] =
+    cell.status === "dirty" || cell.status === "error" ? cell.status : "clean";
+  const state: DataGridCell["state"] =
+    cell.state === "created" ||
+    cell.state === "modified" ||
+    cell.state === "deleted" ||
+    cell.state === "error"
+      ? cell.state
+      : status === "dirty"
+        ? "modified"
+        : status;
   return {
     row: cell.row.trim(),
     column: cell.column.trim(),
     value: cell.value,
-    status:
-      cell.status === "dirty" || cell.status === "error"
-        ? cell.status
-        : "clean",
+    status,
+    state,
   };
 };
 const unique = (values: readonly unknown[]) => [
@@ -160,11 +169,17 @@ export function commitDataGridCell(
   );
   const current = index >= 0 ? state.cells[index] : undefined;
   if (!current) {
-    const cells = state.cells.concat({ row, column, value, status: "dirty" });
+    const cells = state.cells.concat({
+      row,
+      column,
+      value,
+      status: "dirty",
+      state: "modified",
+    });
     return Object.freeze({ ...state, cells: Object.freeze(cells) });
   }
   if (current.value === value) return state;
   const cells = state.cells.slice();
-  cells[index] = { ...current, value, status: "dirty" };
+  cells[index] = { ...current, value, status: "dirty", state: "modified" };
   return Object.freeze({ ...state, cells: Object.freeze(cells) });
 }

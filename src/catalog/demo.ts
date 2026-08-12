@@ -68,11 +68,6 @@ const gridColumns = [
   { id: "name", label: "Name" },
   { id: "status", label: "Status" },
 ] as const;
-const gridRows = [
-  { id: "one", cells: { name: "ikasue", status: "Ready" } },
-  { id: "two", cells: { name: "Catalog", status: "Review" } },
-] as const;
-
 const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
   "theme-root": {
     props: {
@@ -106,10 +101,31 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
     ],
   },
   "editable-text": {
-    props: { id: "title", value: "Editable title", disabled: false },
+    props: {
+      id: "title",
+      value: "Editable title",
+      editor: "text",
+      state: "clean",
+      disabled: false,
+    },
     controls: [
       text("id", "ID", "ID"),
       text("value", "値", "Value"),
+      select("editor", "編集種別", "Editor", [
+        "text",
+        "email",
+        "number",
+        "date",
+        "textarea",
+        "select",
+      ]),
+      select("state", "状態", "State", [
+        "clean",
+        "created",
+        "modified",
+        "deleted",
+        "error",
+      ]),
       boolean("disabled", "無効", "Disabled"),
     ],
   },
@@ -206,16 +222,17 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
     ],
   },
   separator: {
-    props: { orientation: "horizontal", role: "separator" },
+    props: { orientation: "horizontal", weight: "hairline", role: "separator" },
     controls: [
       select("orientation", "方向", "Orientation", ["horizontal", "vertical"]),
+      select("weight", "線の太さ", "Weight", ["hairline", "standard"]),
     ],
   },
   tabs: {
     props: {
       items: commonItems,
       activeId: "overview",
-      variant: "default",
+      variant: "elastic",
       orientation: "horizontal",
     },
     controls: [
@@ -227,24 +244,30 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
   },
   sidebar: {
     props: {
+      main: "Workspace content remains visible beside the navigation rail.",
       items: [
-        { id: "home", label: "Home" },
-        { id: "settings", label: "Settings" },
+        { id: "home", label: "Home", icon: "⌂" },
+        { id: "settings", label: "Settings", icon: "⚙" },
       ],
       activeId: "home",
       collapsed: false,
+      railWidth: "44px",
+      openWidth: "18rem",
     },
     controls: [
+      text("main", "main内容", "Main content"),
       json("items", "項目", "Items"),
       select("activeId", "選択中", "Active item", ["home", "settings"]),
       boolean("collapsed", "折りたたみ", "Collapsed"),
+      text("railWidth", "閉じた幅", "Rail width"),
+      text("openWidth", "開いた幅", "Open width"),
     ],
   },
   toolbar: {
     props: {
       items: [
-        { id: "save", label: "Save" },
-        { id: "refresh", label: "Refresh" },
+        { id: "save", label: "Save", icon: "↓", pressed: true },
+        { id: "refresh", label: "Refresh", icon: "↻", busy: true },
       ],
       overflow: "none",
     },
@@ -261,6 +284,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
       type: "button",
       disabled: false,
       pressed: false,
+      busy: true,
     },
     controls: [
       text("id", "ID", "ID"),
@@ -269,6 +293,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
       select("type", "種類", "Type", ["button", "submit", "reset"]),
       boolean("disabled", "無効", "Disabled"),
       boolean("pressed", "押下中", "Pressed"),
+      boolean("busy", "処理中", "Busy"),
     ],
   },
   "text-field": {
@@ -318,7 +343,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
       options: choiceOptions,
       value: "one",
       disabled: false,
-      variant: "default",
+      variant: "elastic",
     },
     controls: [
       text("id", "ID", "ID"),
@@ -329,25 +354,47 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
     ],
   },
   field: {
-    props: { id: "name", label: "Name", required: true, content: "ikasue" },
+    props: {
+      id: "name",
+      label: "Name",
+      description: "Used for the workspace title",
+      error: "",
+      required: true,
+      content: "ikasue",
+      editor: "text",
+      state: "modified",
+    },
     controls: [
       text("id", "ID", "ID"),
       text("label", "ラベル", "Label"),
       text("content", "内容", "Content"),
       boolean("required", "必須", "Required"),
+      select("editor", "編集種別", "Editor", ["text", "textarea", "select"]),
+      select("state", "状態", "State", ["clean", "modified", "error"]),
     ],
   },
   form: {
     props: {
       fields: [
-        { id: "name", label: "Name", initialValue: "ikasue", required: true },
+        {
+          id: "name",
+          label: "Name",
+          initialValue: "ikasue",
+          required: true,
+          editor: "text",
+          state: "modified",
+        },
       ],
       values: { name: "ikasue" },
-      status: "idle",
+      drafts: { name: "ikasue draft" },
+      errors: {},
+      status: "dirty",
     },
     controls: [
       json("fields", "フィールド", "Fields"),
       json("values", "値", "Values"),
+      json("drafts", "下書き", "Drafts"),
+      json("errors", "検証エラー", "Errors"),
       select("status", "状態", "Status", [
         "idle",
         "clean",
@@ -361,23 +408,55 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
   "data-grid": {
     props: {
       columns: gridColumns,
-      rows: gridRows,
+      rows: [
+        {
+          id: "one",
+          cells: {
+            name: { value: "ikasue", state: "modified" },
+            status: "Ready",
+          },
+        },
+        {
+          id: "two",
+          cells: {
+            name: { value: "Catalog", state: "created" },
+            status: { value: "Review", state: "error" },
+          },
+        },
+      ],
       selection: { row: "one", column: "name" },
-      editable: false,
+      selectionMode: "context",
+      editable: true,
       density: "default",
     },
     controls: [
       json("columns", "列", "Columns"),
       json("rows", "行", "Rows"),
       json("selection", "選択", "Selection"),
+      select("selectionMode", "選択文脈", "Selection mode", [
+        "cell",
+        "context",
+      ]),
+      json("editing", "編集中", "Editing"),
       boolean("editable", "編集可能", "Editable"),
       select("density", "密度", "Density", ["default", "compact"]),
     ],
   },
   "status-indicator": {
-    props: { label: "Ready", status: "success" },
+    props: {
+      id: "status",
+      label: "Ready",
+      status: "success",
+      icon: "✓",
+      showLabel: false,
+      targetId: "",
+    },
     controls: [
+      text("id", "ID", "ID"),
       text("label", "ラベル", "Label"),
+      text("icon", "アイコン", "Icon"),
+      boolean("showLabel", "ラベル表示", "Show label"),
+      text("targetId", "対象ID", "Target ID"),
       select("status", "状態", "Status", [
         "neutral",
         "info",
@@ -392,6 +471,8 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
       message: "Attention required: review the selected item.",
       severity: "warning",
       dismissible: true,
+      target: "selected-work",
+      action: "Focus selected work",
     },
     controls: [
       text("message", "メッセージ", "Message"),
@@ -402,6 +483,8 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
         "danger",
       ]),
       boolean("dismissible", "閉じる", "Dismissible"),
+      text("target", "対象ID", "Target"),
+      text("action", "操作", "Action"),
     ],
   },
   progress: {
@@ -418,12 +501,14 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
       content: "This dialog stays in the document flow for the demo.",
       open: true,
       modal: false,
+      openerId: "",
     },
     controls: [
       text("title", "タイトル", "Title"),
       text("content", "内容", "Content"),
       boolean("open", "開く", "Open"),
       boolean("modal", "モーダル", "Modal"),
+      text("openerId", "起点ID", "Opener ID"),
     ],
   },
   "split-view": {
@@ -433,6 +518,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
         { id: "detail", label: "Detail", content: "Selection", basis: 2 },
       ],
       orientation: "horizontal",
+      activePane: "detail",
       sizes: ["1fr", "2fr"],
       collapsible: true,
       motionOrigin: "start",
@@ -440,6 +526,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
     controls: [
       json("panes", "ペイン", "Panes"),
       select("orientation", "方向", "Orientation", ["horizontal", "vertical"]),
+      select("activePane", "選択中", "Active pane", ["list", "detail"]),
       json("sizes", "サイズ", "Sizes"),
       boolean("collapsible", "折りたたみ", "Collapsible"),
       select("motionOrigin", "モーション起点", "Motion origin", [
@@ -452,12 +539,16 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
   },
   "side-panel": {
     props: {
+      main: "Selected work remains visible while the inspector opens.",
+      children: [],
       title: "Inspector",
       content: "Details remain alongside the work.",
       side: "end",
       open: true,
     },
     controls: [
+      text("main", "main内容", "Main content"),
+      json("children", "main子要素", "Main children"),
       text("title", "タイトル", "Title"),
       text("content", "内容", "Content"),
       select("side", "位置", "Side", ["start", "end"]),
@@ -466,11 +557,15 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
   },
   "bottom-panel": {
     props: {
+      main: "The working document stays above the output region.",
+      children: [],
       title: "Output",
       content: "Logs stay in the page plane.",
       open: true,
     },
     controls: [
+      text("main", "main内容", "Main content"),
+      json("children", "main子要素", "Main children"),
       text("title", "タイトル", "Title"),
       text("content", "内容", "Content"),
       boolean("open", "開く", "Open"),
@@ -505,10 +600,14 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
         },
       ],
       orientation: "vertical",
+      selectedId: "two",
+      compact: false,
     },
     controls: [
       json("entries", "履歴", "Entries"),
       select("orientation", "方向", "Orientation", ["vertical", "horizontal"]),
+      select("selectedId", "選択中", "Selected", ["one", "two"]),
+      boolean("compact", "コンパクト", "Compact"),
     ],
   },
 };

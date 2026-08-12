@@ -42,12 +42,15 @@ import type {
   ProgressOptions,
   ProgressSpec,
 } from "./types";
+import { isMinSize } from "./layout";
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
 const text = (value: unknown) =>
   typeof value === "string" ? value.trim() : "";
 const content = (value: unknown) => (typeof value === "string" ? value : "");
+const width = (value: unknown, fallback: string): string =>
+  typeof value === "string" && isMinSize(value) ? value.trim() : fallback;
 type UnknownRecord = Record<string, unknown>;
 const record = (value: unknown): UnknownRecord | undefined =>
   typeof value === "object" && value !== null
@@ -61,14 +64,18 @@ const items = (value: unknown): NormalizedItem[] => {
     const source = record(item);
     const id = typeof source?.id === "string" ? source.id.trim() : "";
     const label = typeof source?.label === "string" ? source.label.trim() : "";
-    if (!id || !label || typeof source?.content !== "string" || ids.has(id))
-      return [];
+    if (!source || !id || !label || ids.has(id)) return [];
     ids.add(id);
     return [
       {
         id,
         label,
-        content: source.content,
+        ...(typeof source.content === "string"
+          ? { content: source.content }
+          : {}),
+        ...(typeof source.icon === "string"
+          ? { icon: source.icon.trim() }
+          : {}),
         disabled: source.disabled === true,
       },
     ];
@@ -131,8 +138,11 @@ export function sidebar(options?: SidebarOptions): SidebarSpec {
   const normalized = items(options?.items);
   const result: Mutable<SidebarSpec> = {
     kind: "sidebar",
+    main: content(options?.main),
     items: normalized,
     collapsed: options?.collapsed === true,
+    railWidth: width(options?.railWidth, "44px"),
+    openWidth: width(options?.openWidth, "18rem"),
   };
   const active = selected(normalized, options?.activeId);
   if (active) result.activeId = active;
@@ -157,17 +167,24 @@ export function toolbar(options?: ToolbarOptions): ToolbarSpec {
     const result: Mutable<ToolbarSpec["items"][number]> = {
       id,
       label: item.label.trim(),
+      ...(typeof item.icon === "string" ? { icon: item.icon.trim() } : {}),
       disabled: item.disabled === true,
+      pressed: item.pressed === true,
+      busy: item.busy === true,
     };
     if (typeof item.onSelect === "function")
       result.onSelect = item.onSelect as () => void;
     return [result];
   });
-  return Object.freeze({
+  const result: Mutable<ToolbarSpec> = {
     kind: "toolbar",
     items: normalized,
+    collapsed: options?.collapsed === true,
     overflow: options?.overflow === "menu" ? "menu" : "none",
-  });
+  };
+  const active = selected(normalized, options?.activeId);
+  if (active) result.activeId = active;
+  return Object.freeze(result);
 }
 export function iconButton(options: IconButtonOptions): IconButtonSpec {
   const result: Mutable<IconButtonSpec> = {
@@ -179,6 +196,7 @@ export function iconButton(options: IconButtonOptions): IconButtonSpec {
         : "button",
     disabled: options?.disabled === true,
     pressed: options?.pressed === true,
+    busy: options?.busy === true,
   };
   if (text(options?.id)) result.id = text(options?.id);
   if (text(options?.icon)) result.icon = text(options?.icon);
@@ -218,6 +236,21 @@ export function editableText(options?: EditableTextOptions): EditableTextSpec {
   const result: Mutable<EditableTextSpec> = {
     kind: "editable-text",
     value: content(options?.value),
+    editor:
+      options?.editor === "email" ||
+      options?.editor === "number" ||
+      options?.editor === "date" ||
+      options?.editor === "textarea" ||
+      options?.editor === "select"
+        ? options.editor
+        : "text",
+    state:
+      options?.state === "created" ||
+      options?.state === "modified" ||
+      options?.state === "deleted" ||
+      options?.state === "error"
+        ? options.state
+        : "clean",
     disabled: options?.disabled === true,
   };
   if (text(options?.id)) result.id = text(options?.id);
@@ -288,6 +321,21 @@ export function field(options: FieldOptions): FieldSpec {
     label: text(options?.label),
     required: options?.required === true,
     content: content(options?.content),
+    editor:
+      options?.editor === "email" ||
+      options?.editor === "number" ||
+      options?.editor === "date" ||
+      options?.editor === "textarea" ||
+      options?.editor === "select"
+        ? options.editor
+        : "text",
+    state:
+      options?.state === "created" ||
+      options?.state === "modified" ||
+      options?.state === "deleted" ||
+      options?.state === "error"
+        ? options.state
+        : "clean",
   };
   if (typeof options?.description === "string")
     result.description = options.description;
@@ -306,6 +354,21 @@ export function form(options?: FormOptions): FormSpec {
     if (typeof source?.initialValue === "string")
       field.initialValue = source.initialValue;
     if (source?.required === true) field.required = true;
+    if (
+      source?.editor === "email" ||
+      source?.editor === "number" ||
+      source?.editor === "date" ||
+      source?.editor === "textarea" ||
+      source?.editor === "select"
+    )
+      field.editor = source.editor;
+    if (
+      source?.state === "created" ||
+      source?.state === "modified" ||
+      source?.state === "deleted" ||
+      source?.state === "error"
+    )
+      field.state = source.state;
     return [field];
   });
   const values: Record<string, string> = Object.create(null) as Record<
@@ -318,10 +381,30 @@ export function form(options?: FormOptions): FormSpec {
     values[field.id] =
       typeof supplied === "string" ? supplied : content(field.initialValue);
   }
+  const drafts: Record<string, string> = Object.create(null) as Record<
+    string,
+    string
+  >;
+  const suppliedDrafts = record(options?.drafts);
+  for (const field of fields) {
+    const draft = suppliedDrafts?.[field.id];
+    if (typeof draft === "string") drafts[field.id] = draft;
+  }
+  const errors: Record<string, string> = Object.create(null) as Record<
+    string,
+    string
+  >;
+  const suppliedErrors = record(options?.errors);
+  for (const field of fields) {
+    const error = suppliedErrors?.[field.id];
+    if (typeof error === "string" && error) errors[field.id] = error;
+  }
   const result: Mutable<FormSpec> = {
     kind: "form",
     fields,
     values,
+    drafts,
+    errors,
     status:
       options?.status === "clean" ||
       options?.status === "dirty" ||
@@ -380,7 +463,16 @@ export function dataGrid(options?: DataGridOptions): DataGridSpec {
       source?.status === "dirty" || source?.status === "error"
         ? source.status
         : "clean";
-    return [{ row, column, value: cellValue, status }];
+    const state: DataGridCell["state"] =
+      source?.state === "created" ||
+      source?.state === "modified" ||
+      source?.state === "deleted" ||
+      source?.state === "error"
+        ? source.state
+        : status === "dirty"
+          ? "modified"
+          : status;
+    return [{ row, column, value: cellValue, status, state }];
   });
   const materializedColumns = columnsProvided
     ? columns
@@ -418,6 +510,9 @@ export function dataGrid(options?: DataGridOptions): DataGridSpec {
     columnsProvided,
     rowsProvided,
     cells,
+    selectionMode: options?.selectionMode === "cell" ? "cell" : "context",
+    editable: options?.editable === true,
+    density: options?.density === "compact" ? "compact" : "default",
   };
   const selection = normalizeTarget(options?.selection);
   const editing = normalizeTarget(options?.editing);
@@ -444,6 +539,7 @@ export function statusIndicator(
       options?.status === "danger"
         ? options.status
         : "neutral",
+    showLabel: options?.showLabel === true,
   };
   if (text(options?.id)) result.id = text(options?.id);
   if (text(options?.icon)) result.icon = text(options?.icon);
@@ -463,6 +559,8 @@ export function alert(options: AlertOptions): AlertSpec {
     dismissible: options?.dismissible === true,
   };
   if (text(options?.id)) result.id = text(options?.id);
+  if (text(options?.target)) result.target = text(options?.target);
+  if (text(options?.action)) result.action = text(options?.action);
   if (typeof options?.onDismiss === "function")
     result.onDismiss = options.onDismiss;
   return Object.freeze(result);
@@ -519,5 +617,9 @@ export function historyTimeline(
     entries,
     orientation:
       options?.orientation === "horizontal" ? "horizontal" : "vertical",
+    ...(typeof options?.selectedId === "string" && text(options.selectedId)
+      ? { selectedId: text(options.selectedId) }
+      : {}),
+    compact: options?.compact === true,
   });
 }

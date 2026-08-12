@@ -49,6 +49,24 @@ describe("workspace state", () => {
     expect(updated.sizes).toEqual(["1fr", "2fr"]);
   });
 
+  it("normalizes numeric pane bases and allows content-free geometry panes", () => {
+    const spec = splitView(
+      [
+        { id: "list", basis: 1, minSize: "12rem", grow: 1, shrink: 0 },
+        { id: "detail", basis: 2, size: "3fr" },
+      ],
+      { orientation: "horizontal" },
+    );
+    expect(spec.panes[0]).toMatchObject({
+      id: "list",
+      basis: 1,
+      minSize: "12rem",
+      grow: 1,
+      shrink: 0,
+    });
+    expect(spec.sizes).toEqual(["1fr", "3fr"]);
+  });
+
   it("keeps disabled panes mounted but rejects their state transitions", () => {
     const state = createSplitViewState([
       { id: "disabled", content: "hidden", disabled: true },

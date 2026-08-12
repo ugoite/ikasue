@@ -33,6 +33,8 @@
   },
   "scripts": {
     "check": "prettier --check . && eslint . && tsc --noEmit && vitest run && npm run contract:check",
+    "dev": "vite",
+    "test:ui": "playwright test",
     "build": "tsc --noEmit && vite build && tsc -p tsconfig.build.json && node scripts/fix-declaration-imports.mjs && npm run contract:check",
     "contract:check": "node scripts/forbidden-vocabulary.mjs",
     "docs:build": "npm --prefix docs-site run build && node scripts/check-docs-build.mjs && npm run contract:check",
@@ -42,6 +44,7 @@
     "node": ">=22.14.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/node": "^22.13.10",
     "eslint": "^10.8.0",
     "prettier": "^3.9.6",

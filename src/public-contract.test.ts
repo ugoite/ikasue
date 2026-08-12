@@ -117,7 +117,15 @@ describe("public contract", () => {
     expect(api.tabs().items).toEqual([]);
     expect(api.separator().orientation).toBe("horizontal");
     expect(api.loadingRegion({ busy: true }).busy).toBe(true);
-    expect(api.dialog({ modal: true }).modal).toBe(true);
+    expect(
+      api.sidebar({
+        items: [{ id: "home", label: "Home", icon: "⌂" }],
+      }).items,
+    ).toMatchObject([{ id: "home", label: "Home", icon: "⌂" }]);
+    expect(api.dialog({ modal: true, openerId: "open" })).toMatchObject({
+      modal: true,
+      openerId: "open",
+    });
     expect(
       api.setDataGridClipboard(api.createDataGridState([]), "error").clipboard,
     ).toBe("error");
@@ -151,6 +159,46 @@ describe("public contract", () => {
       expect(css).toContain(token);
     expect(css).toContain("@container (max-width: 600px)");
     expect(css).toContain("--ikasue-motion-duration: 0ms");
+    expect(css).toContain("--ikasue-selection: #f0f1ed");
+    expect(css).toContain('[part="read-value"]');
+    expect(css).toContain('[data-row-peer="true"]');
+    expect(css).toContain("ikasue-loading-wave");
+    expect(css).toContain('ika-theme-root[data-variant="dense"]');
+    expect(css).toContain('ika-data-grid[data-density="compact"]');
+    expect(css).not.toContain("#dfeeff");
     expect(css).not.toContain("box-shadow");
+  });
+
+  it("keeps the identity contracts read-first and stateful", () => {
+    expect(
+      api.editableText({
+        value: "Title",
+        editor: "textarea",
+        state: "modified",
+      }),
+    ).toMatchObject({ editor: "textarea", state: "modified" });
+    expect(
+      api.field({
+        id: "name",
+        label: "Name",
+        content: "ikasue",
+        editor: "text",
+        state: "created",
+      }),
+    ).toMatchObject({ editor: "text", state: "created" });
+    expect(
+      api.historyTimeline({
+        entries: [{ id: "r1", label: "Current", content: "Ready" }],
+        selectedId: "r1",
+        compact: true,
+      }),
+    ).toMatchObject({ selectedId: "r1", compact: true });
+    expect(
+      api.alert({
+        message: "Review",
+        target: "work",
+        action: "Focus work",
+      }),
+    ).toMatchObject({ target: "work", action: "Focus work" });
   });
 });

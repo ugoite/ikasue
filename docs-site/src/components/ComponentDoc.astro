@@ -21,6 +21,475 @@ const componentEntry = entry?.kind === "component" ? entry : undefined;
 const abiEntry = IKA_ELEMENT_CONTRACTS[id];
 const demo = componentDemo(id);
 const tag = `ika-${id}`;
+type Guidance = {
+  use: string;
+  avoid: string;
+  keyboard: string;
+  state: string;
+  live: string;
+};
+const localized = (ja: string, en: string): string =>
+  locale === "ja" ? ja : en;
+const makeGuidance = (
+  useJa: string,
+  useEn: string,
+  avoidJa: string,
+  avoidEn: string,
+  keyboardJa: string,
+  keyboardEn: string,
+  stateJa: string,
+  stateEn: string,
+  liveJa: string,
+  liveEn: string,
+): Guidance => ({
+  use: localized(useJa, useEn),
+  avoid: localized(avoidJa, avoidEn),
+  keyboard: localized(keyboardJa, keyboardEn),
+  state: localized(stateJa, stateEn),
+  live: localized(liveJa, liveEn),
+});
+const identityGuidance = (
+  {
+    "editable-text": {
+      use: localized(
+        "読んでからEnter/F2またはdouble clickで編集し、一本線のdraftとしてcommitします。",
+        "Read first, then edit with Enter/F2 or double click and commit the single-line draft.",
+      ),
+      avoid: localized(
+        "常時textareaにせず、読む状態と編集状態を同じ情報の連続として扱います。",
+        "Do not turn the page into permanent textareas; keep reading and editing as one information flow.",
+      ),
+      keyboard: localized(
+        "Enter/F2/double clickで編集、Escapeで取消、Enter/Tabでcommitします。",
+        "Enter/F2/double click edits, Escape cancels, and Enter/Tab commits.",
+      ),
+      state: localized(
+        "read → editing → modifiedの順で、破線から実線へ意味を変えます。",
+        "read → editing → modified changes the underline from dashed to solid.",
+      ),
+      live: localized(
+        "commit後も内容を残し、modified stateをその場で示します。",
+        "Keep the value after commit and show modified state in place.",
+      ),
+    },
+    tabs: {
+      use: localized(
+        "選択中のtabへ面積とpanelの方向を渡し、作業の現在地を明確にします。",
+        "Give area and panel direction to the selected tab so the current work is clear.",
+      ),
+      avoid: localized(
+        "色やunderlineだけでactiveを示さず、elastic variantを最初の選択肢にします。",
+        "Do not rely on color or an underline alone; use the elastic variant first.",
+      ),
+      keyboard: localized(
+        "Arrowはorientationに沿って移動し、Home/Endはtab群の端へ移動します。",
+        "Arrow keys follow orientation; Home/End reach the edges of the tab set.",
+      ),
+      state: localized(
+        "inactive → selected → disabledを面積、背景、操作可能性で分けます。",
+        "inactive → selected → disabled differ through area, background, and operability.",
+      ),
+      live: localized(
+        "panelは選択方向から入り、内容を消して待たせません。",
+        "The panel enters from the selection direction without clearing content while waiting.",
+      ),
+    },
+    "segmented-control": {
+      use: localized(
+        "密接した選択肢のうち、現在の選択へ面積を譲るelastic choiceです。",
+        "An elastic choice where the current option owns more area among related choices.",
+      ),
+      avoid: localized(
+        "小さな丸や同じ幅のbox列にせず、selected optionを仕事の起点にします。",
+        "Avoid tiny circles or equal boxes; make the selected option the work origin.",
+      ),
+      keyboard: localized(
+        "Arrow/Home/Endで視覚方向と同じ順序を移動します。",
+        "Arrow/Home/End move in the same order as the visual direction.",
+      ),
+      state: localized(
+        "selected optionだけがgrowし、disabledは順序を壊さず操作から外れます。",
+        "Only the selected option grows; disabled options leave interaction without breaking order.",
+      ),
+      live: localized(
+        "選択の面積変化を短いspring motionで伝えます。",
+        "A short spring motion communicates the change in owned area.",
+      ),
+    },
+    "data-grid": {
+      use: localized(
+        "cell、row peer、column peerを同時に見せ、差分をその場で編集します。",
+        "Show the cell, row peer, and column peer together, and edit differences in place.",
+      ),
+      avoid: localized(
+        "選択cellだけを強調して周辺文脈を消したり、編集時に表全体を置き換えたりしません。",
+        "Do not erase surrounding context by highlighting only one cell or replacing the table while editing.",
+      ),
+      keyboard: localized(
+        "Arrow/Home/Endはcellの視覚方向へ移動し、F2/Enterで編集、copy/pasteも同じcellを所有します。",
+        "Arrow/Home/End follow the cell direction; F2/Enter edit, and copy/paste stay with that cell.",
+      ),
+      state: localized(
+        "clean/created/modified/errorはcellのstateとして表面と下線に反映します。",
+        "clean/created/modified/error appear as cell state through surface and underline.",
+      ),
+      live: localized(
+        "編集内容を残したままcommitし、selectionとpeerを再計算します。",
+        "Commit without losing the edit, then recalculate selection and peers.",
+      ),
+    },
+    "split-view": {
+      use: localized(
+        "active paneへ面積を渡し、divider上のcontrolで閉じる/戻すworkspaceです。",
+        "A workspace that gives area to the active pane and collapses or restores it from the divider.",
+      ),
+      avoid: localized(
+        "pane上にfloating controlを置くResizableSplitPaneにはしません。",
+        "Do not turn it into a ResizableSplitPane with floating controls over the pane.",
+      ),
+      keyboard: localized(
+        "paneをfocusしてEnter/Space、dividerはorientationの方向で操作します。",
+        "Focus a pane and use Enter/Space; operate the divider along its orientation.",
+      ),
+      state: localized(
+        "active/collapsedは面積とdividerのgeometryとして表します。",
+        "active/collapsed are expressed through area and divider geometry.",
+      ),
+      live: localized(
+        "active paneのtrack比率をspringで再配分します。",
+        "Reallocate track ratios toward the active pane with a spring motion.",
+      ),
+    },
+    "side-panel": {
+      use: localized(
+        "mainとpanelを同じtrackに置き、開くとmainを押して情報を追加します。",
+        "Place main and panel in sibling tracks; opening pushes main to add information.",
+      ),
+      avoid: localized(
+        "mainの上へoverlayせず、side=start/endとmotion originを一致させます。",
+        "Do not overlay main; match side=start/end with the motion origin.",
+      ),
+      keyboard: localized(
+        "mainからpanelへTab順を保ち、Escapeなどhostのclose操作へ戻します。",
+        "Keep Tab order from main to panel and return to the host close action such as Escape.",
+      ),
+      state: localized(
+        "closed/openは0frからpanel trackへの変化として表します。",
+        "closed/open changes the panel track from 0fr to its working size.",
+      ),
+      live: localized(
+        "panelは指定edgeから入り、mainは同時に狭くなります。",
+        "The panel enters from the chosen edge while main narrows at the same time.",
+      ),
+    },
+    "bottom-panel": {
+      use: localized(
+        "mainの下にrowを増やし、outputや補助情報を上の仕事と同時に残します。",
+        "Add a row below main so output and supporting information remain with the work above.",
+      ),
+      avoid: localized(
+        "画面中央のmodalやoverlayで上の情報を隠しません。",
+        "Do not hide the information above with a centered modal or overlay.",
+      ),
+      keyboard: localized(
+        "mainからbottom rowへ自然なTab順で到達できるようにします。",
+        "Keep a natural Tab order from main to the bottom row.",
+      ),
+      state: localized(
+        "closed/openは0frからcontent rowへの変化として表します。",
+        "closed/open changes the panel row from 0fr to its content size.",
+      ),
+      live: localized(
+        "panelは下端から入り、mainの内容を消さずに押し上げます。",
+        "The panel enters from the bottom and pushes up without clearing main content.",
+      ),
+    },
+    "loading-region": {
+      use: localized(
+        "同じcontentを残したまま、対象regionだけをneutral waveでbusyにします。",
+        "Keep the same content and mark only the target region busy with a neutral wave.",
+      ),
+      avoid: localized(
+        "中央spinnerや空のplaceholderへ置き換えません。",
+        "Do not replace the work with a centered spinner or empty placeholder.",
+      ),
+      keyboard: localized(
+        "busy中も読み取り可能なcontentとfocus順を維持します。",
+        "Keep readable content and focus order while busy.",
+      ),
+      state: localized(
+        "idle/busyはaria-busyとwaveだけを変え、情報のstateを消しません。",
+        "idle/busy changes aria-busy and the wave only; it does not erase information state.",
+      ),
+      live: localized(
+        "waveはpointer-events:noneで、読みながら処理の対象を確認できます。",
+        "The wave uses pointer-events:none so the work target stays readable.",
+      ),
+    },
+    "theme-root": makeGuidance(
+      "canvas・ink・lineを一つの平面として配ります。",
+      "Distribute canvas, ink, and line as one coherent plane.",
+      "componentごとに別の色体系を持ちません。",
+      "Do not create a separate color system for each component.",
+      "テーマ変更後もTab順とcontrastを保ちます。",
+      "Keep Tab order and contrast after theme changes.",
+      "default/quiet/denseはsurfaceの密度だけを変えます。",
+      "default/quiet/dense change surface density only.",
+      "tokensを更新しても仕事の内容は消しません。",
+      "Updating tokens never clears work content.",
+    ),
+    text: makeGuidance(
+      "読むためのcontentをsemantic toneと共に置きます。",
+      "Place readable content with an intentional semantic tone.",
+      "装飾的なlabelや無意味な色を足しません。",
+      "Do not add decorative labels or meaningless color.",
+      "selectableなら通常のtext selectionを使えます。",
+      "Selectable text keeps the browser text-selection path.",
+      "default/muted/danger/successだけが意味を持ちます。",
+      "default/muted/danger/success are the only meaningful tones.",
+      "更新中も読める文字列をその場に残します。",
+      "Keep readable text in place during updates.",
+    ),
+    flex: makeGuidance(
+      "仕事の順序をrow/columnとgrowで素直に組みます。",
+      "Compose work order plainly with row/column and grow.",
+      "独自のplane resolverや見えない配置規則を導入しません。",
+      "Do not introduce a hidden plane resolver or placement language.",
+      "TabはDOM順、Arrowは配置方向に合わせます。",
+      "Tab follows DOM order and arrows follow layout direction.",
+      "wrap/align/justifyはgeometryだけを調整します。",
+      "wrap/align/justify adjust geometry only.",
+      "gapとgrowの変化を短いmotionで伝えます。",
+      "Short motion communicates changes to gap and grow.",
+    ),
+    stack: makeGuidance(
+      "縦の仕事の順序と余白を明示します。",
+      "Make vertical work order and spacing explicit.",
+      "各行をcardや囲い箱で分割しません。",
+      "Do not split every row into a card or box.",
+      "Tabは上から下へ読み順を保ちます。",
+      "Tab preserves top-to-bottom reading order.",
+      "gapは密度、contentは各行の意味を所有します。",
+      "gap owns density; content owns meaning.",
+      "追加・削除時も既存contentを残して再配置します。",
+      "Reflow without clearing existing content when rows change.",
+    ),
+    grid: makeGuidance(
+      "複数軸のwork surfaceを標準CSS gridで構成します。",
+      "Compose multi-axis work surfaces with standard CSS Grid.",
+      "固定幅の小箱を並べてresponsiveを犠牲にしません。",
+      "Do not sacrifice responsiveness to fixed-width boxes.",
+      "keyboard順と視覚的なrow/columnを一致させます。",
+      "Keep keyboard order aligned with visual rows and columns.",
+      "columns/rowsは構造、色はsemantic stateに限定します。",
+      "columns/rows are structure; color is reserved for semantic state.",
+      "狭いviewportでは面積を保ちながらflowします。",
+      "At narrow viewports, flow while preserving usable area.",
+    ),
+    "scroll-area": makeGuidance(
+      "長い情報を同じplane内で読み続けます。",
+      "Keep long information readable within the same plane.",
+      "overflowを隠して重要なcontentを切りません。",
+      "Do not hide overflow and cut off important content.",
+      "scrollはTab focusの到達を妨げません。",
+      "Scrolling must not prevent Tab focus from being reached.",
+      "axisとoverscrollが移動範囲のstateを示します。",
+      "axis and overscroll describe the movement state.",
+      "読み取り位置を保ったまま更新します。",
+      "Update without losing the reader's position.",
+    ),
+    separator: makeGuidance(
+      "隣接する仕事の境界を一本のlineで示します。",
+      "Mark the boundary between adjacent work with one line.",
+      "panelやcardの全周borderに置き換えません。",
+      "Do not replace it with a full panel or card border.",
+      "separatorはfocus順を奪わない構造要素です。",
+      "A separator is structural and does not steal focus order.",
+      "orientationとweightだけがline geometryを決めます。",
+      "orientation and weight determine the line geometry.",
+      "contentの変化は境界線を越えても追跡できます。",
+      "Content changes remain traceable across the boundary.",
+    ),
+    sidebar: makeGuidance(
+      "railとmainを同じworkspaceに置き、開閉でmainへ面積を返します。",
+      "Place rail and main in one workspace so opening reallocates main area.",
+      "navだけの小箱やmainへのoverlayにしません。",
+      "Do not reduce it to a nav box or overlay main.",
+      "railからmainへ自然なTab順を保ちます。",
+      "Keep a natural Tab order from rail to main.",
+      "collapsed/openはrail幅とmain trackで表します。",
+      "collapsed/open are expressed by rail width and the main track.",
+      "選択中のrailだけが面積と注意を受け取ります。",
+      "Only the selected rail item receives area and attention.",
+    ),
+    toolbar: makeGuidance(
+      "操作の起点をicon-firstの一列にまとめます。",
+      "Collect work actions in one icon-first row.",
+      "全actionを同じcontainer buttonや長いlabelにしません。",
+      "Do not wrap every action in the same container button or long label.",
+      "Tabは操作順、tooltipはiconの意味を補います。",
+      "Tab follows action order; tooltips explain icons.",
+      "pressed/busy/disabledをiconとstateで区別します。",
+      "pressed/busy/disabled remain distinct icon states.",
+      "実行中もtoolbarの位置と周辺contentを保ちます。",
+      "Keep toolbar position and surrounding content during work.",
+    ),
+    "icon-button": makeGuidance(
+      "頻出操作をiconとtooltipで短く提示します。",
+      "Present frequent actions briefly with an icon and tooltip.",
+      "labelを隠したまま意味のないiconだけを置きません。",
+      "Do not leave an unexplained icon after hiding its label.",
+      "Tabとaria-labelでkeyboardの意味を保ちます。",
+      "Preserve keyboard meaning through Tab and aria-label.",
+      "pressed/busy/disabledはsemantic stateだけに使います。",
+      "Use pressed/busy/disabled only for semantic state.",
+      "action後も現在のplaneを動かさずfeedbackを返します。",
+      "Return feedback without moving the current plane after an action.",
+    ),
+    "text-field": makeGuidance(
+      "labelと一本のunderlineで入力の場所を示します。",
+      "Use a label and one underline to locate an input.",
+      "常時のbox、placeholder依存、重いfieldsetを避けます。",
+      "Avoid permanent boxes, placeholder dependence, and heavy fieldsets.",
+      "labelからinputへ自然にfocusを渡します。",
+      "Move focus naturally from label context to input.",
+      "error/requiredだけがunderlineと説明を変えます。",
+      "Only error/required changes the underline and explanation.",
+      "入力値とvalidation messageを同じ行脈で残します。",
+      "Keep value and validation message in the same information flow.",
+    ),
+    checkbox: makeGuidance(
+      "文章そのものをbooleanの主役にします。",
+      "Make the sentence itself the boolean control.",
+      "uncheckedの空boxを視覚の主役にしません。",
+      "Do not make an empty unchecked box the visual subject.",
+      "label全体をSpaceで切り替えます。",
+      "Toggle the whole label with Space.",
+      "checked/disabledだけが操作と意味を変えます。",
+      "Only checked/disabled change operation and meaning.",
+      "切替後もlabelと周辺contentを読み続けられます。",
+      "Keep label and surrounding content readable after toggling.",
+    ),
+    "radio-group": makeGuidance(
+      "単一選択のcurrent optionへ面積を渡します。",
+      "Give area to the current option in a single-choice group.",
+      "circleの列や全option同幅のboxにしません。",
+      "Do not use a row of circles or equal option boxes.",
+      "Arrow/Home/Endで視覚順を移動します。",
+      "Arrow/Home/End move in visual order.",
+      "selected/disabledはoptionのsemantic stateです。",
+      "selected/disabled are option semantic states.",
+      "選択の面積変化を短く伝え、内容を消しません。",
+      "Communicate area change briefly without clearing content.",
+    ),
+    field: makeGuidance(
+      "label・content・editorを一行の情報として結びます。",
+      "Join label, content, and editor as one information row.",
+      "fieldset boxや常設inputで順序を隠しません。",
+      "Do not hide order inside a fieldset box or permanent input.",
+      "read-firstからeditorへfocusを渡します。",
+      "Move focus from read-first content to the editor.",
+      "clean/created/modified/errorが行の下線を所有します。",
+      "clean/created/modified/error own the row underline.",
+      "validationを対象fieldの近くに残します。",
+      "Keep validation near its target field.",
+    ),
+    form: makeGuidance(
+      "読める情報順とdraft/validationを一つのsurfaceで管理します。",
+      "Manage readable order, drafts, and validation in one surface.",
+      "送信時に情報全体を空のformへ置き換えません。",
+      "Do not replace the information with an empty form on submit.",
+      "Tab順はlabel・editor・actionの読み順にします。",
+      "Tab order follows label, editor, and action reading order.",
+      "idle/dirty/submitting/success/errorを混同しません。",
+      "Keep idle/dirty/submitting/success/error distinct.",
+      "submit中もdraftと対象errorを保持します。",
+      "Keep drafts and target errors during submit.",
+    ),
+    "status-indicator": makeGuidance(
+      "意味色のline iconを主役に、labelは説明にします。",
+      "Make the semantic line icon primary and label explanatory.",
+      "statusを丸いdotやchipだけで表しません。",
+      "Do not reduce status to a dot or chip.",
+      "iconとlabelを同じfocus文脈で読めます。",
+      "Read icon and label in one focus context.",
+      "neutral/info/success/warning/dangerを意味色に限定します。",
+      "Reserve neutral/info/success/warning/danger for meaning.",
+      "状態変化を対象行に返し、layoutを奪いません。",
+      "Return state changes to the target row without stealing layout.",
+    ),
+    alert: makeGuidance(
+      "messageから対象regionへ注意とactionを返します。",
+      "Return attention and action from the message to its target region.",
+      "孤立したtoastやseverityだけのbannerにしません。",
+      "Do not make it an isolated toast or severity-only banner.",
+      "actionはTabで到達し、targetへ戻れる意味を持ちます。",
+      "Make action reachable by Tab and meaningful for returning to target.",
+      "severityはsemantic color、messageは読める説明です。",
+      "severity owns semantic color; message stays readable explanation.",
+      "dismiss後も作業位置を失わないようfeedbackを返します。",
+      "Return feedback without losing work position after dismiss.",
+    ),
+    progress: makeGuidance(
+      "細い構造線で進捗と対象を同じplaneに示します。",
+      "Show progress and target in the same plane with a thin structural line.",
+      "大きなspinnerや意味色のbarで注意を奪いません。",
+      "Do not steal attention with a large spinner or semantic bar.",
+      "progressは読み取り対象で、focusを奪いません。",
+      "Progress is readable and does not steal focus.",
+      "value/maxとlabelが進捗のstateを所有します。",
+      "value/max and label own progress state.",
+      "既存contentを残したまま線だけを更新します。",
+      "Update the line while keeping existing content.",
+    ),
+    dialog: makeGuidance(
+      "判断根拠を隠さないplanar/non-modalな下端面を使います。",
+      "Use a planar, non-modal bottom-edge surface that keeps decision context.",
+      "内容を隠す中央overlayを既定の仕事面にしません。",
+      "Do not make a context-hiding centered overlay the default work surface.",
+      "open時のfocusをdialog内、close後をopenerへ返します。",
+      "Keep focus in the dialog while open and return it to the opener.",
+      "modal/non-modalは判断の拘束度として区別します。",
+      "modal/non-modal distinguish decision constraint.",
+      "背景の仕事を読めるまま判断面を足します。",
+      "Add the decision surface while keeping background work readable.",
+    ),
+    "history-timeline": makeGuidance(
+      "revisionをgutterの線とdot、selectedIdで読みます。",
+      "Read revisions through a gutter line, dot, and selectedId.",
+      "番号付きlistやcard列へ戻しません。",
+      "Do not turn it back into a numbered list or card row.",
+      "selected entryへfocusとcurrentを一致させます。",
+      "Align focus and current state with the selected entry.",
+      "compact/orientationはgutter geometryだけを変えます。",
+      "compact/orientation change gutter geometry only.",
+      "revision contentを残したままcurrentだけを移動します。",
+      "Move current state without clearing revision content.",
+    ),
+  } as Partial<Record<CatalogComponentId, Guidance>>
+)[id];
+const guidance = identityGuidance ?? {
+  use:
+    locale === "ja"
+      ? "読む状態を主役にし、選択・編集・更新が必要な面だけへ場所と注意を渡します。"
+      : "Keep the readable state primary, then give area and attention to the surface that needs work.",
+  avoid:
+    locale === "ja"
+      ? "常設の入力box、意味のないcard、overlay、通常選択への意味色を増やしません。"
+      : "Avoid permanent input chrome, ornamental cards, overlays, and semantic color for ordinary selection.",
+  keyboard:
+    locale === "ja"
+      ? "Tabは順序、Arrowは視覚方向、Home/Endは範囲の端へ一致させます。"
+      : "Tab follows order, arrows follow visual direction, and Home/End reach the edges.",
+  state:
+    locale === "ja"
+      ? "cleanを基準に、created/modified/deleted/errorだけが下線・淡い面・意味色を持ちます。"
+      : "Clean is the baseline; created, modified, deleted, and error own the state surface.",
+  live:
+    locale === "ja"
+      ? "内容を消さず、選択の面積・出現方向・対象regionのmotionで仕事の変化を示します。"
+      : "Keep content present and express change through selection area and directional motion.",
+};
 const copy =
   locale === "ja"
     ? {
@@ -37,6 +506,12 @@ const copy =
         source: "現在の設定から生成したコード",
         attributes: "Attributes",
         eventsMethods: "Events and methods",
+        design: "設計思想",
+        use: "使う",
+        avoid: "避ける",
+        keyboard: "Keyboard",
+        state: "State",
+        live: "Live behavior",
         name: "名前",
         type: "型",
         defaultValue: "既定値",
@@ -56,6 +531,12 @@ const copy =
         source: "Code generated from the current options",
         attributes: "Attributes",
         eventsMethods: "Events and methods",
+        design: "Design rationale",
+        use: "Use",
+        avoid: "Avoid",
+        keyboard: "Keyboard",
+        state: "State",
+        live: "Live behavior",
         name: "Name",
         type: "Type",
         defaultValue: "Default",
@@ -68,6 +549,57 @@ const copy =
     <p class="eyebrow">{entry?.group ?? "component"}</p>
     <p>{entry?.summary[locale] ?? ""}</p>
   </header>
+
+  <section class="identity-guidance" aria-labelledby={`${id}-identity`}>
+    <h2 id={`${id}-identity`}>{copy.design}</h2>
+    <p>{entry?.summary[locale] ?? ""}</p>
+    <div class="identity-guidance-grid">
+      <div>
+        <h3>{copy.use}</h3>
+        <p>
+          {guidance.use}
+        </p>
+      </div>
+      <div>
+        <h3>{copy.avoid}</h3>
+        <p>
+          {guidance.avoid}
+        </p>
+      </div>
+      <div>
+        <h3>{copy.keyboard}</h3>
+        <p>
+          {guidance.keyboard}
+        </p>
+      </div>
+      <div>
+        <h3>{copy.state}</h3>
+        <p>
+          {guidance.state}
+        </p>
+      </div>
+      <div>
+        <h3>{copy.live}</h3>
+        <p>
+          {guidance.live}
+        </p>
+      </div>
+    </div>
+  </section>
+
+  {
+    id === "editable-text" && (
+      <section class="editable-state-sequence" aria-label="EditableText states">
+        <span data-state="read">read / plain value</span>
+        <span data-state="affordance">
+          editable affordance / dashed underline
+        </span>
+        <span data-state="editing">editing / solid underline</span>
+        <span data-state="modified">modified / changed value</span>
+        <span data-state="error">error / semantic attention</span>
+      </section>
+    )
+  }
 
   <section class="demo-section" aria-labelledby={`${id}-demo`}>
     <div class="section-heading">
@@ -320,12 +852,28 @@ const copy =
     id: CatalogComponentId,
     element: HTMLElement,
   ): void => {
-    if (
-      id === "theme-root" ||
-      id === "flex" ||
-      id === "stack" ||
-      id === "grid"
-    ) {
+    if (id === "theme-root") {
+      const work = element.ownerDocument.createElement(
+        "ika-stack",
+      ) as DemoElement;
+      work.dataset.demoThemeDescendant = "true";
+      work.props = { gap: "0.5rem", align: "stretch", justify: "start" };
+      for (const [content, tone] of [
+        ["Primary work", "success"],
+        ["Secondary detail", "muted"],
+        ["Ready state", "default"],
+      ] as const) {
+        const child = element.ownerDocument.createElement(
+          "ika-text",
+        ) as DemoElement;
+        child.dataset.demoThemeDescendant = "true";
+        child.props = { content, tone, selectable: true };
+        work.append(child);
+      }
+      element.append(work);
+      return;
+    }
+    if (id === "flex" || id === "stack" || id === "grid") {
       addTextChild(element, "Primary work", "success");
       addTextChild(element, "Secondary detail", "muted");
       addTextChild(element, "Ready state", "default");
@@ -422,6 +970,45 @@ const copy =
         }
         addDemoChildren(id, element);
         preview.append(element);
+        if (id === "editable-text") {
+          const stateStrip = preview.ownerDocument.createElement("div");
+          stateStrip.className = "editable-live-states";
+          const stateValues = [
+            { state: "clean", value: "Read value" },
+            { state: "modified", value: "Modified value" },
+            { state: "error", value: "Needs attention" },
+            { state: "editing", value: "Editing value" },
+          ] as const;
+          for (const stateValue of stateValues) {
+            const stateElement = preview.ownerDocument.createElement(
+              "ika-editable-text",
+            ) as DemoElement;
+            stateElement.dataset.demoState = stateValue.state;
+            stateElement.props = {
+              id: `state-${stateValue.state}`,
+              value: stateValue.value,
+              editor: "text",
+              state:
+                stateValue.state === "editing" ? "clean" : stateValue.state,
+            };
+            stateStrip.append(stateElement);
+            if (stateValue.state === "editing")
+              stateElement.querySelector('[part="read-value"]')?.dispatchEvent(
+                new KeyboardEvent("keydown", {
+                  key: "Enter",
+                  bubbles: true,
+                }),
+              );
+          }
+          preview.append(stateStrip);
+        }
+        if (id === "alert") {
+          const target = preview.ownerDocument.createElement("div");
+          target.id = "selected-work";
+          target.textContent =
+            locale === "ja" ? "対象のwork region" : "Selected work region";
+          preview.append(target);
+        }
         element.addEventListener("ika-active-change", (event) => {
           const next = (event as CustomEvent<{ readonly id?: unknown }>).detail
             ?.id;
@@ -619,6 +1206,7 @@ const copy =
     max-width: 64rem;
   }
   .docs-component-heading,
+  .identity-guidance,
   .demo-section,
   .contract-section,
   .contract-details {
@@ -627,6 +1215,81 @@ const copy =
   }
   .demo-section {
     container-type: inline-size;
+  }
+  .identity-guidance {
+    padding-block: 1.25rem;
+    border-block: 1px solid var(--ikasue-line);
+  }
+  .identity-guidance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+    gap: 1rem;
+    margin-block-start: 1rem;
+  }
+  .identity-guidance-grid > div {
+    padding-block-start: 0.75rem;
+    border-block-start: 1px solid var(--ikasue-line);
+  }
+  .identity-guidance h3 {
+    margin-block: 0 0 0.35rem;
+    font-size: 0.85rem;
+  }
+  .identity-guidance p {
+    margin: 0;
+    color: var(--ikasue-muted);
+    font-size: 0.88rem;
+  }
+  .editable-state-sequence {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border-block: 1px solid var(--ikasue-line);
+  }
+  .editable-live-states {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    padding-block: 1rem;
+    border-block-end: 1px solid var(--ikasue-line);
+  }
+  .editable-live-states::before {
+    content: "live states";
+    grid-column: 1 / -1;
+    color: var(--ikasue-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+  }
+  .editable-live-states [data-demo-state]::before {
+    display: block;
+    margin-block-end: 0.35rem;
+    color: var(--ikasue-muted);
+    content: attr(data-demo-state);
+    font-size: 0.72rem;
+  }
+  .editable-state-sequence span {
+    padding: 0.75rem 0.5rem;
+    border-inline-end: 1px solid var(--ikasue-line);
+    color: var(--ikasue-muted);
+    font-size: 0.8rem;
+  }
+  .editable-state-sequence span:last-child {
+    border-inline-end: 0;
+  }
+  .editable-state-sequence [data-state="read"] {
+    border-block-end: 1px dashed var(--ikasue-line-strong, #a7aaa1);
+  }
+  .editable-state-sequence [data-state="editing"],
+  .editable-state-sequence [data-state="modified"] {
+    border-block-end: 1px solid var(--ikasue-ink);
+  }
+  .editable-state-sequence [data-state="error"] {
+    border-block-end: 1px solid var(--ikasue-error-ink, #a82e29);
+    color: var(--ikasue-error-ink, #a82e29);
+  }
+  @media (max-width: 720px) {
+    .editable-state-sequence,
+    .editable-live-states {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
   .eyebrow {
     margin: 0;
@@ -657,14 +1320,14 @@ const copy =
     display: grid;
     min-width: 0;
     overflow: hidden;
-    border: 1px solid var(--ikasue-line);
+    border-block: 1px solid var(--ikasue-line);
     background: var(--ikasue-surface);
   }
   .demo-options {
     display: grid;
     gap: 0.75rem;
     min-width: 0;
-    padding: 1rem;
+    padding: 1rem 0;
     border-block-end: 1px solid var(--ikasue-line);
     background: var(--ikasue-surface-raised);
   }
@@ -691,10 +1354,10 @@ const copy =
   :global(.demo-control textarea) {
     inline-size: 100%;
     min-inline-size: 0;
-    border: 1px solid var(--ikasue-line);
-    border-radius: 0.25rem;
-    padding: 0.45rem 0.55rem;
-    background: var(--ikasue-surface);
+    border: 0;
+    border-block-end: 1px solid var(--ikasue-line-strong);
+    padding: 0.45rem 0.1rem;
+    background: transparent;
     color: var(--ikasue-ink);
   }
   :global(.demo-control textarea) {
@@ -706,7 +1369,7 @@ const copy =
     display: grid;
     gap: 0.75rem;
     min-width: 0;
-    padding: 1rem;
+    padding: 1rem 0;
   }
   .demo-view-tabs,
   .demo-provider-tabs {
@@ -719,6 +1382,7 @@ const copy =
   }
   .demo-view-tabs button,
   .demo-provider-tabs button {
+    flex: 1 1 auto;
     border: 0;
     border-block-end: 2px solid transparent;
     padding: 0.5rem 0.75rem;
@@ -730,6 +1394,8 @@ const copy =
   .demo-provider-tabs button[aria-selected="true"] {
     border-color: currentColor;
     background: var(--ikasue-selection);
+    flex-grow: 1.35;
+    transform: translateY(-1px);
   }
   .demo-preview {
     display: grid;
@@ -738,7 +1404,7 @@ const copy =
     min-inline-size: 0;
     overflow: auto;
     padding: 1rem;
-    border: 1px dashed var(--ikasue-line);
+    border-block: 1px solid var(--ikasue-line);
     background: var(--ikasue-surface);
     color: var(--ikasue-ink);
   }
@@ -756,7 +1422,7 @@ const copy =
     max-block-size: 34rem;
     margin: 0;
     overflow: auto;
-    border: 1px solid var(--ikasue-line);
+    border-block: 1px solid var(--ikasue-line);
     padding: 1rem;
     background: var(--ikasue-code-surface);
     color: var(--ikasue-code-ink);

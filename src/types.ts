@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-invalid-void-type */
 
+import type { IkaView } from "./contract";
+
 export type LayoutChild =
   | string
   | {
@@ -70,22 +72,24 @@ export interface ScrollAreaSpec {
 
 export interface SeparatorOptions {
   readonly orientation?: "horizontal" | "vertical";
+  readonly weight?: "hairline" | "standard";
   readonly role?: "separator";
 }
 
 export interface SeparatorSpec {
   readonly kind: "separator";
   readonly orientation: "horizontal" | "vertical";
+  readonly weight: "hairline" | "standard";
   readonly role?: "separator";
 }
 
 export interface SplitPane {
   readonly id: string;
-  readonly content: string;
+  readonly content?: string;
   readonly label?: string;
   readonly size?: string;
   readonly minSize?: string;
-  readonly basis?: string;
+  readonly basis?: number | string;
   readonly grow?: number;
   readonly shrink?: number;
   readonly collapsible?: boolean;
@@ -126,6 +130,8 @@ export interface SplitViewState {
 
 export interface SidePanelOptions {
   readonly id?: string;
+  readonly main?: string;
+  readonly children?: readonly IkaView[];
   readonly title?: string;
   readonly content?: string;
   readonly side?: "start" | "end";
@@ -136,6 +142,8 @@ export interface SidePanelOptions {
 export interface SidePanelSpec {
   readonly kind: "side-panel";
   readonly id?: string;
+  readonly main: string;
+  readonly children: readonly IkaView[];
   readonly title: string;
   readonly content: string;
   readonly side: "start" | "end";
@@ -145,6 +153,8 @@ export interface SidePanelSpec {
 
 export interface BottomPanelOptions {
   readonly id?: string;
+  readonly main?: string;
+  readonly children?: readonly IkaView[];
   readonly title?: string;
   readonly content?: string;
   readonly open?: boolean;
@@ -154,6 +164,8 @@ export interface BottomPanelOptions {
 export interface BottomPanelSpec {
   readonly kind: "bottom-panel";
   readonly id?: string;
+  readonly main: string;
+  readonly children: readonly IkaView[];
   readonly title: string;
   readonly content: string;
   readonly open: boolean;
@@ -164,7 +176,6 @@ export interface LoadingRegionOptions {
   readonly id?: string;
   readonly content?: string;
   readonly busy?: boolean;
-  readonly progress?: number;
   readonly label?: string;
 }
 
@@ -173,7 +184,6 @@ export interface LoadingRegionSpec {
   readonly id?: string;
   readonly content: string;
   readonly busy: boolean;
-  readonly progress?: number;
   readonly label: string;
 }
 
@@ -212,7 +222,8 @@ export interface ThemeRootSpec {
 type Item = {
   readonly id: string;
   readonly label: string;
-  readonly content: string;
+  readonly content?: string;
+  readonly icon?: string;
   readonly disabled?: boolean;
 };
 
@@ -238,17 +249,23 @@ export interface TabsSpec {
 }
 
 export interface SidebarOptions {
+  readonly main?: string;
   readonly items?: readonly Item[];
   readonly activeId?: string;
   readonly collapsed?: boolean;
+  readonly railWidth?: string;
+  readonly openWidth?: string;
   readonly onActiveChange?: (id: string) => void;
 }
 
 export interface SidebarSpec {
   readonly kind: "sidebar";
+  readonly main: string;
   readonly items: readonly NormalizedItem[];
   readonly activeId?: string;
   readonly collapsed: boolean;
+  readonly railWidth: string;
+  readonly openWidth: string;
   readonly onActiveChange?: (id: string) => void;
 }
 
@@ -256,9 +273,14 @@ export interface ToolbarOptions {
   readonly items?: readonly {
     readonly id: string;
     readonly label: string;
+    readonly icon?: string;
     readonly disabled?: boolean;
+    readonly pressed?: boolean;
+    readonly busy?: boolean;
     readonly onSelect?: () => void;
   }[];
+  readonly activeId?: string;
+  readonly collapsed?: boolean;
   readonly overflow?: "none" | "menu";
 }
 
@@ -267,9 +289,14 @@ export interface ToolbarSpec {
   readonly items: readonly {
     readonly id: string;
     readonly label: string;
+    readonly icon?: string;
     readonly disabled: boolean;
+    readonly pressed: boolean;
+    readonly busy: boolean;
     readonly onSelect?: () => void;
   }[];
+  readonly activeId?: string;
+  readonly collapsed: boolean;
   readonly overflow: "none" | "menu";
 }
 
@@ -280,6 +307,7 @@ export interface IconButtonOptions {
   readonly type?: "button" | "submit" | "reset";
   readonly disabled?: boolean;
   readonly pressed?: boolean;
+  readonly busy?: boolean;
   readonly onClick?: () => void;
 }
 
@@ -291,6 +319,7 @@ export interface IconButtonSpec {
   readonly type: "button" | "submit" | "reset";
   readonly disabled: boolean;
   readonly pressed: boolean;
+  readonly busy: boolean;
   readonly onClick?: () => void;
 }
 
@@ -335,6 +364,8 @@ export interface TextFieldSpec {
 export interface EditableTextOptions {
   readonly id?: string;
   readonly value?: string;
+  readonly editor?: EditableTextEditor;
+  readonly state?: EditableTextState;
   readonly disabled?: boolean;
   readonly onCommit?: (value: string) => void;
   readonly onCancel?: () => void;
@@ -344,10 +375,17 @@ export interface EditableTextSpec {
   readonly kind: "editable-text";
   readonly id?: string;
   readonly value: string;
+  readonly editor: EditableTextEditor;
+  readonly state: EditableTextState;
   readonly disabled: boolean;
   readonly onCommit?: (value: string) => void;
   readonly onCancel?: () => void;
 }
+
+export type EditableTextEditor =
+  "text" | "email" | "number" | "date" | "textarea" | "select";
+export type EditableTextState =
+  "clean" | "created" | "modified" | "deleted" | "error";
 
 export interface CheckboxOptions {
   readonly id: string;
@@ -413,6 +451,8 @@ export interface FieldOptions {
   readonly error?: string;
   readonly required?: boolean;
   readonly content?: string;
+  readonly editor?: EditableTextEditor;
+  readonly state?: EditableTextState;
 }
 
 export interface FieldSpec {
@@ -423,6 +463,8 @@ export interface FieldSpec {
   readonly error?: string;
   readonly required: boolean;
   readonly content: string;
+  readonly editor: EditableTextEditor;
+  readonly state: EditableTextState;
 }
 
 export interface FormField {
@@ -430,6 +472,8 @@ export interface FormField {
   readonly label: string;
   readonly initialValue?: string;
   readonly required?: boolean;
+  readonly editor?: EditableTextEditor;
+  readonly state?: EditableTextState;
 }
 
 export type FormStateStatus =
@@ -447,6 +491,8 @@ export interface FormState {
 export interface FormOptions {
   readonly fields?: readonly FormField[];
   readonly values?: Readonly<Record<string, string>>;
+  readonly drafts?: Readonly<Record<string, string>>;
+  readonly errors?: Readonly<Record<string, string>>;
   readonly status?: FormStateStatus;
   readonly onSubmit?: (
     values: Readonly<Record<string, string>>,
@@ -457,6 +503,8 @@ export interface FormSpec {
   readonly kind: "form";
   readonly fields: readonly FormField[];
   readonly values: Readonly<Record<string, string>>;
+  readonly drafts: Readonly<Record<string, string>>;
+  readonly errors: Readonly<Record<string, string>>;
   readonly status: FormStateStatus;
   readonly onSubmit?: (
     values: Readonly<Record<string, string>>,
@@ -468,6 +516,7 @@ export interface DataGridCell {
   readonly column: string;
   readonly value: string;
   readonly status?: "clean" | "dirty" | "error";
+  readonly state?: EditableTextState;
 }
 
 export interface DataGridSelection {
@@ -498,6 +547,9 @@ export interface DataGridOptions {
   readonly cells?: readonly DataGridCell[];
   readonly selection?: DataGridSelection;
   readonly editing?: DataGridSelection;
+  readonly selectionMode?: "cell" | "context";
+  readonly editable?: boolean;
+  readonly density?: "default" | "compact";
   readonly onSelect?: (selection: DataGridSelection | undefined) => void;
   readonly onEdit?: (row: string, column: string, value: string) => void;
   readonly onCopy?: ClipboardHandler;
@@ -513,6 +565,9 @@ export interface DataGridSpec {
   readonly cells: readonly DataGridCell[];
   readonly selection?: DataGridSelection;
   readonly editing?: DataGridSelection;
+  readonly selectionMode: "cell" | "context";
+  readonly editable: boolean;
+  readonly density: "default" | "compact";
   readonly onSelect?: (selection: DataGridSelection | undefined) => void;
   readonly onEdit?: (row: string, column: string, value: string) => void;
   readonly onCopy?: ClipboardHandler;
@@ -524,6 +579,7 @@ export interface StatusIndicatorOptions {
   readonly label: string;
   readonly status?: "neutral" | "info" | "success" | "warning" | "danger";
   readonly icon?: string;
+  readonly showLabel?: boolean;
   readonly targetId?: string;
 }
 
@@ -533,6 +589,7 @@ export interface StatusIndicatorSpec {
   readonly label: string;
   readonly status: "neutral" | "info" | "success" | "warning" | "danger";
   readonly icon?: string;
+  readonly showLabel: boolean;
   readonly targetId?: string;
 }
 
@@ -541,6 +598,8 @@ export interface AlertOptions {
   readonly message: string;
   readonly severity?: "info" | "success" | "warning" | "danger";
   readonly dismissible?: boolean;
+  readonly target?: string;
+  readonly action?: string;
   readonly onDismiss?: () => void;
 }
 
@@ -550,6 +609,8 @@ export interface AlertSpec {
   readonly message: string;
   readonly severity: "info" | "success" | "warning" | "danger";
   readonly dismissible: boolean;
+  readonly target?: string;
+  readonly action?: string;
   readonly onDismiss?: () => void;
 }
 
@@ -574,6 +635,8 @@ export interface HistoryTimelineOptions {
     readonly tone?: "default" | "muted" | "success" | "danger";
   }[];
   readonly orientation?: "horizontal" | "vertical";
+  readonly selectedId?: string;
+  readonly compact?: boolean;
 }
 
 export interface HistoryTimelineSpec {
@@ -585,4 +648,6 @@ export interface HistoryTimelineSpec {
     readonly tone: "default" | "muted" | "success" | "danger";
   }[];
   readonly orientation: "horizontal" | "vertical";
+  readonly selectedId?: string;
+  readonly compact: boolean;
 }
