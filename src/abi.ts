@@ -175,6 +175,7 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
   sidebar: contract(
     "sidebar",
     [
+      property("main", "string", ""),
       property("items", "Item[]", "[]"),
       property("activeId", "string"),
       property("collapsed", "boolean", false),
@@ -263,6 +264,7 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
     [
       "ika-selection-change",
       "ika-edit-start",
+      "ika-edit-commit",
       "ika-model-event",
       "ika-update",
       "ika-error",

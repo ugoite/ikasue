@@ -105,7 +105,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
       id: "title",
       value: "Editable title",
       editor: "text",
-      state: "modified",
+      state: "clean",
       disabled: false,
     },
     controls: [
@@ -243,6 +243,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
   },
   sidebar: {
     props: {
+      main: "Workspace content remains visible beside the navigation rail.",
       items: [
         { id: "home", label: "Home", icon: "⌂" },
         { id: "settings", label: "Settings", icon: "⚙" },
@@ -251,6 +252,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
       collapsed: false,
     },
     controls: [
+      text("main", "main内容", "Main content"),
       json("items", "項目", "Items"),
       select("activeId", "選択中", "Active item", ["home", "settings"]),
       boolean("collapsed", "折りたたみ", "Collapsed"),
@@ -404,13 +406,12 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
         {
           id: "two",
           cells: {
-            name: "Catalog",
+            name: { value: "Catalog", state: "created" },
             status: { value: "Review", state: "error" },
           },
         },
       ],
       selection: { row: "one", column: "name" },
-      editing: { row: "one", column: "name" },
       editable: true,
       density: "default",
     },

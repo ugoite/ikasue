@@ -500,6 +500,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "main": { "type": "string" },
         "items": { "type": "array", "items": { "$ref": "#/$defs/item" } },
         "activeId": { "type": "string" },
         "collapsed": { "type": "boolean" }

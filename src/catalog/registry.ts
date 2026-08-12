@@ -290,6 +290,7 @@ const componentProperties: Record<
     property("orientation", "horizontal | vertical", "horizontal"),
   ],
   sidebar: [
+    property("main", "string", ""),
     property("items", "Item[]", "[]"),
     property("activeId", "string", ""),
     property("collapsed", "boolean", false),
@@ -354,6 +355,7 @@ const componentProperties: Record<
     property("columns", "DataGridColumn[]", "[]"),
     property("rows", "DataGridRow[]", "[]"),
     property("selection", "DataGridSelection"),
+    property("editing", "DataGridSelection"),
     property("editable", "boolean", false),
     property("density", "default | compact", "default"),
   ],
@@ -593,7 +595,7 @@ const componentDefaults: Record<
     variant: "default",
     orientation: "horizontal",
   },
-  sidebar: { items: "[]", activeId: "", collapsed: false },
+  sidebar: { main: "", items: "[]", activeId: "", collapsed: false },
   toolbar: { items: "[]", overflow: "none" },
   "icon-button": {
     id: "",

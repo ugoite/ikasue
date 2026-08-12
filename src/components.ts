@@ -134,6 +134,7 @@ export function sidebar(options?: SidebarOptions): SidebarSpec {
   const normalized = items(options?.items);
   const result: Mutable<SidebarSpec> = {
     kind: "sidebar",
+    main: content(options?.main),
     items: normalized,
     collapsed: options?.collapsed === true,
   };
