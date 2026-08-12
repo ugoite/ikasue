@@ -510,6 +510,7 @@ export function dataGrid(options?: DataGridOptions): DataGridSpec {
     rowsProvided,
     cells,
     selectionMode: options?.selectionMode === "cell" ? "cell" : "context",
+    editable: options?.editable === true,
   };
   const selection = normalizeTarget(options?.selection);
   const editing = normalizeTarget(options?.editing);

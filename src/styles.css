@@ -965,6 +965,7 @@ ika-progress [part="progress"]::-moz-progress-bar {
 }
 
 ika-dialog [part="dialog"] {
+  animation: ikasue-from-bottom var(--ikasue-motion) var(--ikasue-spring) both;
   max-inline-size: min(32rem, calc(100vw - 2rem));
   border: 0;
   border-block-start: 1px solid var(--ikasue-line-strong);
