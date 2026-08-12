@@ -422,7 +422,7 @@ ika-status-indicator[data-status="danger"] [part="status"] {
 }
 
 ika-sidebar {
-  inline-size: var(--ikasue-nav-open, 18rem);
+  inline-size: 100%;
   min-block-size: 100%;
   overflow: hidden;
   border-inline-end: 1px solid var(--ikasue-line);
@@ -491,7 +491,7 @@ ika-sidebar {
 }
 
 ika-sidebar[data-collapsed="true"] {
-  inline-size: auto;
+  inline-size: 100%;
   grid-template-columns: minmax(0, 1fr) 44px;
 }
 
