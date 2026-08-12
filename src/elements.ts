@@ -134,6 +134,7 @@ const primitiveAttributes = new Set([
   "label",
   "content",
   "title",
+  "main",
   "message",
   "editor",
   "state",
@@ -215,6 +216,7 @@ const nextTabsInstanceId = (): number => {
 const editableEditing = new WeakSet<HTMLElement>();
 const editableDrafts = new WeakMap<HTMLElement, string>();
 const editableValues = new WeakMap<HTMLElement, string>();
+const editableStates = new WeakMap<HTMLElement, string>();
 
 const propertyKeysByTag: Readonly<
   Record<IkaElementTagName, ReadonlySet<string>>
@@ -283,6 +285,7 @@ const propertyKeysByTag: Readonly<
     "columns",
     "rows",
     "selection",
+    "editing",
     "editable",
     "density",
   ]),
@@ -301,8 +304,8 @@ const propertyKeysByTag: Readonly<
     "collapsible",
     "motionOrigin",
   ]),
-  "ika-side-panel": new Set(["title", "content", "side", "open"]),
-  "ika-bottom-panel": new Set(["title", "content", "open"]),
+  "ika-side-panel": new Set(["main", "title", "content", "side", "open"]),
+  "ika-bottom-panel": new Set(["main", "title", "content", "open"]),
   "ika-loading-region": new Set(["content", "busy", "label"]),
   "ika-dialog": new Set(["title", "content", "open", "modal"]),
   "ika-status-indicator": new Set([
@@ -478,11 +481,16 @@ function propertyBoolean(value: IkaJsonRecord, key: string): boolean {
   return value[key] === true;
 }
 
-function applySplitSize(section: HTMLElement, size: string): void {
+function applySplitSize(
+  section: HTMLElement,
+  size: string,
+  active = false,
+): void {
   const value = size.trim();
   const fractional = /^(\d+(?:\.\d+)?)fr$/.exec(value);
   if (fractional) {
-    section.style.flexGrow = fractional[1] ?? "1";
+    const base = Number(fractional[1] ?? "1");
+    section.style.flexGrow = String(active ? base * 1.55 : base);
     section.style.flexShrink = "1";
     section.style.flexBasis = "0";
     return;
@@ -935,24 +943,33 @@ export class IkaElement extends HTMLElementBase {
       case "ika-bottom-panel":
         this.dataset.side = propertyText(value, "side") || "end";
         this.dataset.open = String(propertyBoolean(value, "open"));
-        appendInternal(root, "aside", (element) => {
-          element.hidden = !propertyBoolean(value, "open");
-          element.part = "panel";
+        appendInternal(root, "div", (workspace) => {
+          workspace.part = "workspace";
+          const main = this.ownerDocument.createElement("main");
+          main.part = "main";
+          main.textContent = propertyText(value, "main");
+          const panel = this.ownerDocument.createElement("aside");
+          panel.part = "panel";
+          panel.setAttribute(
+            "aria-hidden",
+            String(!propertyBoolean(value, "open")),
+          );
           const title = propertyText(value, "title");
           const content = propertyText(value, "content");
           if (title) {
             const heading = this.ownerDocument.createElement("h2");
             heading.part = "title";
             heading.textContent = title;
-            element.append(heading);
+            panel.append(heading);
           }
           if (content) {
             const paragraph = this.ownerDocument.createElement("p");
             paragraph.part = "content";
             paragraph.textContent = content;
-            element.append(paragraph);
+            panel.append(paragraph);
           }
-          if (!title && !content) element.textContent = label;
+          if (!title && !content) panel.textContent = label;
+          workspace.append(main, panel);
         });
         break;
       case "ika-loading-region":
@@ -1191,7 +1208,8 @@ export class IkaElement extends HTMLElementBase {
   ): void {
     const disabled = propertyBoolean(value, "disabled");
     const editor = propertyText(value, "editor") || "text";
-    const state = propertyText(value, "state") || "clean";
+    const state =
+      editableStates.get(this) || propertyText(value, "state") || "clean";
     const controlledValue = propertyText(value, "value");
     if (!editableValues.has(this)) editableValues.set(this, controlledValue);
     const currentValue = editableValues.get(this) ?? controlledValue;
@@ -1315,6 +1333,8 @@ export class IkaElement extends HTMLElementBase {
     editableEditing.delete(this);
     editableDrafts.delete(this);
     editableValues.set(this, next);
+    if ((propertyText(this.effectiveProps, "state") || "clean") === "clean")
+      editableStates.set(this, "modified");
     this.render();
     this.dispatchEvent(
       new CustomEvent("ika-commit", {
@@ -1398,6 +1418,9 @@ export class IkaDataGridElement extends IkaElement {
     this.#columns = columns;
     this.#rows = rows;
     this.#selection = selection;
+    if (value.editing === undefined) this.#editing = undefined;
+    else if (isIkaDataGridSelection(value.editing))
+      this.#editing = value.editing;
     super.props = value;
   }
 
@@ -1645,10 +1668,55 @@ export class IkaDataGridElement extends IkaElement {
           this.startEditing({ row: row.id, column: column.id });
         });
         cell.addEventListener("keydown", (event) => {
+          const rowIndex = this.#rows.findIndex(
+            (candidate) => candidate.id === row.id,
+          );
+          const columnIndex = this.#columns.findIndex(
+            (candidate) => candidate.id === column.id,
+          );
+          let nextRow = rowIndex;
+          let nextColumn = columnIndex;
+          if (event.key === "ArrowUp") nextRow -= 1;
+          else if (event.key === "ArrowDown") nextRow += 1;
+          else if (event.key === "ArrowLeft") nextColumn -= 1;
+          else if (event.key === "ArrowRight") nextColumn += 1;
+          else if (event.key === "Home") nextColumn = 0;
+          else if (event.key === "End") nextColumn = this.#columns.length - 1;
+          if (nextRow !== rowIndex || nextColumn !== columnIndex) {
+            const nextRowValue = this.#rows[nextRow];
+            const nextColumnValue = this.#columns[nextColumn];
+            if (nextRowValue && nextColumnValue) {
+              event.preventDefault();
+              this.selection = {
+                row: nextRowValue.id,
+                column: nextColumnValue.id,
+              };
+              this.render();
+              this.querySelector<HTMLElement>(
+                `[data-row-id="${CSS.escape(nextRowValue.id)}"][data-column-id="${CSS.escape(nextColumnValue.id)}"]`,
+              )?.focus();
+            }
+            return;
+          }
           if (event.key === "F2" || event.key === "Enter") {
             event.preventDefault();
             this.startEditing({ row: row.id, column: column.id });
           }
+        });
+        cell.addEventListener("copy", (event) => {
+          const clipboard = event.clipboardData;
+          if (!clipboard) return;
+          event.preventDefault();
+          clipboard.setData("text/plain", gridCellValue(rawValue));
+          this.dataset.clipboard = "copying";
+        });
+        cell.addEventListener("paste", (event) => {
+          const pasted = event.clipboardData?.getData("text/plain");
+          if (!pasted || value.editable !== true) return;
+          event.preventDefault();
+          this.dataset.clipboard = "pasting";
+          this.startEditing({ row: row.id, column: column.id });
+          this.commitGridCell(row.id, column.id, pasted);
         });
         if (
           this.#editing?.row === row.id &&
@@ -1693,6 +1761,7 @@ export class IkaDataGridElement extends IkaElement {
       };
     });
     this.#editing = undefined;
+    this.dataset.clipboard = "idle";
     this.render();
     this.dispatchEvent(
       new CustomEvent("ika-edit-commit", {
@@ -1903,6 +1972,9 @@ export class IkaTabsElement extends IkaElement {
       panel.setAttribute("role", "tabpanel");
       panel.setAttribute("aria-labelledby", tabId);
       panel.hidden = item.id !== this.#activeId;
+      panel.dataset.active = String(item.id === this.#activeId);
+      panel.dataset.motion =
+        orientation === "vertical" ? "from-bottom" : "from-end";
       panel.textContent = item.content ?? "";
       panels.append(panel);
     }
@@ -1994,6 +2066,24 @@ export class IkaSplitViewElement extends IkaElement {
       section.dataset.active = String(
         (propertyText(value, "activePane") || this.#activePane) === pane.id,
       );
+      section.tabIndex = 0;
+      section.addEventListener("click", () => {
+        if (propertyText(this.effectiveProps, "activePane")) return;
+        this.#activePane = pane.id;
+        this.render();
+        this.dispatchEvent(
+          new CustomEvent("ika-active-pane-change", {
+            bubbles: true,
+            composed: true,
+            detail: { id: pane.id },
+          }),
+        );
+      });
+      section.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        section.click();
+      });
       section.setAttribute("aria-hidden", String(this.#collapsed.has(pane.id)));
       if (this.#collapsed.has(pane.id)) {
         section.style.flex = "0 0 0";
@@ -2002,7 +2092,11 @@ export class IkaSplitViewElement extends IkaElement {
         const size =
           sizes[index] ??
           (pane.basis === undefined ? "1fr" : `${String(pane.basis)}fr`);
-        applySplitSize(section, size);
+        applySplitSize(
+          section,
+          size,
+          (propertyText(value, "activePane") || this.#activePane) === pane.id,
+        );
       }
       if (pane.label) {
         const heading = this.ownerDocument.createElement("h3");
@@ -2027,9 +2121,14 @@ export class IkaSplitViewElement extends IkaElement {
         const control = this.ownerDocument.createElement("button");
         control.type = "button";
         control.part = "collapse-control";
-        control.textContent = this.#collapsed.has(pane.id)
-          ? "Expand"
-          : "Collapse";
+        control.textContent = orientation === "horizontal" ? "↔" : "↕";
+        control.title = this.#collapsed.has(pane.id)
+          ? "Expand pane"
+          : "Collapse pane";
+        control.setAttribute(
+          "aria-label",
+          this.#collapsed.has(pane.id) ? "Expand pane" : "Collapse pane",
+        );
         control.setAttribute(
           "aria-expanded",
           String(!this.#collapsed.has(pane.id)),

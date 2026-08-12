@@ -181,8 +181,28 @@
       "required": ["id", "cells"],
       "properties": {
         "id": { "type": "string", "minLength": 1 },
-        "cells": { "$ref": "#/$defs/jsonRecord" }
+        "cells": { "$ref": "#/$defs/dataGridCells" }
       }
+    },
+    "dataGridCells": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/dataGridCell" }
+    },
+    "dataGridCell": {
+      "oneOf": [
+        { "$ref": "#/$defs/jsonValue" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value"],
+          "properties": {
+            "value": { "type": "string" },
+            "state": {
+              "enum": ["clean", "created", "modified", "deleted", "error"]
+            }
+          }
+        }
+      ]
     },
     "selection": {
       "type": "object",
@@ -579,6 +599,7 @@
         },
         "rows": { "type": "array", "items": { "$ref": "#/$defs/dataGridRow" } },
         "selection": { "$ref": "#/$defs/selection" },
+        "editing": { "$ref": "#/$defs/selection" },
         "editable": { "type": "boolean" },
         "density": { "enum": ["default", "compact"] }
       }
@@ -612,6 +633,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "main": { "type": "string" },
         "title": { "type": "string" },
         "content": { "type": "string" },
         "side": { "enum": ["start", "end"] },
@@ -622,6 +644,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "main": { "type": "string" },
         "title": { "type": "string" },
         "content": { "type": "string" },
         "open": { "type": "boolean" }

@@ -126,6 +126,7 @@ export interface SplitViewState {
 
 export interface SidePanelOptions {
   readonly id?: string;
+  readonly main?: string;
   readonly title?: string;
   readonly content?: string;
   readonly side?: "start" | "end";
@@ -136,6 +137,7 @@ export interface SidePanelOptions {
 export interface SidePanelSpec {
   readonly kind: "side-panel";
   readonly id?: string;
+  readonly main: string;
   readonly title: string;
   readonly content: string;
   readonly side: "start" | "end";
@@ -145,6 +147,7 @@ export interface SidePanelSpec {
 
 export interface BottomPanelOptions {
   readonly id?: string;
+  readonly main?: string;
   readonly title?: string;
   readonly content?: string;
   readonly open?: boolean;
@@ -154,6 +157,7 @@ export interface BottomPanelOptions {
 export interface BottomPanelSpec {
   readonly kind: "bottom-panel";
   readonly id?: string;
+  readonly main: string;
   readonly title: string;
   readonly content: string;
   readonly open: boolean;

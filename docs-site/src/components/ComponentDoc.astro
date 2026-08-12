@@ -21,6 +21,108 @@ const componentEntry = entry?.kind === "component" ? entry : undefined;
 const abiEntry = IKA_ELEMENT_CONTRACTS[id];
 const demo = componentDemo(id);
 const tag = `ika-${id}`;
+type Guidance = {
+  use: string;
+  avoid: string;
+  keyboard: string;
+  state: string;
+  live: string;
+};
+const identityGuidance = (
+  {
+    "editable-text": {
+      use: "読んでからEnter/F2またはdouble clickで編集し、一本線のdraftとしてcommitします。",
+      avoid:
+        "常時textareaにせず、読む状態と編集状態を同じ情報の連続として扱います。",
+      keyboard:
+        "Enter/F2/double clickで編集、Escapeで取消、Enter/Tabでcommitします。",
+      state: "read → editing → modifiedの順で、破線から実線へ意味を変えます。",
+      live: "commit後も内容を残し、modified stateをその場で示します。",
+    },
+    tabs: {
+      use: "選択中のtabへ面積とpanelの方向を渡し、作業の現在地を明確にします。",
+      avoid:
+        "色やunderlineだけでactiveを示さず、elastic variantを最初の選択肢にします。",
+      keyboard:
+        "Arrowはorientationに沿って移動し、Home/Endはtab群の端へ移動します。",
+      state:
+        "inactive → selected → disabledを面積、背景、操作可能性で分けます。",
+      live: "panelは選択方向から入り、内容を消して待たせません。",
+    },
+    "segmented-control": {
+      use: "密接した選択肢のうち、現在の選択へ面積を譲るelastic choiceです。",
+      avoid:
+        "小さな丸や同じ幅のbox列にせず、selected optionを仕事の起点にします。",
+      keyboard: "Arrow/Home/Endで視覚方向と同じ順序を移動します。",
+      state:
+        "selected optionだけがgrowし、disabledは順序を壊さず操作から外れます。",
+      live: "選択の面積変化を短いspring motionで伝えます。",
+    },
+    "data-grid": {
+      use: "cell、row peer、column peerを同時に見せ、差分をその場で編集します。",
+      avoid:
+        "選択cellだけを強調して周辺文脈を消したり、編集時に表全体を置き換えたりしません。",
+      keyboard:
+        "Arrow/Home/Endはcellの視覚方向へ移動し、F2/Enterで編集、copy/pasteも同じcellを所有します。",
+      state:
+        "clean/created/modified/errorはcellのstateとして表面と下線に反映します。",
+      live: "編集内容を残したままcommitし、selectionとpeerを再計算します。",
+    },
+    "split-view": {
+      use: "active paneへ面積を渡し、divider上のcontrolで閉じる/戻すworkspaceです。",
+      avoid: "pane上にfloating controlを置くResizableSplitPaneにはしません。",
+      keyboard:
+        "paneをfocusしてEnter/Space、dividerはorientationの方向で操作します。",
+      state: "active/collapsedは面積とdividerのgeometryとして表します。",
+      live: "active paneのtrack比率をspringで再配分します。",
+    },
+    "side-panel": {
+      use: "mainとpanelを同じtrackに置き、開くとmainを押して情報を追加します。",
+      avoid:
+        "mainの上へoverlayせず、side=start/endとmotion originを一致させます。",
+      keyboard:
+        "mainからpanelへTab順を保ち、Escapeなどhostのclose操作へ戻します。",
+      state: "closed/openは0frからpanel trackへの変化として表します。",
+      live: "panelは指定edgeから入り、mainは同時に狭くなります。",
+    },
+    "bottom-panel": {
+      use: "mainの下にrowを増やし、outputや補助情報を上の仕事と同時に残します。",
+      avoid: "画面中央のmodalやoverlayで上の情報を隠しません。",
+      keyboard: "mainからbottom rowへ自然なTab順で到達できるようにします。",
+      state: "closed/openは0frからcontent rowへの変化として表します。",
+      live: "panelは下端から入り、mainの内容を消さずに押し上げます。",
+    },
+    "loading-region": {
+      use: "同じcontentを残したまま、対象regionだけをneutral waveでbusyにします。",
+      avoid: "中央spinnerや空のplaceholderへ置き換えません。",
+      keyboard: "busy中も読み取り可能なcontentとfocus順を維持します。",
+      state: "idle/busyはaria-busyとwaveだけを変え、情報のstateを消しません。",
+      live: "waveはpointer-events:noneで、読みながら処理の対象を確認できます。",
+    },
+  } as Partial<Record<CatalogComponentId, Guidance>>
+)[id];
+const guidance = identityGuidance ?? {
+  use:
+    locale === "ja"
+      ? "読む状態を主役にし、選択・編集・更新が必要な面だけへ場所と注意を渡します。"
+      : "Keep the readable state primary, then give area and attention to the surface that needs work.",
+  avoid:
+    locale === "ja"
+      ? "常設の入力box、意味のないcard、overlay、通常選択への意味色を増やしません。"
+      : "Avoid permanent input chrome, ornamental cards, overlays, and semantic color for ordinary selection.",
+  keyboard:
+    locale === "ja"
+      ? "Tabは順序、Arrowは視覚方向、Home/Endは範囲の端へ一致させます。"
+      : "Tab follows order, arrows follow visual direction, and Home/End reach the edges.",
+  state:
+    locale === "ja"
+      ? "cleanを基準に、created/modified/deleted/errorだけが下線・淡い面・意味色を持ちます。"
+      : "Clean is the baseline; created, modified, deleted, and error own the state surface.",
+  live:
+    locale === "ja"
+      ? "内容を消さず、選択の面積・出現方向・対象regionのmotionで仕事の変化を示します。"
+      : "Keep content present and express change through selection area and directional motion.",
+};
 const copy =
   locale === "ja"
     ? {
@@ -88,55 +190,46 @@ const copy =
       <div>
         <h3>{copy.use}</h3>
         <p>
-          {
-            locale === "ja"
-              ? "読む状態を主役にし、選択・編集・更新が必要な面だけへ場所と注意を渡します。"
-              : "Keep the readable state primary, then give area and attention to the surface that needs work."
-          }
+          {guidance.use}
         </p>
       </div>
       <div>
         <h3>{copy.avoid}</h3>
         <p>
-          {
-            locale === "ja"
-              ? "常設の入力box、意味のないcard、overlay、通常選択への意味色を増やしません。"
-              : "Avoid permanent input chrome, ornamental cards, overlays, and semantic color for ordinary selection."
-          }
+          {guidance.avoid}
         </p>
       </div>
       <div>
         <h3>{copy.keyboard}</h3>
         <p>
-          {
-            locale === "ja"
-              ? "Tabは順序、Arrowは視覚方向、Home/Endは範囲の端へ一致させます。編集はEnter/F2、取消はEscapeです。"
-              : "Tab follows order, arrows follow visual direction, and Home/End reach the edges. Enter/F2 edits and Escape cancels."
-          }
+          {guidance.keyboard}
         </p>
       </div>
       <div>
         <h3>{copy.state}</h3>
         <p>
-          {
-            locale === "ja"
-              ? "cleanを基準に、created/modified/deleted/errorだけが下線・淡い面・意味色を持ちます。"
-              : "Clean is the baseline; created, modified, deleted, and error states own the underline, quiet area, or semantic color."
-          }
+          {guidance.state}
         </p>
       </div>
       <div>
         <h3>{copy.live}</h3>
         <p>
-          {
-            locale === "ja"
-              ? "内容を消さず、選択の面積・出現方向・対象regionのmotionで仕事の変化を示します。"
-              : "Keep content present and express change through selection area, directional origin, and motion on the target region."
-          }
+          {guidance.live}
         </p>
       </div>
     </div>
   </section>
+
+  {
+    id === "editable-text" && (
+      <section class="editable-state-sequence" aria-label="EditableText states">
+        <span data-state="read">read / dashed underline</span>
+        <span data-state="editing">editing / solid underline</span>
+        <span data-state="modified">modified / changed value</span>
+        <span data-state="error">error / semantic attention</span>
+      </section>
+    )
+  }
 
   <section class="demo-section" aria-labelledby={`${id}-demo`}>
     <div class="section-heading">
@@ -720,6 +813,36 @@ const copy =
     margin: 0;
     color: var(--ikasue-muted);
     font-size: 0.88rem;
+  }
+  .editable-state-sequence {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border-block: 1px solid var(--ikasue-line);
+  }
+  .editable-state-sequence span {
+    padding: 0.75rem 0.5rem;
+    border-inline-end: 1px solid var(--ikasue-line);
+    color: var(--ikasue-muted);
+    font-size: 0.8rem;
+  }
+  .editable-state-sequence span:last-child {
+    border-inline-end: 0;
+  }
+  .editable-state-sequence [data-state="read"] {
+    border-block-end: 1px dashed var(--ikasue-line-strong, #a7aaa1);
+  }
+  .editable-state-sequence [data-state="editing"],
+  .editable-state-sequence [data-state="modified"] {
+    border-block-end: 1px solid var(--ikasue-ink);
+  }
+  .editable-state-sequence [data-state="error"] {
+    border-block-end: 1px solid var(--ikasue-error-ink, #a82e29);
+    color: var(--ikasue-error-ink, #a82e29);
+  }
+  @media (max-width: 720px) {
+    .editable-state-sequence {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
   .eyebrow {
     margin: 0;

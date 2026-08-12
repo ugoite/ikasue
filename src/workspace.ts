@@ -263,6 +263,7 @@ export function setPaneCollapsed(
 export function sidePanel(options?: SidePanelOptions): SidePanelSpec {
   const result: { -readonly [K in keyof SidePanelSpec]: SidePanelSpec[K] } = {
     kind: "side-panel",
+    main: clean(options?.main),
     title: clean(options?.title),
     content: clean(options?.content),
     side: options?.side === "start" ? "start" : "end",
@@ -276,6 +277,7 @@ export function bottomPanel(options?: BottomPanelOptions): BottomPanelSpec {
   const result: { -readonly [K in keyof BottomPanelSpec]: BottomPanelSpec[K] } =
     {
       kind: "bottom-panel",
+      main: clean(options?.main),
       title: clean(options?.title),
       content: clean(options?.content),
       open: Boolean(options?.open),
