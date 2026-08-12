@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-invalid-void-type */
 
+import type { IkaView } from "./contract";
+
 export type LayoutChild =
   | string
   | {
@@ -129,6 +131,7 @@ export interface SplitViewState {
 export interface SidePanelOptions {
   readonly id?: string;
   readonly main?: string;
+  readonly children?: readonly IkaView[];
   readonly title?: string;
   readonly content?: string;
   readonly side?: "start" | "end";
@@ -140,6 +143,7 @@ export interface SidePanelSpec {
   readonly kind: "side-panel";
   readonly id?: string;
   readonly main: string;
+  readonly children: readonly IkaView[];
   readonly title: string;
   readonly content: string;
   readonly side: "start" | "end";
@@ -150,6 +154,7 @@ export interface SidePanelSpec {
 export interface BottomPanelOptions {
   readonly id?: string;
   readonly main?: string;
+  readonly children?: readonly IkaView[];
   readonly title?: string;
   readonly content?: string;
   readonly open?: boolean;
@@ -160,6 +165,7 @@ export interface BottomPanelSpec {
   readonly kind: "bottom-panel";
   readonly id?: string;
   readonly main: string;
+  readonly children: readonly IkaView[];
   readonly title: string;
   readonly content: string;
   readonly open: boolean;
@@ -477,6 +483,8 @@ export interface FormState {
 export interface FormOptions {
   readonly fields?: readonly FormField[];
   readonly values?: Readonly<Record<string, string>>;
+  readonly drafts?: Readonly<Record<string, string>>;
+  readonly errors?: Readonly<Record<string, string>>;
   readonly status?: FormStateStatus;
   readonly onSubmit?: (
     values: Readonly<Record<string, string>>,
@@ -487,6 +495,8 @@ export interface FormSpec {
   readonly kind: "form";
   readonly fields: readonly FormField[];
   readonly values: Readonly<Record<string, string>>;
+  readonly drafts: Readonly<Record<string, string>>;
+  readonly errors: Readonly<Record<string, string>>;
   readonly status: FormStateStatus;
   readonly onSubmit?: (
     values: Readonly<Record<string, string>>,
@@ -529,6 +539,7 @@ export interface DataGridOptions {
   readonly cells?: readonly DataGridCell[];
   readonly selection?: DataGridSelection;
   readonly editing?: DataGridSelection;
+  readonly selectionMode?: "cell" | "context";
   readonly onSelect?: (selection: DataGridSelection | undefined) => void;
   readonly onEdit?: (row: string, column: string, value: string) => void;
   readonly onCopy?: ClipboardHandler;
@@ -544,6 +555,7 @@ export interface DataGridSpec {
   readonly cells: readonly DataGridCell[];
   readonly selection?: DataGridSelection;
   readonly editing?: DataGridSelection;
+  readonly selectionMode: "cell" | "context";
   readonly onSelect?: (selection: DataGridSelection | undefined) => void;
   readonly onEdit?: (row: string, column: string, value: string) => void;
   readonly onCopy?: ClipboardHandler;
@@ -555,6 +567,7 @@ export interface StatusIndicatorOptions {
   readonly label: string;
   readonly status?: "neutral" | "info" | "success" | "warning" | "danger";
   readonly icon?: string;
+  readonly showLabel?: boolean;
   readonly targetId?: string;
 }
 
@@ -564,6 +577,7 @@ export interface StatusIndicatorSpec {
   readonly label: string;
   readonly status: "neutral" | "info" | "success" | "warning" | "danger";
   readonly icon?: string;
+  readonly showLabel: boolean;
   readonly targetId?: string;
 }
 

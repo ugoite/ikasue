@@ -123,6 +123,7 @@ const IKA_VIEW_PROPERTY_KEYS = new Set([
   "status",
   "selection",
   "editing",
+  "selectionMode",
   "editable",
   "entries",
   "panes",
@@ -133,11 +134,14 @@ const IKA_VIEW_PROPERTY_KEYS = new Set([
   "main",
   "open",
   "side",
+  "drafts",
+  "errors",
   "busy",
   "message",
   "target",
   "action",
   "targetId",
+  "showLabel",
   "severity",
   "dismissible",
   "loading",
@@ -370,6 +374,8 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
   form: {
     fields: isArrayOf(isFormField),
     values: isStringRecord,
+    drafts: isStringRecord,
+    errors: isStringRecord,
     status: isEnum("idle", "clean", "dirty", "submitting", "success", "error"),
   },
   "data-grid": {
@@ -377,6 +383,7 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
     rows: isArrayOf(isIkaDataGridRow),
     selection: isIkaDataGridSelection,
     editing: isIkaDataGridSelection,
+    selectionMode: isEnum("cell", "context"),
     editable: isBoolean,
     density: isEnum("default", "compact"),
   },
@@ -396,6 +403,7 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
   },
   "side-panel": {
     main: isString,
+    children: isViewArray,
     title: isString,
     content: isString,
     side: isEnum("start", "end"),
@@ -403,6 +411,7 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
   },
   "bottom-panel": {
     main: isString,
+    children: isViewArray,
     title: isString,
     content: isString,
     open: isBoolean,
@@ -419,6 +428,7 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
     label: isString,
     status: isEnum("neutral", "info", "success", "warning", "danger"),
     icon: isString,
+    showLabel: isBoolean,
     targetId: isString,
   },
   alert: {

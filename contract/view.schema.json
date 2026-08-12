@@ -586,6 +586,8 @@
       "properties": {
         "fields": { "type": "array", "items": { "$ref": "#/$defs/formField" } },
         "values": { "$ref": "#/$defs/stringRecord" },
+        "drafts": { "$ref": "#/$defs/stringRecord" },
+        "errors": { "$ref": "#/$defs/stringRecord" },
         "status": {
           "enum": ["idle", "clean", "dirty", "submitting", "success", "error"]
         }
@@ -602,6 +604,7 @@
         "rows": { "type": "array", "items": { "$ref": "#/$defs/dataGridRow" } },
         "selection": { "$ref": "#/$defs/selection" },
         "editing": { "$ref": "#/$defs/selection" },
+        "selectionMode": { "enum": ["cell", "context"] },
         "editable": { "type": "boolean" },
         "density": { "enum": ["default", "compact"] }
       }
@@ -636,6 +639,7 @@
       "additionalProperties": false,
       "properties": {
         "main": { "type": "string" },
+        "children": { "$ref": "#/$defs/viewArray" },
         "title": { "type": "string" },
         "content": { "type": "string" },
         "side": { "enum": ["start", "end"] },
@@ -647,6 +651,7 @@
       "additionalProperties": false,
       "properties": {
         "main": { "type": "string" },
+        "children": { "$ref": "#/$defs/viewArray" },
         "title": { "type": "string" },
         "content": { "type": "string" },
         "open": { "type": "boolean" }
@@ -681,6 +686,7 @@
           "enum": ["neutral", "info", "success", "warning", "danger"]
         },
         "icon": { "type": "string" },
+        "showLabel": { "type": "boolean" },
         "targetId": { "type": "string" }
       }
     },

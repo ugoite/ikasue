@@ -352,6 +352,8 @@ const componentProperties: Record<
   form: [
     property("fields", "FormField[]", "[]"),
     property("values", "Record<string, string>", "{}"),
+    property("drafts", "Record<string, string>", "{}"),
+    property("errors", "Record<string, string>", "{}"),
     property("status", "FormStateStatus", "idle"),
   ],
   "data-grid": [
@@ -359,6 +361,7 @@ const componentProperties: Record<
     property("rows", "DataGridRow[]", "[]"),
     property("selection", "DataGridSelection"),
     property("editing", "DataGridSelection"),
+    property("selectionMode", "cell | context", "context"),
     property("editable", "boolean", false),
     property("density", "default | compact", "default"),
   ],
@@ -371,6 +374,7 @@ const componentProperties: Record<
       "neutral",
     ),
     property("icon", "string", "i"),
+    property("showLabel", "boolean", false),
     property("targetId", "string"),
   ],
   alert: [
@@ -401,6 +405,7 @@ const componentProperties: Record<
   ],
   "side-panel": [
     property("main", "string", ""),
+    property("children", "IkaView[]", "[]"),
     property("title", "string", ""),
     property("content", "string", ""),
     property("side", "start | end", "end"),
@@ -408,6 +413,7 @@ const componentProperties: Record<
   ],
   "bottom-panel": [
     property("main", "string", ""),
+    property("children", "IkaView[]", "[]"),
     property("title", "string", ""),
     property("content", "string", ""),
     property("open", "boolean", false),
@@ -626,10 +632,17 @@ const componentDefaults: Record<
     variant: "default",
   },
   field: { id: "", label: "", required: false, content: "" },
-  form: { fields: "[]", values: "{}", status: "idle" },
+  form: {
+    fields: "[]",
+    values: "{}",
+    drafts: "{}",
+    errors: "{}",
+    status: "idle",
+  },
   "data-grid": {
     columns: "[]",
     rows: "[]",
+    selectionMode: "context",
     editable: false,
     density: "default",
   },
@@ -638,6 +651,7 @@ const componentDefaults: Record<
     label: "",
     status: "neutral",
     icon: "i",
+    showLabel: false,
     targetId: "",
   },
   alert: { message: "", severity: "info", dismissible: false },
@@ -650,8 +664,21 @@ const componentDefaults: Record<
     collapsible: false,
     motionOrigin: "start",
   },
-  "side-panel": { main: "", title: "", content: "", side: "end", open: false },
-  "bottom-panel": { main: "", title: "", content: "", open: false },
+  "side-panel": {
+    main: "",
+    children: "[]",
+    title: "",
+    content: "",
+    side: "end",
+    open: false,
+  },
+  "bottom-panel": {
+    main: "",
+    children: "[]",
+    title: "",
+    content: "",
+    open: false,
+  },
   "loading-region": { content: "", busy: false, label: "Loading" },
   "history-timeline": { entries: "[]", orientation: "vertical" },
 };

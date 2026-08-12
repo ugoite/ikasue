@@ -378,11 +378,15 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
         },
       ],
       values: { name: "ikasue" },
-      status: "idle",
+      drafts: { name: "ikasue draft" },
+      errors: {},
+      status: "dirty",
     },
     controls: [
       json("fields", "フィールド", "Fields"),
       json("values", "値", "Values"),
+      json("drafts", "下書き", "Drafts"),
+      json("errors", "検証エラー", "Errors"),
       select("status", "状態", "Status", [
         "idle",
         "clean",
@@ -413,6 +417,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
         },
       ],
       selection: { row: "one", column: "name" },
+      selectionMode: "context",
       editable: true,
       density: "default",
     },
@@ -420,6 +425,10 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
       json("columns", "列", "Columns"),
       json("rows", "行", "Rows"),
       json("selection", "選択", "Selection"),
+      select("selectionMode", "選択文脈", "Selection mode", [
+        "cell",
+        "context",
+      ]),
       json("editing", "編集中", "Editing"),
       boolean("editable", "編集可能", "Editable"),
       select("density", "密度", "Density", ["default", "compact"]),
@@ -431,12 +440,14 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
       label: "Ready",
       status: "success",
       icon: "✓",
+      showLabel: false,
       targetId: "",
     },
     controls: [
       text("id", "ID", "ID"),
       text("label", "ラベル", "Label"),
       text("icon", "アイコン", "Icon"),
+      boolean("showLabel", "ラベル表示", "Show label"),
       text("targetId", "対象ID", "Target ID"),
       select("status", "状態", "Status", [
         "neutral",
@@ -519,6 +530,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
   "side-panel": {
     props: {
       main: "Selected work remains visible while the inspector opens.",
+      children: [],
       title: "Inspector",
       content: "Details remain alongside the work.",
       side: "end",
@@ -526,6 +538,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
     },
     controls: [
       text("main", "main内容", "Main content"),
+      json("children", "main子要素", "Main children"),
       text("title", "タイトル", "Title"),
       text("content", "内容", "Content"),
       select("side", "位置", "Side", ["start", "end"]),
@@ -535,12 +548,14 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
   "bottom-panel": {
     props: {
       main: "The working document stays above the output region.",
+      children: [],
       title: "Output",
       content: "Logs stay in the page plane.",
       open: true,
     },
     controls: [
       text("main", "main内容", "Main content"),
+      json("children", "main子要素", "Main children"),
       text("title", "タイトル", "Title"),
       text("content", "内容", "Content"),
       boolean("open", "開く", "Open"),

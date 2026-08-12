@@ -73,6 +73,20 @@ test.describe("ikasue identity contracts", () => {
     await expect(side.locator('[part="main"]')).toContainText(
       "Workspace content",
     );
+    const sideMainBox = await side.locator('[part="main"]').boundingBox();
+    const sidePanelBox = await side.locator('[part="panel"]').boundingBox();
+    expect(sideMainBox && sidePanelBox).toBeTruthy();
+    const sideHorizontalOverlap =
+      sideMainBox && sidePanelBox
+        ? Math.max(
+            0,
+            Math.min(
+              sideMainBox.x + sideMainBox.width,
+              sidePanelBox.x + sidePanelBox.width,
+            ) - Math.max(sideMainBox.x, sidePanelBox.x),
+          )
+        : -1;
+    expect(sideHorizontalOverlap).toBe(0);
     await side.evaluate((node) => {
       (node as HTMLElement & { props: Record<string, unknown> }).props = {
         main: "Workspace content",
@@ -94,10 +108,11 @@ test.describe("ikasue identity contracts", () => {
         open: true,
       };
     });
-    const openStartColumns = await side.evaluate(
-      (node) => getComputedStyle(node).gridTemplateColumns,
-    );
-    expect(openStartColumns).not.toBe(closedStartColumns);
+    await expect
+      .poll(() =>
+        side.evaluate((node) => getComputedStyle(node).gridTemplateColumns),
+      )
+      .not.toBe(closedStartColumns);
     await page.goto("/components/sidebar/");
     const sidebar = page.locator("ika-sidebar").first();
     await expect(sidebar.locator('[part="main"]')).toContainText(
@@ -167,6 +182,41 @@ test.describe("ikasue identity contracts", () => {
       (node) => getComputedStyle(node).gridTemplateRows,
     );
     expect(rows.split(" ").length).toBeGreaterThanOrEqual(2);
+    const bottomMainBox = await bottom.locator('[part="main"]').boundingBox();
+    const bottomPanelBox = await bottom.locator('[part="panel"]').boundingBox();
+    expect(bottomMainBox && bottomPanelBox).toBeTruthy();
+    const bottomVerticalOverlap =
+      bottomMainBox && bottomPanelBox
+        ? Math.max(
+            0,
+            Math.min(
+              bottomMainBox.y + bottomMainBox.height,
+              bottomPanelBox.y + bottomPanelBox.height,
+            ) - Math.max(bottomMainBox.y, bottomPanelBox.y),
+          )
+        : -1;
+    expect(bottomVerticalOverlap).toBe(0);
+
+    await page.goto("/components/form/");
+    const formHost = page.locator("ika-form").first();
+    await expect(formHost).toHaveAttribute("data-status", "dirty");
+    await expect(formHost.locator("ika-editable-text").first()).toContainText(
+      "ikasue draft",
+    );
+    const submitted = await formHost.evaluate(
+      (node) =>
+        new Promise<unknown>((resolve) => {
+          node.addEventListener(
+            "ika-submit",
+            (event) => {
+              resolve((event as CustomEvent).detail);
+            },
+            { once: true },
+          );
+          node.querySelector("form")?.requestSubmit();
+        }),
+    );
+    expect(submitted).toEqual({ values: { name: "ikasue draft" } });
 
     await page.goto("/components/split-view/");
     const split = page.locator("ika-split-view").first();
@@ -208,7 +258,7 @@ test.describe("ikasue identity contracts", () => {
     );
     await expect(grid.locator('[data-row-peer="true"]')).toHaveCSS(
       "background-color",
-      "rgb(240, 241, 237)",
+      "rgb(250, 250, 248)",
     );
     await expect(grid.locator('[data-column-peer="true"]')).toHaveCount(1);
     await selected.press("Enter");
@@ -270,10 +320,14 @@ test.describe("ikasue identity contracts", () => {
       await page.goto("/components/tabs/");
       const tabs = page.locator("ika-tabs").first();
       await expect(tabs).toBeVisible();
-      await page.keyboard.press("Tab");
+      const firstTab = tabs.locator('[part="tab"]').first();
+      await firstTab.focus();
+      await page.keyboard.press("ArrowRight");
       await expect(tabs.locator('[part="tab"]:focus')).toBeVisible();
-      const screenshot = await page.screenshot({ animations: "disabled" });
-      expect(screenshot.byteLength).toBeGreaterThan(1000);
+      await expect(page).toHaveScreenshot(`tabs-${String(width)}.png`, {
+        animations: "disabled",
+        maxDiffPixelRatio: 0.05,
+      });
     }
 
     await page.goto("/components/sidebar/");
@@ -297,5 +351,14 @@ test.describe("ikasue identity contracts", () => {
     });
     expect(motion.animationDuration).toBe("0s");
     expect(motion.transitionDuration).toContain("0s");
+
+    const selectionColor = await activeTab.evaluate(
+      (node) => getComputedStyle(node).backgroundColor,
+    );
+    expect(selectionColor).not.toMatch(/blue|green|red|yellow/i);
+    await expect(page).toHaveScreenshot("tabs-reduced-motion.png", {
+      animations: "disabled",
+      maxDiffPixelRatio: 0.05,
+    });
   });
 });

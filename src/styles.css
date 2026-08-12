@@ -417,6 +417,15 @@ ika-status-indicator [part="label"] {
   white-space: nowrap;
 }
 
+ika-status-indicator[data-show-label="true"] [part="label"] {
+  position: static;
+  inline-size: auto;
+  block-size: auto;
+  overflow: visible;
+  clip-path: none;
+  white-space: normal;
+}
+
 ika-status-indicator[data-status="info"] [part="status"] {
   color: var(--ikasue-info);
 }
@@ -714,6 +723,10 @@ ika-segmented-control [role="radio"][aria-checked="true"] {
   transform: translateY(-1px);
 }
 
+ika-radio-group [role="radio"][aria-checked="true"] {
+  flex-grow: 1.2;
+}
+
 ika-segmented-control[data-variant="elastic"]
   [role="radio"][aria-checked="true"] {
   flex-grow: 1.55;
@@ -738,6 +751,10 @@ ika-form [part="field"] {
 
 ika-form [part="field"] [part="label"] {
   display: block;
+}
+
+ika-form [part="field"][data-error="true"] [part="label"] {
+  color: var(--ikasue-error-ink);
 }
 
 ika-data-grid {

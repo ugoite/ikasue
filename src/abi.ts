@@ -246,11 +246,17 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
     ),
     property("state", "clean | created | modified | deleted | error", "clean"),
   ]),
-  form: contract("form", [
-    property("fields", "FormField[]", "[]"),
-    property("values", "JSON object", "{}"),
-    property("status", "FormStateStatus", "idle"),
-  ]),
+  form: contract(
+    "form",
+    [
+      property("fields", "FormField[]", "[]"),
+      property("values", "JSON object", "{}"),
+      property("drafts", "JSON object", "{}"),
+      property("errors", "JSON object", "{}"),
+      property("status", "FormStateStatus", "idle"),
+    ],
+    ["ika-submit", "ika-draft-change"],
+  ),
   "data-grid": contract(
     "data-grid",
     [
@@ -258,6 +264,7 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
       property("rows", "DataGridRow[]", "[]"),
       property("selection", "DataGridSelection"),
       property("editing", "DataGridSelection"),
+      property("selectionMode", "cell | context", "context"),
       property("editable", "boolean", false),
       property("density", "default | compact", "default"),
       property("model", "IkaDataGridModel (binding)"),
@@ -300,6 +307,7 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
   ),
   "side-panel": contract("side-panel", [
     property("main", "string", ""),
+    property("children", "IkaView[]", "[]"),
     property("title", "string", ""),
     property("content", "string", ""),
     property("side", "start | end", "end"),
@@ -307,6 +315,7 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
   ]),
   "bottom-panel": contract("bottom-panel", [
     property("main", "string", ""),
+    property("children", "IkaView[]", "[]"),
     property("title", "string", ""),
     property("content", "string", ""),
     property("open", "boolean", false),
@@ -331,6 +340,7 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
       "neutral",
     ),
     property("icon", "string", ""),
+    property("showLabel", "boolean", false),
     property("targetId", "string"),
   ]),
   alert: contract(
