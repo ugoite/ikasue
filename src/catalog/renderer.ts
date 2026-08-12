@@ -1248,6 +1248,14 @@ function renderComponentDemo(
                   status: { value: "Ready", state: "clean" },
                 },
               },
+              {
+                id: "two",
+                label: "Two",
+                cells: {
+                  name: { value: "Catalog", state: "created" },
+                  status: { value: "Review", state: "error" },
+                },
+              },
             ],
             selection: { row: "one", column: "name" },
             editable: true,
@@ -1335,17 +1343,18 @@ function renderComponentDemo(
       return;
     case "side-panel": {
       const spec: SidePanelSpec = sidePanel({
+        main: "Workspace content",
         title: "Inspector",
         content: "Details",
         open: true,
       });
-      target.className = "ikasue-workspace-demo ikasue-workspace-demo-side";
+      target.className = "ikasue-workspace-demo";
       target.append(
-        element(document, "main", "Workspace content"),
         ikaDemoElement(
           document,
           "side-panel",
           {
+            main: spec.main,
             title: spec.title,
             content: spec.content,
             side: spec.side,
@@ -1358,17 +1367,22 @@ function renderComponentDemo(
     }
     case "bottom-panel": {
       const spec = bottomPanel({
+        main: "Workspace content",
         title: "Output",
         content: "Logs",
         open: true,
       });
-      target.className = "ikasue-workspace-demo ikasue-workspace-demo-bottom";
+      target.className = "ikasue-workspace-demo";
       target.append(
-        element(document, "main", "Workspace content"),
         ikaDemoElement(
           document,
           "bottom-panel",
-          { title: spec.title, content: spec.content, open: spec.open },
+          {
+            main: spec.main,
+            title: spec.title,
+            content: spec.content,
+            open: spec.open,
+          },
           spec.content,
         ),
       );
@@ -1376,7 +1390,7 @@ function renderComponentDemo(
     }
     case "loading-region": {
       const spec: LoadingRegionSpec = loadingRegion({
-        content: "Original content",
+        content: "Original content remains readable while work continues.",
         busy: true,
         progress: 48,
       });
