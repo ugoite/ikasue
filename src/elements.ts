@@ -194,6 +194,14 @@ const nextSplitViewInstanceId = (): number => {
   scope.__ikasue_split_view_instance_id__ = next;
   return next;
 };
+const nextTabsInstanceId = (): number => {
+  const scope = globalThis as typeof globalThis & {
+    __ikasue_tabs_instance_id__?: number;
+  };
+  const next = (scope.__ikasue_tabs_instance_id__ ?? 0) + 1;
+  scope.__ikasue_tabs_instance_id__ = next;
+  return next;
+};
 
 const propertyKeysByTag: Readonly<
   Record<IkaElementTagName, ReadonlySet<string>>
@@ -291,6 +299,12 @@ function asRows(value: unknown): readonly IkaDataGridRow[] {
 function asTabsItems(value: unknown): readonly IkaTabsItem[] {
   if (!Array.isArray(value) || !value.every(isIkaTabsItem))
     throw new Error("ikasue Tabs items must match the JSON contract");
+  const ids = new Set<string>();
+  for (const item of value) {
+    if (ids.has(item.id))
+      throw new Error("ikasue Tabs item IDs must be unique");
+    ids.add(item.id);
+  }
   return value;
 }
 
@@ -751,13 +765,29 @@ export class IkaElement extends HTMLElementBase {
         appendInternal(root, "aside", (element) => {
           element.setAttribute("role", "alert");
           element.part = "alert";
-          element.dataset.severity = propertyText(value, "severity") || "info";
-          element.textContent = propertyText(value, "message") || label;
+          const severity = propertyText(value, "severity") || "info";
+          element.dataset.severity = severity;
+          const icon = this.ownerDocument.createElement("span");
+          icon.part = "icon";
+          icon.setAttribute("aria-hidden", "true");
+          icon.textContent =
+            severity === "danger"
+              ? "!"
+              : severity === "warning"
+                ? "▲"
+                : severity === "success"
+                  ? "✓"
+                  : "i";
+          const message = this.ownerDocument.createElement("span");
+          message.part = "message";
+          message.textContent = propertyText(value, "message") || label;
+          element.append(icon, message);
           if (value.dismissible === true) {
             const dismiss = this.ownerDocument.createElement("button");
             dismiss.type = "button";
             dismiss.part = "dismiss";
             dismiss.textContent = "Dismiss";
+            dismiss.setAttribute("aria-label", "Dismiss alert");
             dismiss.addEventListener("click", () =>
               this.dispatchEvent(
                 new CustomEvent("ika-dismiss", {
@@ -1238,6 +1268,7 @@ export class IkaDataGridElement extends IkaElement {
     headRow.setAttribute("role", "row");
     for (const column of this.#columns) {
       const cell = this.ownerDocument.createElement("th");
+      cell.part = "header-cell";
       cell.setAttribute("role", "columnheader");
       cell.style.padding = "var(--ikasue-grid-cell-padding, 0.5rem)";
       cell.textContent = column.label;
@@ -1254,6 +1285,7 @@ export class IkaDataGridElement extends IkaElement {
       rowNode.tabIndex = 0;
       for (const column of this.#columns) {
         const cell = this.ownerDocument.createElement("td");
+        cell.part = "cell";
         cell.setAttribute("role", "gridcell");
         cell.style.padding = "var(--ikasue-grid-cell-padding, 0.5rem)";
         cell.dataset.rowId = row.id;
@@ -1330,6 +1362,7 @@ export class IkaDataGridElement extends IkaElement {
 }
 
 export class IkaTabsElement extends IkaElement {
+  #instanceId = nextTabsInstanceId();
   #items: readonly IkaTabsItem[] = [];
   #activeId: string | undefined;
 
@@ -1399,30 +1432,90 @@ export class IkaTabsElement extends IkaElement {
 
   protected override render(): void {
     const root = this.renderRoot;
+    const value = this.effectiveProps;
+    const orientation = propertyText(value, "orientation") || "horizontal";
+    this.dataset.orientation = orientation;
+    this.dataset.variant = propertyText(value, "variant") || "default";
     if (serializedChildrenForElement.has(this)) {
       clearInternalContent(root);
       return;
     }
-    const value = this.effectiveProps;
     clearInternalContent(root);
-    this.dataset.orientation =
-      propertyText(value, "orientation") || "horizontal";
+    const active =
+      this.#items.find(
+        (item) => item.id === this.#activeId && item.disabled !== true,
+      ) ?? this.#items.find((item) => item.disabled !== true);
+    this.#activeId = active?.id;
     const list = this.ownerDocument.createElement("div");
     list.dataset.ikaInternal = "true";
+    list.part = "tablist";
+    list.id = `ika-tabs-${String(this.#instanceId)}-list`;
     list.setAttribute("role", "tablist");
-    for (const item of this.#items) {
+    list.setAttribute("aria-orientation", orientation);
+    const panels = this.ownerDocument.createElement("div");
+    panels.dataset.ikaInternal = "true";
+    panels.part = "panels";
+    for (const [index, item] of this.#items.entries()) {
       const button = this.ownerDocument.createElement("button");
+      const tabId = `ika-tabs-${String(this.#instanceId)}-tab-${String(index + 1)}`;
+      const panelId = `ika-tabs-${String(this.#instanceId)}-panel-${String(index + 1)}`;
       button.type = "button";
       button.textContent = item.label;
+      button.id = tabId;
+      button.part = "tab";
       button.setAttribute("role", "tab");
+      button.setAttribute("aria-controls", panelId);
       button.setAttribute("aria-selected", String(item.id === this.#activeId));
+      button.tabIndex = item.id === this.#activeId ? 0 : -1;
       button.disabled = item.disabled === true;
       button.addEventListener("click", () => {
         this.select(textValue(item.id));
       });
+      button.dataset.tabId = item.id;
+      button.addEventListener("keydown", (event) => {
+        const key = event.key;
+        const keys =
+          orientation === "vertical"
+            ? ["ArrowUp", "ArrowDown"]
+            : ["ArrowLeft", "ArrowRight"];
+        if (![...keys, "Home", "End"].includes(key)) return;
+        event.preventDefault();
+        const enabled = this.#items.filter(
+          (candidate) => candidate.disabled !== true,
+        );
+        const current = enabled.findIndex(
+          (candidate) => candidate.id === item.id,
+        );
+        const nextIndex =
+          key === "Home"
+            ? 0
+            : key === "End"
+              ? enabled.length - 1
+              : (current + (key === keys[0] ? -1 : 1) + enabled.length) %
+                enabled.length;
+        const next = enabled[nextIndex];
+        if (!next) return;
+        this.select(next.id);
+        const renderedList =
+          this.renderRoot.querySelector<HTMLElement>('[part="tablist"]');
+        const nextButton = Array.from(
+          renderedList?.querySelectorAll<HTMLButtonElement>('[role="tab"]') ??
+            [],
+        ).find((candidate) => candidate.dataset.tabId === next.id);
+        nextButton?.focus();
+      });
       list.append(button);
+      const panel = this.ownerDocument.createElement("section");
+      panel.dataset.ikaInternal = "true";
+      panel.part = "panel";
+      panel.id = panelId;
+      panel.setAttribute("role", "tabpanel");
+      panel.setAttribute("aria-labelledby", tabId);
+      panel.hidden = item.id !== this.#activeId;
+      panel.textContent = item.content ?? "";
+      panels.append(panel);
     }
-    root.append(list);
+    root.append(list, panels);
   }
 }
 
@@ -1489,7 +1582,6 @@ export class IkaSplitViewElement extends IkaElement {
     container.style.display = "flex";
     container.style.flex = "1 1 auto";
     container.style.minWidth = "0";
-    container.style.minHeight = "0";
     container.style.gap = "0.75rem";
     container.part = "panes";
     const controls = this.ownerDocument.createElement("div");
