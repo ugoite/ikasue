@@ -397,6 +397,7 @@ const componentProperties: Record<
     property("content", "string", ""),
     property("open", "boolean", false),
     property("modal", "boolean", true),
+    property("openerId", "string"),
   ],
   "split-view": [
     property("panes", "SplitPane[]", "[]"),
@@ -667,7 +668,13 @@ const componentDefaults: Record<
   },
   alert: { message: "", severity: "info", dismissible: false },
   progress: { value: "0", max: "100", label: "" },
-  dialog: { title: "", content: "", open: false, modal: true },
+  dialog: {
+    title: "",
+    content: "",
+    open: false,
+    modal: true,
+    openerId: "",
+  },
   "split-view": {
     panes: "[]",
     orientation: "horizontal",

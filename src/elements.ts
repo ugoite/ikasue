@@ -194,6 +194,23 @@ const editableValues = new WeakMap<HTMLElement, string>();
 const editableStates = new WeakMap<HTMLElement, string>();
 const editableControlledValues = new WeakMap<HTMLElement, string>();
 const editableControlledStates = new WeakMap<HTMLElement, string>();
+const dialogOpenStates = new WeakMap<HTMLElement, boolean>();
+const dialogOpeners = new WeakMap<HTMLElement, HTMLElement>();
+
+function notifyDialogClosed(host: HTMLElement): void {
+  if (dialogOpenStates.get(host) !== true) return;
+  dialogOpenStates.set(host, false);
+  const opener = dialogOpeners.get(host);
+  dialogOpeners.delete(host);
+  host.dispatchEvent(
+    new CustomEvent("ika-close", {
+      bubbles: true,
+      composed: true,
+      detail: {},
+    }),
+  );
+  opener?.focus();
+}
 
 const propertyKeysByTag: Readonly<
   Record<IkaElementTagName, ReadonlySet<string>>
@@ -303,7 +320,7 @@ const propertyKeysByTag: Readonly<
   ]),
   "ika-bottom-panel": new Set(["main", "children", "title", "content", "open"]),
   "ika-loading-region": new Set(["content", "busy", "label"]),
-  "ika-dialog": new Set(["title", "content", "open", "modal"]),
+  "ika-dialog": new Set(["title", "content", "open", "modal", "openerId"]),
   "ika-status-indicator": new Set([
     "id",
     "label",
@@ -711,6 +728,12 @@ export class IkaElement extends HTMLElementBase {
       return;
     }
     if (
+      kind === "ika-dialog" &&
+      dialogOpenStates.get(this) === true &&
+      !propertyBoolean(value, "open")
+    )
+      notifyDialogClosed(this);
+    if (
       kind !== "ika-form" &&
       root.childNodes.length > 0 &&
       !hasDirectInternalChild(root)
@@ -973,33 +996,65 @@ export class IkaElement extends HTMLElementBase {
         });
         break;
       case "ika-dialog":
-        this.dataset.modal = String(value.modal !== false);
-        const dialogNode = appendInternal(root, "dialog", (element) => {
-          element.part = "dialog";
-          element.setAttribute("aria-modal", String(value.modal !== false));
-          const title = propertyText(value, "title");
-          const content = propertyText(value, "content");
-          if (title) {
-            const heading = this.ownerDocument.createElement("h2");
-            heading.part = "title";
-            heading.textContent = title;
-            element.append(heading);
+        {
+          const modal = value.modal !== false;
+          const requestedOpen = propertyBoolean(value, "open");
+          const openerId = propertyText(value, "openerId");
+          if (requestedOpen && !dialogOpenStates.get(this)) {
+            const opener = openerId
+              ? this.ownerDocument.getElementById(openerId)
+              : this.ownerDocument.activeElement;
+            if (opener instanceof HTMLElement && opener !== this)
+              dialogOpeners.set(this, opener);
           }
-          if (content) {
-            const paragraph = this.ownerDocument.createElement("p");
-            paragraph.part = "content";
-            paragraph.textContent = content;
-            element.append(paragraph);
-          }
-          if (!title && !content) element.textContent = label;
-        });
-        if (propertyBoolean(value, "open")) {
-          const dialog = dialogNode as HTMLDialogElement;
-          try {
-            if (value.modal !== false) dialog.showModal();
-            else dialog.show();
-          } catch {
-            dialog.open = true;
+          this.dataset.modal = String(modal);
+          const dialogNode = appendInternal(root, "dialog", (element) => {
+            element.part = "dialog";
+            element.tabIndex = -1;
+            element.setAttribute("aria-modal", String(modal));
+            const title = propertyText(value, "title");
+            const content = propertyText(value, "content");
+            if (title) {
+              const heading = this.ownerDocument.createElement("h2");
+              heading.part = "title";
+              heading.textContent = title;
+              element.append(heading);
+            }
+            if (content) {
+              const paragraph = this.ownerDocument.createElement("p");
+              paragraph.part = "content";
+              paragraph.textContent = content;
+              element.append(paragraph);
+            }
+            if (!title && !content) element.textContent = label;
+          });
+          const close = (): void => {
+            const dialog = dialogNode as HTMLDialogElement;
+            if (dialog.open) dialog.close();
+            else notifyDialogClosed(this);
+          };
+          const closeButton = this.ownerDocument.createElement("button");
+          closeButton.type = "button";
+          closeButton.part = "close";
+          closeButton.textContent = "Close";
+          closeButton.addEventListener("click", close);
+          dialogNode.append(closeButton);
+          dialogNode.addEventListener("close", () => {
+            notifyDialogClosed(this);
+          });
+          dialogOpenStates.set(this, requestedOpen);
+          if (requestedOpen && this.isConnected) {
+            const dialog = dialogNode as HTMLDialogElement;
+            try {
+              if (modal) dialog.showModal();
+              else dialog.show();
+            } catch {
+              dialog.open = true;
+            }
+            const focusTarget = dialog.querySelector<HTMLElement>(
+              '[autofocus], button, input, textarea, select, [tabindex]:not([tabindex="-1"])',
+            );
+            (focusTarget ?? dialog).focus();
           }
         }
         break;
@@ -2571,7 +2626,9 @@ export class IkaHistoryTimelineElement extends IkaElement {
     const list = this.ownerDocument.createElement("ol");
     list.dataset.ikaInternal = "true";
     list.part = "timeline";
-    const entries = Array.isArray(value.entries) ? value.entries : [];
+    const entries: readonly IkaJsonValue[] = Array.isArray(value.entries)
+      ? (value.entries as readonly IkaJsonValue[])
+      : [];
     this.dataset.orientation = propertyText(value, "orientation") || "vertical";
     this.dataset.compact = String(value.compact === true);
     const selectedId = propertyText(value, "selectedId");
@@ -2579,15 +2636,39 @@ export class IkaHistoryTimelineElement extends IkaElement {
       if (!isIkaJsonRecord(entry)) continue;
       const item = this.ownerDocument.createElement("li");
       item.part = "entry";
-      item.setAttribute(
-        "aria-current",
-        String(
-          selectedId
-            ? textValue(entry.id) === selectedId
-            : entries.indexOf(entry) === entries.length - 1,
-        ),
-      );
+      const current = selectedId
+        ? textValue(entry.id) === selectedId
+        : entries.indexOf(entry) === entries.length - 1;
+      item.setAttribute("aria-current", String(current));
+      item.tabIndex = current ? 0 : -1;
       item.textContent = `${textValue(entry.label)}: ${textValue(entry.content)}`;
+      item.addEventListener("keydown", (event) => {
+        if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key))
+          return;
+        event.preventDefault();
+        const nextIndex =
+          event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? entries.length - 1
+              : Math.max(
+                  0,
+                  Math.min(
+                    entries.length - 1,
+                    entries.indexOf(entry) + (event.key === "ArrowUp" ? -1 : 1),
+                  ),
+                );
+        const nextEntry = entries[nextIndex];
+        const nextId = isIkaJsonRecord(nextEntry)
+          ? textValue(nextEntry.id)
+          : "";
+        if (!nextId) return;
+        this.setAttribute("selectedId", nextId);
+        this.render();
+        this.renderRoot
+          .querySelector<HTMLElement>(`[part="entry"][aria-current="true"]`)
+          ?.focus();
+      });
       list.append(item);
     }
     root.append(list);

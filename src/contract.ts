@@ -148,6 +148,7 @@ const IKA_VIEW_PROPERTY_KEYS = new Set([
   "showLabel",
   "severity",
   "dismissible",
+  "openerId",
   "loading",
   "max",
 ]);
@@ -439,6 +440,7 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
     content: isString,
     open: isBoolean,
     modal: isBoolean,
+    openerId: isString,
   },
   "status-indicator": {
     id: isString,

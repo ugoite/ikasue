@@ -703,7 +703,8 @@
         "title": { "type": "string" },
         "content": { "type": "string" },
         "open": { "type": "boolean" },
-        "modal": { "type": "boolean" }
+        "modal": { "type": "boolean" },
+        "openerId": { "type": "string" }
       }
     },
     "statusProps": {

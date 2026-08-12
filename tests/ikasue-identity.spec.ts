@@ -640,6 +640,59 @@ test.describe("ikasue identity contracts", () => {
     await expect(target).toHaveAttribute("data-ika-attention", "true");
   });
 
+  test("HistoryTimeline keeps the selected revision keyboard reachable", async ({
+    page,
+  }) => {
+    await page.goto("/components/history-timeline/");
+    const timeline = page.locator("ika-history-timeline").first();
+    const current = timeline.locator('[part="entry"][aria-current="true"]');
+    await expect(current).toHaveAttribute("tabindex", "0");
+    await current.focus();
+    await page.keyboard.press("ArrowUp");
+    await expect(
+      timeline.locator('[part="entry"][aria-current="true"]'),
+    ).toContainText("Created");
+    await expect(
+      timeline.locator('[part="entry"][aria-current="true"]'),
+    ).toBeFocused();
+  });
+
+  test("Dialog opens in the flow and returns focus to its opener", async ({
+    page,
+  }) => {
+    await page.goto("/components/dialog/");
+    const host = page.locator("ika-dialog").first();
+    await host.evaluate((node) => {
+      const opener = node.ownerDocument.createElement("button");
+      opener.id = "dialog-opener";
+      opener.type = "button";
+      opener.textContent = "Open";
+      node.parentElement?.prepend(opener);
+      (node as HTMLElement & { props: Record<string, unknown> }).props = {
+        title: "Confirm",
+        content: "Continue?",
+        open: false,
+        modal: false,
+        openerId: "dialog-opener",
+      };
+    });
+    const opener = page.locator("#dialog-opener");
+    await opener.focus();
+    await host.evaluate((node) => {
+      (node as HTMLElement & { props: Record<string, unknown> }).props = {
+        title: "Confirm",
+        content: "Continue?",
+        open: true,
+        modal: false,
+        openerId: "dialog-opener",
+      };
+    });
+    await expect(host.locator('[part="dialog"]')).toBeVisible();
+    await expect(host.locator('[part="close"]')).toBeFocused();
+    await host.locator('[part="close"]').click();
+    await expect(opener).toBeFocused();
+  });
+
   test("unchecked Checkbox keeps its semantic text without an empty box", async ({
     page,
   }) => {
