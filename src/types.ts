@@ -85,11 +85,11 @@ export interface SeparatorSpec {
 
 export interface SplitPane {
   readonly id: string;
-  readonly content: string;
+  readonly content?: string;
   readonly label?: string;
   readonly size?: string;
   readonly minSize?: string;
-  readonly basis?: string;
+  readonly basis?: number | string;
   readonly grow?: number;
   readonly shrink?: number;
   readonly collapsible?: boolean;

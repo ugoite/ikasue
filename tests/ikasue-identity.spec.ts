@@ -118,6 +118,32 @@ test.describe("ikasue identity contracts", () => {
           )
         : -1;
     expect(sideHorizontalOverlap).toBe(0);
+    await page.setViewportSize({ width: 320, height: 800 });
+    for (const sidePosition of ["end", "start"] as const) {
+      await side.evaluate((node, position) => {
+        (node as HTMLElement & { props: Record<string, unknown> }).props = {
+          main: "Workspace content",
+          title: "Inspector",
+          content: "Details",
+          side: position,
+          open: true,
+        };
+      }, sidePosition);
+      const mainBox = await side.locator('[part="main"]').boundingBox();
+      const panelBox = await side.locator('[part="panel"]').boundingBox();
+      expect(mainBox && panelBox).toBeTruthy();
+      const overlap =
+        mainBox && panelBox
+          ? Math.max(
+              0,
+              Math.min(mainBox.x + mainBox.width, panelBox.x + panelBox.width) -
+                Math.max(mainBox.x, panelBox.x),
+            )
+          : -1;
+      expect(overlap).toBe(0);
+      expect(mainBox?.width ?? 0).toBeGreaterThan(0);
+      expect(panelBox?.width ?? 0).toBeGreaterThan(0);
+    }
     await side.evaluate((node) => {
       (node as HTMLElement & { props: Record<string, unknown> }).props = {
         main: "Workspace content",
@@ -144,6 +170,7 @@ test.describe("ikasue identity contracts", () => {
         side.evaluate((node) => getComputedStyle(node).gridTemplateColumns),
       )
       .not.toBe(closedStartColumns);
+    await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/components/sidebar/");
     const sidebar = page.locator("ika-sidebar").first();
     await expect(sidebar.locator('[part="main"]')).toContainText(
@@ -204,6 +231,23 @@ test.describe("ikasue identity contracts", () => {
     );
     expect(selectedWidth).toBeGreaterThan(otherWidth);
 
+    for (const choiceRoute of ["radio-group", "segmented-control"] as const) {
+      await page.goto(`/components/${choiceRoute}/`);
+      const choice = page.locator(`ika-${choiceRoute}`).first();
+      await choice.evaluate((node) => {
+        (node as HTMLElement & { props: Record<string, unknown> }).props = {
+          options: [
+            { id: "one", label: "One" },
+            { id: "two", label: "Two" },
+          ],
+          value: "missing",
+        };
+      });
+      await expect(choice.locator('[role="radio"][tabindex="0"]')).toHaveCount(
+        1,
+      );
+    }
+
     await page.goto("/components/bottom-panel/");
     const bottom = page.locator("ika-bottom-panel").first();
     await expect(bottom.locator('[part="main"]')).toContainText(
@@ -227,12 +271,53 @@ test.describe("ikasue identity contracts", () => {
           )
         : -1;
     expect(bottomVerticalOverlap).toBe(0);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.goto("/components/bottom-panel/");
+    const narrowBottom = page.locator("ika-bottom-panel").first();
+    const narrowMainBox = await narrowBottom
+      .locator('[part="main"]')
+      .boundingBox();
+    const narrowPanelBox = await narrowBottom
+      .locator('[part="panel"]')
+      .boundingBox();
+    expect(narrowMainBox && narrowPanelBox).toBeTruthy();
+    const narrowOverlap =
+      narrowMainBox && narrowPanelBox
+        ? Math.max(
+            0,
+            Math.min(
+              narrowMainBox.y + narrowMainBox.height,
+              narrowPanelBox.y + narrowPanelBox.height,
+            ) - Math.max(narrowMainBox.y, narrowPanelBox.y),
+          )
+        : -1;
+    expect(narrowOverlap).toBe(0);
+    expect(narrowMainBox?.height ?? 0).toBeGreaterThan(0);
+    expect(narrowPanelBox?.height ?? 0).toBeGreaterThan(0);
 
     await page.goto("/components/form/");
     const formHost = page.locator("ika-form").first();
     await expect(formHost).toHaveAttribute("data-status", "dirty");
     await expect(formHost.locator("ika-editable-text").first()).toContainText(
       "ikasue draft",
+    );
+    const formEditor = formHost.locator("ika-editable-text").first();
+    const formLabelId = await formHost
+      .locator('[part="label"]')
+      .first()
+      .getAttribute("id");
+    if (!formLabelId) throw new Error("Form label must have an id");
+    await expect(formEditor.locator('[part="read-value"]')).toHaveAttribute(
+      "aria-labelledby",
+      formLabelId,
+    );
+    await formEditor.locator('[part="read-value"]').press("Enter");
+    await expect(formEditor.locator('[part="input"]')).toHaveAttribute(
+      "aria-labelledby",
+      formLabelId,
+    );
+    await expect(formEditor.locator('[part="input"]')).toHaveAccessibleName(
+      "Name",
     );
     const submitted = await formHost.evaluate(
       (node) =>
@@ -249,6 +334,7 @@ test.describe("ikasue identity contracts", () => {
     );
     expect(submitted).toEqual({ values: { name: "ikasue draft" } });
 
+    await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/components/split-view/");
     const split = page.locator("ika-split-view").first();
     await expect(split).toHaveAttribute("data-active-pane", "detail");
@@ -424,14 +510,37 @@ test.describe("ikasue identity contracts", () => {
   test("P0 components keep a responsive visual and keyboard baseline", async ({
     page,
   }) => {
+    await page.goto("/components/theme-root/");
+    const theme = page.locator("ika-theme-root").first();
+    await expect(theme).toHaveAttribute("data-variant", "default");
+    const inheritedSurface = await theme
+      .locator("p")
+      .evaluate((node) =>
+        getComputedStyle(node).getPropertyValue("--ikasue-surface"),
+      );
+    expect(inheritedSurface.trim()).toBe("#f5f7fb");
+    await theme.evaluate((node) => {
+      (node as HTMLElement & { props: Record<string, unknown> }).props = {
+        tokens: { "ikasue-surface": "#010203" },
+        variant: "dense",
+      };
+    });
+    await expect(theme).toHaveAttribute("data-variant", "dense");
+    await expect
+      .poll(() =>
+        theme
+          .locator("p")
+          .evaluate((node) =>
+            getComputedStyle(node).getPropertyValue("--ikasue-surface").trim(),
+          ),
+      )
+      .toBe("#010203");
+
     for (const width of [320, 600, 1280]) {
       await page.setViewportSize({ width, height: 800 });
       for (const route of P0_COMPONENT_ROUTES) {
         await page.goto(`/components/${route}/`);
-        const component =
-          route === "theme-root"
-            ? page.locator('[data-kind="theme-root"]').first()
-            : page.locator(`ika-${route}`).first();
+        const component = page.locator(`ika-${route}`).first();
         await expect(component).toBeVisible();
         const focusable =
           route === "split-view"
@@ -461,10 +570,7 @@ test.describe("ikasue identity contracts", () => {
       await page.evaluate(() => {
         document.documentElement.style.fontSize = "200%";
       });
-      const component =
-        route === "theme-root"
-          ? page.locator('[data-kind="theme-root"]').first()
-          : page.locator(`ika-${route}`).first();
+      const component = page.locator(`ika-${route}`).first();
       await expect(component).toHaveScreenshot(`p0-${route}-zoom.png`, {
         animations: "disabled",
         maxDiffPixelRatio: 0.05,
@@ -474,10 +580,7 @@ test.describe("ikasue identity contracts", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     for (const route of P0_COMPONENT_ROUTES) {
       await page.goto(`/components/${route}/`);
-      const component =
-        route === "theme-root"
-          ? page.locator('[data-kind="theme-root"]').first()
-          : page.locator(`ika-${route}`).first();
+      const component = page.locator(`ika-${route}`).first();
       await expect(component).toHaveScreenshot(`p0-${route}-reduced.png`, {
         animations: "disabled",
         maxDiffPixelRatio: 0.05,
