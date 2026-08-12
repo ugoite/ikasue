@@ -103,6 +103,44 @@ test.describe("ikasue identity contracts", () => {
     await expect(sidebar.locator('[part="main"]')).toContainText(
       "Workspace content",
     );
+    const sidebarParts = await sidebar.evaluate((node) =>
+      Array.from(node.querySelectorAll('[part="nav"], [part="main"]')).map(
+        (part) => part.getAttribute("part"),
+      ),
+    );
+    expect(sidebarParts).toEqual(["nav", "main"]);
+    await sidebar.evaluate((node) => {
+      (node as HTMLElement & { props: Record<string, unknown> }).props = {
+        main: "Workspace content",
+        items: [
+          { id: "home", label: "Home", icon: "⌂" },
+          { id: "settings", label: "Settings", icon: "⚙" },
+        ],
+        collapsed: true,
+      };
+    });
+    const closedMain = await sidebar.locator('[part="main"]').boundingBox();
+    await sidebar.evaluate((node) => {
+      (node as HTMLElement & { props: Record<string, unknown> }).props = {
+        main: "Workspace content",
+        items: [
+          { id: "home", label: "Home", icon: "⌂" },
+          { id: "settings", label: "Settings", icon: "⚙" },
+        ],
+        collapsed: false,
+      };
+    });
+    const openMain = await sidebar.locator('[part="main"]').boundingBox();
+    const openRail = await sidebar.locator('[part="nav"]').boundingBox();
+    expect((openMain?.width ?? 0) < (closedMain?.width ?? 0)).toBe(true);
+    expect((openRail?.x ?? 0) + (openRail?.width ?? 0)).toBeLessThanOrEqual(
+      (openMain?.x ?? 0) + 1,
+    );
+    await sidebar.locator('[part="nav-item"]').nth(1).click();
+    await expect(sidebar.locator('[part="nav-item"]').nth(1)).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     const sidebarColumns = await sidebar.evaluate(
       (node) => getComputedStyle(node).gridTemplateColumns,
     );
@@ -164,6 +202,15 @@ test.describe("ikasue identity contracts", () => {
     await expect(grid.locator('[data-state="error"]')).toHaveCount(1);
 
     const selected = grid.locator('[data-selected="true"]');
+    await expect(selected).toHaveCSS(
+      "border-block-end-color",
+      "rgb(17, 17, 17)",
+    );
+    await expect(grid.locator('[data-row-peer="true"]')).toHaveCSS(
+      "background-color",
+      "rgb(240, 241, 237)",
+    );
+    await expect(grid.locator('[data-column-peer="true"]')).toHaveCount(1);
     await selected.press("Enter");
     const input = grid.locator('[part="input"]');
     await expect(input).toBeVisible();
@@ -194,5 +241,61 @@ test.describe("ikasue identity contracts", () => {
     await alert.locator('[part="alert-action"]').click();
     await expect(target).toBeFocused();
     await expect(target).toHaveAttribute("data-ika-attention", "true");
+  });
+
+  test("unchecked Checkbox keeps its semantic text without an empty box", async ({
+    page,
+  }) => {
+    await page.goto("/components/checkbox/");
+    const checkbox = page.locator("ika-checkbox").first();
+    await checkbox.evaluate((node) => {
+      (node as HTMLElement & { props: Record<string, unknown> }).props = {
+        id: "enabled",
+        label: "Enabled",
+        checked: false,
+        disabled: false,
+      };
+    });
+    const check = checkbox.locator('[part="check"]');
+    await expect(check).toHaveText("");
+    await expect(check).toHaveCSS("border-style", "none");
+    await expect(check).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  });
+
+  test("identity survives viewport, zoom, keyboard, and reduced motion changes", async ({
+    page,
+  }) => {
+    for (const width of [320, 600, 1280]) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto("/components/tabs/");
+      const tabs = page.locator("ika-tabs").first();
+      await expect(tabs).toBeVisible();
+      await page.keyboard.press("Tab");
+      await expect(tabs.locator('[part="tab"]:focus')).toBeVisible();
+      const screenshot = await page.screenshot({ animations: "disabled" });
+      expect(screenshot.byteLength).toBeGreaterThan(1000);
+    }
+
+    await page.goto("/components/sidebar/");
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    await expect(page.locator("ika-sidebar").first()).toBeVisible();
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/components/tabs/");
+    const activeTab = page.locator(
+      'ika-tabs [part="tab"][aria-selected="true"]',
+    );
+    await expect(activeTab).toBeVisible();
+    const motion = await activeTab.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return {
+        animationDuration: style.animationDuration,
+        transitionDuration: style.transitionDuration,
+      };
+    });
+    expect(motion.animationDuration).toBe("0s");
+    expect(motion.transitionDuration).toContain("0s");
   });
 });

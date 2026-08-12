@@ -222,9 +222,10 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
     ],
   },
   separator: {
-    props: { orientation: "horizontal", role: "separator" },
+    props: { orientation: "horizontal", weight: "hairline", role: "separator" },
     controls: [
       select("orientation", "方向", "Orientation", ["horizontal", "vertical"]),
+      select("weight", "線の太さ", "Weight", ["hairline", "standard"]),
     ],
   },
   tabs: {

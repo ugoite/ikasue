@@ -145,6 +145,7 @@ const primitiveAttributes = new Set([
   "axis",
   "direction",
   "orientation",
+  "weight",
   "variant",
   "fit",
   "gap",
@@ -252,7 +253,7 @@ const propertyKeysByTag: Readonly<
     "children",
   ]),
   "ika-scroll-area": new Set(["content", "axis", "overscroll"]),
-  "ika-separator": new Set(["orientation", "role"]),
+  "ika-separator": new Set(["orientation", "weight", "role"]),
   "ika-sidebar": new Set(["main", "items", "activeId", "collapsed"]),
   "ika-toolbar": new Set(["items", "overflow"]),
   "ika-icon-button": new Set([
@@ -749,6 +750,7 @@ export class IkaElement extends HTMLElementBase {
       case "ika-separator":
         this.dataset.orientation =
           propertyText(value, "orientation") || "horizontal";
+        this.dataset.weight = propertyText(value, "weight") || "hairline";
         appendInternal(root, "hr", (element) => {
           element.part = "separator";
           element.setAttribute("role", "separator");
@@ -1042,7 +1044,7 @@ export class IkaElement extends HTMLElementBase {
             });
             nav.append(button);
           }
-          workspace.append(main, nav);
+          workspace.append(nav, main);
         });
         break;
       case "ika-toolbar":
@@ -1988,6 +1990,8 @@ export class IkaTabsElement extends IkaElement {
       button.setAttribute("role", "tab");
       button.setAttribute("aria-controls", panelId);
       button.setAttribute("aria-selected", String(item.id === this.#activeId));
+      button.dataset.motion =
+        item.id === this.#activeId ? this.#motion : "none";
       button.tabIndex = item.id === this.#activeId ? 0 : -1;
       button.disabled = item.disabled === true;
       button.addEventListener("click", () => {
