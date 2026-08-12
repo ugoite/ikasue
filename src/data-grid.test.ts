@@ -40,11 +40,13 @@ describe("data grid state", () => {
     const derived = dataGrid({
       cells: [{ row: "r", column: "c", value: "x" }],
       editable: true,
+      density: "compact",
     });
     expect(derived.columnsProvided).toBe(false);
     expect(derived.rowsProvided).toBe(false);
     expect(derived.columns).toEqual([{ id: "c", label: "c" }]);
     expect(derived.editable).toBe(true);
+    expect(derived.density).toBe("compact");
     const empty = dataGrid({
       columns: [],
       rows: [],
