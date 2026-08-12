@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ugoite.github.io/ikasue/contract/tabs.schema.json",
   "title": "ikasue Tabs contract",
+  "$comment": "Tab item ids must be unique; JSON Schema 2020-12 cannot express uniqueness by object property, so hosts must apply the public validator.",
   "type": "object",
   "additionalProperties": false,
   "required": ["items"],
@@ -20,6 +21,7 @@
       "properties": {
         "id": { "type": "string", "minLength": 1 },
         "label": { "type": "string" },
+        "content": { "type": "string" },
         "disabled": { "type": "boolean" }
       }
     }

@@ -192,6 +192,15 @@ const isHistoryEntry = (value: IkaJsonValue): boolean =>
   typeof value.content === "string" &&
   (value.tone === undefined ||
     ["default", "muted", "success", "danger"].includes(value.tone as string));
+const isUniqueTabsItems = (value: IkaJsonValue): boolean => {
+  if (!Array.isArray(value)) return false;
+  const ids = new Set<string>();
+  for (const item of value) {
+    if (!isIkaTabsItem(item) || ids.has(item.id)) return false;
+    ids.add(item.id);
+  }
+  return true;
+};
 
 const IKA_VIEW_PROPERTY_GUARDS: Readonly<
   Record<IkaViewKind, Readonly<Record<string, IkaPropertyGuard>>>
@@ -248,7 +257,7 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
     role: isEnum("separator"),
   },
   tabs: {
-    items: isArrayOf(isIkaTabsItem),
+    items: isUniqueTabsItems,
     activeId: isString,
     variant: isEnum("default", "elastic"),
     orientation: isEnum("horizontal", "vertical"),
@@ -386,6 +395,7 @@ export interface IkaDataGridSpec {
 export interface IkaTabsItem {
   readonly id: string;
   readonly label: string;
+  readonly content?: string;
   readonly disabled?: boolean;
 }
 
@@ -690,13 +700,14 @@ export function isIkaDataGridRow(value: unknown): value is IkaDataGridRow {
 export function isIkaTabsItem(value: unknown): value is IkaTabsItem {
   if (
     !isIkaJsonRecord(value) ||
-    !hasOnlyKeys(value, ["id", "label", "disabled"])
+    !hasOnlyKeys(value, ["id", "label", "content", "disabled"])
   )
     return false;
   return (
     typeof value.id === "string" &&
     value.id.length > 0 &&
     typeof value.label === "string" &&
+    (value.content === undefined || typeof value.content === "string") &&
     (value.disabled === undefined || typeof value.disabled === "boolean")
   );
 }
