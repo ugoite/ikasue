@@ -30,25 +30,19 @@
   --ikasue-font-en:
     Aptos, "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
   --ikasue-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  color: var(--ikasue-ink);
-  background: var(--ikasue-canvas);
-  font-family: var(--ikasue-font-en), var(--ikasue-font-ja);
 }
 
-*,
-*::before,
-*::after {
+[data-ika-kind],
+[data-ika-kind] *,
+[data-ika-kind]::before,
+[data-ika-kind]::after,
+[data-ika-kind] *::before,
+[data-ika-kind] *::after {
   box-sizing: border-box;
   border-radius: 0;
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  margin: 0;
-  background: var(--ikasue-canvas);
+[data-ika-kind] {
   color: var(--ikasue-ink);
   font:
     14px/1.58 var(--ikasue-font-en),
@@ -56,7 +50,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-button {
+[data-ika-kind] button {
   border: 0;
   padding: 0;
   background: none;
@@ -65,22 +59,22 @@ button {
   font: inherit;
 }
 
-input,
-textarea,
-select {
+[data-ika-kind] input,
+[data-ika-kind] textarea,
+[data-ika-kind] select {
   color: inherit;
   font: inherit;
 }
 
-fieldset,
-hr {
+[data-ika-kind] fieldset,
+[data-ika-kind] hr {
   min-inline-size: 0;
   margin: 0;
   padding: 0;
   border: 0;
 }
 
-hr {
+[data-ika-kind] hr {
   border-block-start: 1px solid var(--ikasue-line);
 }
 
@@ -431,7 +425,17 @@ ika-status-indicator [part="icon"] {
   inline-size: 1rem;
   block-size: 1rem;
   color: currentColor;
-  font: 700 0.78rem/1 var(--ikasue-mono);
+}
+
+ika-status-indicator [part="icon"] svg,
+ika-alert [part="icon"] svg,
+ika-icon-button [part="icon"] svg,
+ika-toolbar [part="icon"] svg,
+ika-sidebar [part="icon"] svg,
+ika-checkbox [part="check"] svg {
+  display: block;
+  inline-size: 1em;
+  block-size: 1em;
 }
 
 ika-status-indicator [part="label"] {
@@ -932,7 +936,6 @@ ika-alert [part="icon"] {
   place-items: center;
   inline-size: 1.2rem;
   block-size: 1.2rem;
-  font-weight: 800;
 }
 
 ika-alert [data-severity="success"] {
@@ -1196,15 +1199,6 @@ ika-loading-region[data-busy="true"]::after {
   animation: ikasue-loading-wave 1.35s linear infinite;
 }
 
-ika-loading-region[data-busy="false"]::before {
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  inline-size: 3px;
-  background: var(--ikasue-success);
-  content: "";
-}
-
 @keyframes ikasue-loading-wave {
   from {
     background-position: 180% 0;
@@ -1258,16 +1252,18 @@ ika-loading-region[data-busy="false"]::before {
   }
 }
 
-[data-selected="true"] {
+[data-ika-kind] [data-selected="true"] {
   background: var(--ikasue-selection);
 }
 
-:focus-visible {
+[data-ika-kind]:focus-visible,
+[data-ika-kind] *:focus-visible {
   outline: 2px solid var(--ikasue-ink);
   outline-offset: 2px;
 }
 
-::selection {
+[data-ika-kind]::selection,
+[data-ika-kind] *::selection {
   background: var(--ikasue-selection-strong);
   color: var(--ikasue-ink);
 }
@@ -1380,12 +1376,15 @@ ika-scroll-area.ikasue-main {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :root {
+  [data-ika-kind] {
     --ikasue-motion-duration: 0ms;
   }
-  *,
-  *::before,
-  *::after {
+  [data-ika-kind],
+  [data-ika-kind] *,
+  [data-ika-kind]::before,
+  [data-ika-kind]::after,
+  [data-ika-kind] *::before,
+  [data-ika-kind] *::after {
     scroll-behavior: auto !important;
     transition-duration: 0ms !important;
     animation-duration: 0ms !important;

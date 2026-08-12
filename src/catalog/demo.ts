@@ -71,11 +71,7 @@ const gridColumns = [
 const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
   "theme-root": {
     props: {
-      tokens: {
-        "--ikasue-surface": "#f5f7fb",
-        "--ikasue-ink": "#172033",
-        "--ikasue-line": "#9aa8bd",
-      },
+      tokens: {},
       variant: "default",
     },
     controls: [
@@ -246,8 +242,8 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
     props: {
       main: "Workspace content remains visible beside the navigation rail.",
       items: [
-        { id: "home", label: "Home", icon: "⌂" },
-        { id: "settings", label: "Settings", icon: "⚙" },
+        { id: "home", label: "Home", icon: "home" },
+        { id: "settings", label: "Settings", icon: "settings" },
       ],
       activeId: "home",
       collapsed: false,
@@ -266,8 +262,8 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
   toolbar: {
     props: {
       items: [
-        { id: "save", label: "Save", icon: "↓", pressed: true },
-        { id: "refresh", label: "Refresh", icon: "↻", busy: true },
+        { id: "save", label: "Save", icon: "save", pressed: true },
+        { id: "refresh", label: "Refresh", icon: "refresh", busy: true },
       ],
       overflow: "none",
     },
@@ -280,7 +276,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
     props: {
       id: "more",
       label: "More actions",
-      icon: "⋯",
+      icon: "more",
       type: "button",
       disabled: false,
       pressed: false,
@@ -447,7 +443,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
       id: "status",
       label: "Ready",
       status: "success",
-      icon: "✓",
+      icon: "check",
       showLabel: false,
       targetId: "",
     },
