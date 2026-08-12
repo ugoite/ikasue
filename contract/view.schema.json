@@ -221,7 +221,18 @@
         "id": { "type": "string", "minLength": 1 },
         "label": { "type": "string" },
         "content": { "type": "string" },
-        "basis": { "type": "number", "minimum": 0 }
+        "size": { "type": "string" },
+        "minSize": { "type": "string" },
+        "basis": {
+          "oneOf": [
+            { "type": "number", "minimum": 0 },
+            { "type": "string", "minLength": 1 }
+          ]
+        },
+        "grow": { "type": "number", "minimum": 0 },
+        "shrink": { "type": "number", "minimum": 0 },
+        "collapsible": { "type": "boolean" },
+        "disabled": { "type": "boolean" }
       }
     },
     "kindProps": {

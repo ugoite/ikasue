@@ -504,7 +504,13 @@ export interface IkaSplitViewPane {
   readonly id: string;
   readonly label?: string;
   readonly content?: string;
-  readonly basis?: number;
+  readonly size?: string;
+  readonly minSize?: string;
+  readonly basis?: number | string;
+  readonly grow?: number;
+  readonly shrink?: number;
+  readonly collapsible?: boolean;
+  readonly disabled?: boolean;
 }
 
 export interface IkaSplitViewSpec {
@@ -817,7 +823,18 @@ export function isIkaTabsItem(value: unknown): value is IkaTabsItem {
 export function isIkaSplitViewPane(value: unknown): value is IkaSplitViewPane {
   if (
     !isIkaJsonRecord(value) ||
-    !hasOnlyKeys(value, ["id", "label", "content", "basis"])
+    !hasOnlyKeys(value, [
+      "id",
+      "label",
+      "content",
+      "size",
+      "minSize",
+      "basis",
+      "grow",
+      "shrink",
+      "collapsible",
+      "disabled",
+    ])
   )
     return false;
   return (
@@ -825,9 +842,23 @@ export function isIkaSplitViewPane(value: unknown): value is IkaSplitViewPane {
     value.id.length > 0 &&
     (value.label === undefined || typeof value.label === "string") &&
     (value.content === undefined || typeof value.content === "string") &&
+    (value.size === undefined || typeof value.size === "string") &&
+    (value.minSize === undefined || typeof value.minSize === "string") &&
     (value.basis === undefined ||
+      (typeof value.basis === "string" && value.basis.length > 0) ||
       (typeof value.basis === "number" &&
         Number.isFinite(value.basis) &&
-        value.basis >= 0))
+        value.basis >= 0)) &&
+    (value.grow === undefined ||
+      (typeof value.grow === "number" &&
+        Number.isFinite(value.grow) &&
+        value.grow >= 0)) &&
+    (value.shrink === undefined ||
+      (typeof value.shrink === "number" &&
+        Number.isFinite(value.shrink) &&
+        value.shrink >= 0)) &&
+    (value.collapsible === undefined ||
+      typeof value.collapsible === "boolean") &&
+    (value.disabled === undefined || typeof value.disabled === "boolean")
   );
 }

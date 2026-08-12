@@ -1319,6 +1319,21 @@ ika-scroll-area.ikasue-main {
   }
 }
 
+@media (max-width: 600px) {
+  ika-sidebar {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+  ika-sidebar nav button [part="label"] {
+    display: none;
+  }
+  ika-side-panel {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 40%);
+  }
+  ika-side-panel[data-side="start"] {
+    grid-template-columns: minmax(0, 40%) minmax(0, 1fr);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --ikasue-motion-duration: 0ms;
