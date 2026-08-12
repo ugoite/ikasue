@@ -297,6 +297,8 @@ const componentProperties: Record<
     property("items", "Item[]", "[]"),
     property("activeId", "string", ""),
     property("collapsed", "boolean", false),
+    property("railWidth", "CSS length", "44px"),
+    property("openWidth", "CSS length", "18rem"),
   ],
   toolbar: [
     property("items", "ToolbarItem[]", "[]"),
@@ -309,6 +311,7 @@ const componentProperties: Record<
     property("type", "button | submit | reset", "button"),
     property("disabled", "boolean", false),
     property("pressed", "boolean", false),
+    property("busy", "boolean", false),
   ],
   "text-field": [
     property("id", "string", ""),
@@ -604,7 +607,14 @@ const componentDefaults: Record<
     variant: "default",
     orientation: "horizontal",
   },
-  sidebar: { main: "", items: "[]", activeId: "", collapsed: false },
+  sidebar: {
+    main: "",
+    items: "[]",
+    activeId: "",
+    collapsed: false,
+    railWidth: "44px",
+    openWidth: "18rem",
+  },
   toolbar: { items: "[]", overflow: "none" },
   "icon-button": {
     id: "",
@@ -613,6 +623,7 @@ const componentDefaults: Record<
     type: "button",
     disabled: false,
     pressed: false,
+    busy: false,
   },
   "text-field": {
     id: "",

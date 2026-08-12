@@ -523,7 +523,9 @@
         "main": { "type": "string" },
         "items": { "type": "array", "items": { "$ref": "#/$defs/item" } },
         "activeId": { "type": "string" },
-        "collapsed": { "type": "boolean" }
+        "collapsed": { "type": "boolean" },
+        "railWidth": { "$ref": "#/$defs/minSize" },
+        "openWidth": { "$ref": "#/$defs/minSize" }
       }
     },
     "toolbarProps": {
@@ -545,7 +547,8 @@
         "icon": { "type": "string" },
         "type": { "enum": ["button", "submit", "reset"] },
         "disabled": { "type": "boolean" },
-        "pressed": { "type": "boolean" }
+        "pressed": { "type": "boolean" },
+        "busy": { "type": "boolean" }
       }
     },
     "checkboxProps": {

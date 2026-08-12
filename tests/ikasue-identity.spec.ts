@@ -95,6 +95,48 @@ test.describe("ikasue identity contracts", () => {
   test("workspace panels push their main track", async ({ page }) => {
     await page.goto("/components/side-panel/");
     const side = page.locator("ika-side-panel").first();
+    const initialSideColumns = await side.evaluate(
+      (node) => getComputedStyle(node).gridTemplateColumns,
+    );
+    await side.evaluate((node) => {
+      (node as HTMLElement & { props: Record<string, unknown> }).props = {
+        main: "Workspace content",
+        title: "Inspector",
+        content: "Details",
+        side: "end",
+        open: false,
+      };
+    });
+    await expect(side.locator('[part="panel"]')).toHaveAttribute("inert", "");
+    await expect
+      .poll(() =>
+        side.evaluate((node) => getComputedStyle(node).gridTemplateColumns),
+      )
+      .not.toBe(initialSideColumns);
+    const closedSideMain = await side.locator('[part="main"]').boundingBox();
+    await side.evaluate((node) => {
+      (node as HTMLElement & { props: Record<string, unknown> }).props = {
+        main: "Workspace content",
+        title: "Inspector",
+        content: "Details",
+        side: "end",
+        open: true,
+      };
+    });
+    await expect(side.locator('[part="panel"]')).not.toHaveAttribute("inert");
+    await expect
+      .poll(() =>
+        side.evaluate((node) => getComputedStyle(node).gridTemplateColumns),
+      )
+      .not.toBe(
+        await side.evaluate(
+          (node) => getComputedStyle(node).gridTemplateColumns,
+        ),
+      );
+    const openSideMain = await side.locator('[part="main"]').boundingBox();
+    expect(openSideMain?.width ?? 0).toBeLessThan(
+      closedSideMain?.width ?? Number.POSITIVE_INFINITY,
+    );
     await expect(side.locator('[part="main"]')).toBeVisible();
     await expect(side.locator('[part="panel"]')).toBeVisible();
     const columns = await side.evaluate(
@@ -229,7 +271,7 @@ test.describe("ikasue identity contracts", () => {
     const otherWidth = await otherOption.evaluate(
       (node) => node.getBoundingClientRect().width,
     );
-    expect(selectedWidth).toBeGreaterThan(otherWidth);
+    expect(selectedWidth).toBeGreaterThanOrEqual(otherWidth * 1.4);
 
     for (const choiceRoute of ["radio-group", "segmented-control"] as const) {
       await page.goto(`/components/${choiceRoute}/`);
@@ -250,6 +292,51 @@ test.describe("ikasue identity contracts", () => {
 
     await page.goto("/components/bottom-panel/");
     const bottom = page.locator("ika-bottom-panel").first();
+    await bottom.evaluate((node) => {
+      (node as HTMLElement).style.blockSize = "24rem";
+    });
+    const initialBottomRows = await bottom.evaluate(
+      (node) => getComputedStyle(node).gridTemplateRows,
+    );
+    await bottom.evaluate((node) => {
+      (node as HTMLElement & { props: Record<string, unknown> }).props = {
+        main: "Workspace content",
+        title: "Output",
+        content: "Logs",
+        open: false,
+      };
+    });
+    await expect(bottom.locator('[part="panel"]')).toHaveAttribute("inert", "");
+    await expect
+      .poll(() =>
+        bottom.evaluate((node) => getComputedStyle(node).gridTemplateRows),
+      )
+      .not.toBe(initialBottomRows);
+    const closedBottomMain = await bottom
+      .locator('[part="main"]')
+      .boundingBox();
+    await bottom.evaluate((node) => {
+      (node as HTMLElement & { props: Record<string, unknown> }).props = {
+        main: "Workspace content",
+        title: "Output",
+        content: "Logs",
+        open: true,
+      };
+    });
+    await expect(bottom.locator('[part="panel"]')).not.toHaveAttribute("inert");
+    await expect
+      .poll(() =>
+        bottom.evaluate((node) => getComputedStyle(node).gridTemplateRows),
+      )
+      .not.toBe(
+        await bottom.evaluate(
+          (node) => getComputedStyle(node).gridTemplateRows,
+        ),
+      );
+    const openBottomMain = await bottom.locator('[part="main"]').boundingBox();
+    expect(openBottomMain?.height ?? 0).toBeLessThan(
+      closedBottomMain?.height ?? Number.POSITIVE_INFINITY,
+    );
     await expect(bottom.locator('[part="main"]')).toContainText(
       "Workspace content",
     );
@@ -400,6 +487,34 @@ test.describe("ikasue identity contracts", () => {
       `${fieldDescriptionId} ${fieldErrorId}`,
     );
 
+    await page.goto("/components/text-field/");
+    const textField = page.locator("ika-text-field").first();
+    await textField.evaluate((node) => {
+      (node as HTMLElement & { props: Record<string, unknown> }).props = {
+        id: "query",
+        label: "Query",
+        value: "ikasue",
+        description: "Search the current workspace",
+        error: "Query is required",
+        required: true,
+      };
+    });
+    const textInput = textField.locator('[part="input"]');
+    const textDescriptionId = await textField
+      .locator('[part="description"]')
+      .getAttribute("id");
+    const textErrorId = await textField
+      .locator('[part="error"]')
+      .getAttribute("id");
+    if (!textDescriptionId || !textErrorId)
+      throw new Error("TextField status nodes must have ids");
+    await expect(textField).toHaveAttribute("aria-invalid", "true");
+    await expect(textInput).toHaveAccessibleName("Query");
+    await expect(textInput).toHaveAttribute(
+      "aria-describedby",
+      `${textDescriptionId} ${textErrorId}`,
+    );
+
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/components/split-view/");
     const split = page.locator("ika-split-view").first();
@@ -414,6 +529,35 @@ test.describe("ikasue identity contracts", () => {
       Number.parseFloat(getComputedStyle(node).flexGrow),
     );
     expect(activeFlex).toBeGreaterThan(inactiveFlex);
+    const paneBoxes = await split
+      .locator("[data-pane-id]")
+      .evaluateAll((nodes) =>
+        nodes.map((node) => {
+          const box = node.getBoundingClientRect();
+          return { x: box.x, y: box.y, right: box.right, bottom: box.bottom };
+        }),
+      );
+    const controlBoxes = await split
+      .locator("[data-pane-divider] button")
+      .evaluateAll((nodes) =>
+        nodes.map((node) => {
+          const box = node.getBoundingClientRect();
+          return { x: box.x, y: box.y, right: box.right, bottom: box.bottom };
+        }),
+      );
+    for (const control of controlBoxes)
+      for (const pane of paneBoxes) {
+        const overlap =
+          Math.max(
+            0,
+            Math.min(control.right, pane.right) - Math.max(control.x, pane.x),
+          ) *
+          Math.max(
+            0,
+            Math.min(control.bottom, pane.bottom) - Math.max(control.y, pane.y),
+          );
+        expect(overlap).toBe(0);
+      }
     await split.evaluate((node) => {
       (node as HTMLElement & { props: Record<string, unknown> }).props = {
         panes: [
@@ -452,6 +596,9 @@ test.describe("ikasue identity contracts", () => {
     await expect(grid.locator('[data-state="error"]')).toHaveCount(1);
 
     const selected = grid.locator('[data-selected="true"]');
+    await expect(selected).toHaveAttribute("aria-selected", "true");
+    await expect(grid.locator('[role="row"][tabindex]')).toHaveCount(0);
+    await expect(grid.locator('[part="cell"][tabindex="0"]')).toHaveCount(1);
     await expect(selected).toHaveCSS(
       "border-block-end-color",
       "rgb(17, 17, 17)",

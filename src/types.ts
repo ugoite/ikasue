@@ -255,6 +255,8 @@ export interface SidebarOptions {
   readonly items?: readonly Item[];
   readonly activeId?: string;
   readonly collapsed?: boolean;
+  readonly railWidth?: string;
+  readonly openWidth?: string;
   readonly onActiveChange?: (id: string) => void;
 }
 
@@ -264,6 +266,8 @@ export interface SidebarSpec {
   readonly items: readonly NormalizedItem[];
   readonly activeId?: string;
   readonly collapsed: boolean;
+  readonly railWidth: string;
+  readonly openWidth: string;
   readonly onActiveChange?: (id: string) => void;
 }
 
@@ -305,6 +309,7 @@ export interface IconButtonOptions {
   readonly type?: "button" | "submit" | "reset";
   readonly disabled?: boolean;
   readonly pressed?: boolean;
+  readonly busy?: boolean;
   readonly onClick?: () => void;
 }
 
@@ -316,6 +321,7 @@ export interface IconButtonSpec {
   readonly type: "button" | "submit" | "reset";
   readonly disabled: boolean;
   readonly pressed: boolean;
+  readonly busy: boolean;
   readonly onClick?: () => void;
 }
 

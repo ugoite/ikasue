@@ -42,12 +42,15 @@ import type {
   ProgressOptions,
   ProgressSpec,
 } from "./types";
+import { isMinSize } from "./layout";
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
 const text = (value: unknown) =>
   typeof value === "string" ? value.trim() : "";
 const content = (value: unknown) => (typeof value === "string" ? value : "");
+const width = (value: unknown, fallback: string): string =>
+  typeof value === "string" && isMinSize(value) ? value.trim() : fallback;
 type UnknownRecord = Record<string, unknown>;
 const record = (value: unknown): UnknownRecord | undefined =>
   typeof value === "object" && value !== null
@@ -137,6 +140,8 @@ export function sidebar(options?: SidebarOptions): SidebarSpec {
     main: content(options?.main),
     items: normalized,
     collapsed: options?.collapsed === true,
+    railWidth: width(options?.railWidth, "44px"),
+    openWidth: width(options?.openWidth, "18rem"),
   };
   const active = selected(normalized, options?.activeId);
   if (active) result.activeId = active;
@@ -190,6 +195,7 @@ export function iconButton(options: IconButtonOptions): IconButtonSpec {
         : "button",
     disabled: options?.disabled === true,
     pressed: options?.pressed === true,
+    busy: options?.busy === true,
   };
   if (text(options?.id)) result.id = text(options?.id);
   if (text(options?.icon)) result.icon = text(options?.icon);

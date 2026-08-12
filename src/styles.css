@@ -291,6 +291,16 @@ ika-text-field[aria-invalid="true"] [part="input"] {
   background: var(--ikasue-error-fill);
 }
 
+ika-text-field [part="description"] {
+  color: var(--ikasue-muted);
+  font-size: 0.76rem;
+}
+
+ika-text-field [part="error"] {
+  color: var(--ikasue-error-ink);
+  font-size: 0.76rem;
+}
+
 ika-icon-button {
   display: inline-block;
   inline-size: 38px;
@@ -507,14 +517,14 @@ ika-sidebar[data-collapsed="true"] nav button [part="label"] {
 
 ika-sidebar {
   display: grid;
-  grid-template-columns: minmax(0, 18rem) minmax(0, 1fr);
+  grid-template-columns: var(--ikasue-sidebar-open-width) minmax(0, 1fr);
   min-inline-size: 0;
   border-inline-end: 1px solid var(--ikasue-line);
 }
 
 ika-sidebar[data-collapsed="true"] {
   inline-size: 100%;
-  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-columns: var(--ikasue-sidebar-rail-width) minmax(0, 1fr);
 }
 
 ika-sidebar [part="workspace"] {
@@ -812,6 +822,10 @@ ika-data-grid [part="cell"][data-selected="true"] {
   border-block-end-color: var(--ikasue-ink);
 }
 
+ika-data-grid [part="cell"][data-state="error"][data-selected="true"] {
+  background: var(--ikasue-selection-strong);
+}
+
 ika-data-grid [part="input"] {
   inline-size: 100%;
   border: 0;
@@ -1006,15 +1020,29 @@ ika-split-view > [data-ika-split-container] > [data-pane-divider] {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  background: var(--ikasue-line);
+  background: transparent;
 }
 
 ika-split-view[data-orientation="horizontal"] [data-pane-divider] {
-  inline-size: 1px;
+  inline-size: 2rem;
+  background: linear-gradient(
+    to right,
+    transparent calc(50% - 0.5px),
+    var(--ikasue-line) calc(50% - 0.5px),
+    var(--ikasue-line) calc(50% + 0.5px),
+    transparent calc(50% + 0.5px)
+  );
 }
 
 ika-split-view[data-orientation="vertical"] [data-pane-divider] {
-  block-size: 1px;
+  block-size: 2rem;
+  background: linear-gradient(
+    to bottom,
+    transparent calc(50% - 0.5px),
+    var(--ikasue-line) calc(50% - 0.5px),
+    var(--ikasue-line) calc(50% + 0.5px),
+    transparent calc(50% + 0.5px)
+  );
 }
 
 ika-split-view [part="collapse-control"] {

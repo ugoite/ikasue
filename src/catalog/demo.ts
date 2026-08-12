@@ -251,12 +251,16 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
       ],
       activeId: "home",
       collapsed: false,
+      railWidth: "44px",
+      openWidth: "18rem",
     },
     controls: [
       text("main", "main内容", "Main content"),
       json("items", "項目", "Items"),
       select("activeId", "選択中", "Active item", ["home", "settings"]),
       boolean("collapsed", "折りたたみ", "Collapsed"),
+      text("railWidth", "閉じた幅", "Rail width"),
+      text("openWidth", "開いた幅", "Open width"),
     ],
   },
   toolbar: {
@@ -280,6 +284,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
       type: "button",
       disabled: false,
       pressed: false,
+      busy: true,
     },
     controls: [
       text("id", "ID", "ID"),
@@ -288,6 +293,7 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
       select("type", "種類", "Type", ["button", "submit", "reset"]),
       boolean("disabled", "無効", "Disabled"),
       boolean("pressed", "押下中", "Pressed"),
+      boolean("busy", "処理中", "Busy"),
     ],
   },
   "text-field": {
