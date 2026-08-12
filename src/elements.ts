@@ -574,7 +574,7 @@ export class IkaElement extends HTMLElementBase {
     "aria-describedby",
     "class",
     "hidden",
-    ...primitiveAttributes,
+    ...Array.from(primitiveAttributes, (attribute) => attribute.toLowerCase()),
   ];
   #props: IkaJsonRecord = {};
   #themeTokenKeys = new Set<string>();
@@ -2655,11 +2655,16 @@ export class IkaHistoryTimelineElement extends IkaElement {
     this.dataset.orientation = propertyText(value, "orientation") || "vertical";
     this.dataset.compact = String(value.compact === true);
     const selectedId = propertyText(value, "selectedId");
+    const selectedEntryExists =
+      selectedId !== "" &&
+      entries.some(
+        (entry) => isIkaJsonRecord(entry) && textValue(entry.id) === selectedId,
+      );
     for (const entry of entries) {
       if (!isIkaJsonRecord(entry)) continue;
       const item = this.ownerDocument.createElement("li");
       item.part = "entry";
-      const current = selectedId
+      const current = selectedEntryExists
         ? textValue(entry.id) === selectedId
         : entries.indexOf(entry) === entries.length - 1;
       item.setAttribute("aria-current", String(current));

@@ -501,12 +501,14 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
       content: "This dialog stays in the document flow for the demo.",
       open: true,
       modal: false,
+      openerId: "",
     },
     controls: [
       text("title", "タイトル", "Title"),
       text("content", "内容", "Content"),
       boolean("open", "開く", "Open"),
       boolean("modal", "モーダル", "Modal"),
+      text("openerId", "起点ID", "Opener ID"),
     ],
   },
   "split-view": {
