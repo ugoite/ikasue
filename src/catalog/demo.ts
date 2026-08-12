@@ -482,7 +482,6 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
       modal: false,
     },
     controls: [
-      text("main", "main内容", "Main content"),
       text("title", "タイトル", "Title"),
       text("content", "内容", "Content"),
       boolean("open", "開く", "Open"),
