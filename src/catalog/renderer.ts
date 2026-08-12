@@ -1007,13 +1007,7 @@ function renderComponentDemo(
 ): Cleanup | undefined {
   switch (id) {
     case "theme-root": {
-      const spec = themeRoot({
-        tokens: {
-          "ikasue-surface": "#f5f7fb",
-          "ikasue-ink": "#172033",
-          "ikasue-line": "#9aa8bd",
-        },
-      });
+      const spec = themeRoot();
       const root = ikaDemoElement(
         document,
         "theme-root",
@@ -1119,12 +1113,12 @@ function renderComponentDemo(
           {
             main: "Workspace content remains visible beside the navigation rail.",
             items: [
-              { id: "home", label: "Home", content: "Home", icon: "⌂" },
+              { id: "home", label: "Home", content: "Home", icon: "home" },
               {
                 id: "settings",
                 label: "Settings",
                 content: "Settings",
-                icon: "⚙",
+                icon: "settings",
               },
             ],
             activeId: "home",
@@ -1141,12 +1135,12 @@ function renderComponentDemo(
           "toolbar",
           {
             items: [
-              { id: "save", label: "Save", content: "Save", icon: "↓" },
+              { id: "save", label: "Save", content: "Save", icon: "save" },
               {
                 id: "refresh",
                 label: "Refresh",
                 content: "Refresh",
-                icon: "↻",
+                icon: "refresh",
               },
             ],
           },
@@ -1160,7 +1154,7 @@ function renderComponentDemo(
         ikaDemoElement(
           document,
           "icon-button",
-          { id: "more", label: "More", icon: "⋯", type: "button" },
+          { id: "more", label: "More", icon: "more", type: "button" },
           "More",
         ),
       );
@@ -1318,7 +1312,7 @@ function renderComponentDemo(
             id: "status",
             label: "Ready",
             status: "success",
-            icon: "✓",
+            icon: "check",
             showLabel: false,
           },
           "Ready",

@@ -119,9 +119,9 @@ describe("public contract", () => {
     expect(api.loadingRegion({ busy: true }).busy).toBe(true);
     expect(
       api.sidebar({
-        items: [{ id: "home", label: "Home", icon: "⌂" }],
+        items: [{ id: "home", label: "Home", icon: "home" }],
       }).items,
-    ).toMatchObject([{ id: "home", label: "Home", icon: "⌂" }]);
+    ).toMatchObject([{ id: "home", label: "Home", icon: "home" }]);
     expect(api.dialog({ modal: true, openerId: "open" })).toMatchObject({
       modal: true,
       openerId: "open",
@@ -165,6 +165,12 @@ describe("public contract", () => {
     expect(css).toContain("ikasue-loading-wave");
     expect(css).toContain('ika-theme-root[data-variant="dense"]');
     expect(css).toContain('ika-data-grid[data-density="compact"]');
+    expect(css).toContain("[data-ika-kind] button");
+    expect(css).toContain('[data-ika-kind] [data-selected="true"]');
+    expect(css).toContain("[data-ika-kind] *::selection");
+    expect(css).not.toContain('data-busy="false"]::before');
+    expect(css).not.toMatch(/\nbody\s*\{/);
+    expect(css).not.toMatch(/\nbutton\s*\{/);
     expect(css).not.toContain("#dfeeff");
     expect(css).not.toContain("box-shadow");
   });

@@ -127,6 +127,70 @@ function textValue(value: unknown): string {
   return "";
 }
 
+type LineIconName =
+  | "home"
+  | "settings"
+  | "save"
+  | "refresh"
+  | "more"
+  | "check"
+  | "info"
+  | "warning"
+  | "danger";
+
+const lineIconPaths: Readonly<Record<LineIconName, string>> = {
+  home: "M3 10.5 12 3l9 7.5M5.5 9.5V21h13V9.5M9.5 21v-6h5v6",
+  settings:
+    "M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7ZM12 3v2M12 19v2M3 12h2M19 12h2M5.64 5.64l1.42 1.42M16.94 16.94l1.42 1.42M18.36 5.64l-1.42 1.42M7.06 16.94l-1.42 1.42",
+  save: "M5 3h11l3 3v15H5zM8 3v6h8V3M9 21v-6h6v6",
+  refresh:
+    "M20 11a8 8 0 0 0-14.8-4L3 10M3 5v5h5M4 13a8 8 0 0 0 14.8 4L21 14M21 19v-5h-5",
+  more: "M5 12h.01M12 12h.01M19 12h.01",
+  check: "M5 12.5 9.5 17 19 7",
+  info: "M12 10v7M12 6.8v.1",
+  warning: "M12 4 21 20H3zM12 10v4M12 17.2v.1",
+  danger: "M12 4v10M12 18v.1",
+};
+
+const lineIconAliases: Readonly<Record<string, LineIconName>> = {
+  home: "home",
+  settings: "settings",
+  save: "save",
+  refresh: "refresh",
+  more: "more",
+  check: "check",
+  info: "info",
+  warning: "warning",
+  danger: "danger",
+};
+
+function lineIconName(value: unknown, fallback: LineIconName): LineIconName {
+  return lineIconAliases[textValue(value).trim().toLowerCase()] ?? fallback;
+}
+
+function appendLineIcon(
+  parent: HTMLElement,
+  value: unknown,
+  fallback: LineIconName,
+): void {
+  const document = parent.ownerDocument;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("width", "18");
+  svg.setAttribute("height", "18");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "1.75");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", lineIconPaths[lineIconName(value, fallback)]);
+  svg.append(path);
+  parent.append(svg);
+}
+
 const primitiveAttributes = new Set(IKA_PRIMITIVE_ATTRIBUTE_NAMES);
 
 const booleanAttributes = new Set([
@@ -581,6 +645,7 @@ export class IkaElement extends HTMLElementBase {
   #reflectingAttributes = false;
 
   connectedCallback(): void {
+    this.dataset.ikaKind = this.localName.replace(/^ika-/, "");
     if (this.localName === "ika-form" && this.getAttribute("role") !== "form") {
       this.#reflectingAttributes = true;
       try {
@@ -862,7 +927,7 @@ export class IkaElement extends HTMLElementBase {
           const icon = this.ownerDocument.createElement("span");
           icon.part = "icon";
           icon.setAttribute("aria-hidden", "true");
-          icon.textContent = propertyText(value, "icon") || "i";
+          appendLineIcon(icon, propertyText(value, "icon"), "info");
           button.append(icon);
           button.addEventListener("click", () =>
             this.dispatchEvent(
@@ -886,13 +951,14 @@ export class IkaElement extends HTMLElementBase {
           const check = this.ownerDocument.createElement("span");
           check.part = "check";
           check.setAttribute("aria-hidden", "true");
-          check.textContent = input.checked ? "✓" : "";
+          if (input.checked) appendLineIcon(check, "check", "check");
           const copy = this.ownerDocument.createElement("span");
           copy.part = "label";
           copy.textContent = label;
           input.addEventListener("change", () => {
             element.dataset.checked = String(input.checked);
-            check.textContent = input.checked ? "✓" : "";
+            check.replaceChildren();
+            if (input.checked) appendLineIcon(check, "check", "check");
             this.dispatchEvent(
               new CustomEvent("ika-change", {
                 bubbles: true,
@@ -912,7 +978,18 @@ export class IkaElement extends HTMLElementBase {
           const icon = this.ownerDocument.createElement("span");
           icon.part = "icon";
           icon.setAttribute("aria-hidden", "true");
-          icon.textContent = propertyText(value, "icon") || "⋯";
+          const status = propertyText(value, "status") || "neutral";
+          appendLineIcon(
+            icon,
+            propertyText(value, "icon"),
+            status === "success"
+              ? "check"
+              : status === "warning"
+                ? "warning"
+                : status === "danger"
+                  ? "danger"
+                  : "info",
+          );
           const copy = this.ownerDocument.createElement("span");
           copy.part = "label";
           copy.textContent = label;
@@ -938,14 +1015,17 @@ export class IkaElement extends HTMLElementBase {
           const icon = this.ownerDocument.createElement("span");
           icon.part = "icon";
           icon.setAttribute("aria-hidden", "true");
-          icon.textContent =
+          appendLineIcon(
+            icon,
+            undefined,
             severity === "danger"
-              ? "!"
+              ? "danger"
               : severity === "warning"
-                ? "▲"
+                ? "warning"
                 : severity === "success"
-                  ? "✓"
-                  : "i";
+                  ? "check"
+                  : "info",
+          );
           const message = this.ownerDocument.createElement("span");
           message.part = "message";
           message.textContent = propertyText(value, "message") || label;
@@ -1166,7 +1246,7 @@ export class IkaElement extends HTMLElementBase {
             const icon = this.ownerDocument.createElement("span");
             icon.part = "icon";
             icon.setAttribute("aria-hidden", "true");
-            icon.textContent = textValue(item.icon) || "⌂";
+            appendLineIcon(icon, item.icon, "home");
             const itemText = this.ownerDocument.createElement("span");
             itemText.part = "label";
             itemText.textContent = itemLabel;
@@ -1202,9 +1282,6 @@ export class IkaElement extends HTMLElementBase {
             const button = this.ownerDocument.createElement("button");
             button.type = "button";
             const itemLabel = textValue(item.label) || item.id;
-            const itemIcon =
-              textValue(item.icon) ||
-              (item.id === "save" ? "↓" : item.id === "refresh" ? "↻" : "⋯");
             button.setAttribute("aria-label", itemLabel);
             button.title = itemLabel;
             button.part = "item";
@@ -1216,7 +1293,7 @@ export class IkaElement extends HTMLElementBase {
             const icon = this.ownerDocument.createElement("span");
             icon.part = "icon";
             icon.setAttribute("aria-hidden", "true");
-            icon.textContent = itemIcon;
+            appendLineIcon(icon, textValue(item.icon) || item.id, "more");
             button.append(icon);
             button.addEventListener("click", () =>
               this.dispatchEvent(
