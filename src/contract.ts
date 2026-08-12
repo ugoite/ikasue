@@ -481,7 +481,9 @@ export interface IkaDataGridSpec {
   readonly rows?: readonly IkaDataGridRow[];
   readonly selection?: IkaDataGridSelection;
   readonly editing?: IkaDataGridSelection;
+  readonly selectionMode?: "cell" | "context";
   readonly editable?: boolean;
+  readonly density?: "default" | "compact";
 }
 
 export interface IkaTabsItem {
@@ -494,6 +496,8 @@ export interface IkaTabsItem {
 export interface IkaTabsSpec {
   readonly items: readonly IkaTabsItem[];
   readonly activeId?: string;
+  readonly variant?: "default" | "elastic";
+  readonly orientation?: "horizontal" | "vertical";
 }
 
 export interface IkaSplitViewPane {
@@ -505,6 +509,11 @@ export interface IkaSplitViewPane {
 
 export interface IkaSplitViewSpec {
   readonly panes: readonly IkaSplitViewPane[];
+  readonly orientation?: "horizontal" | "vertical";
+  readonly activePane?: string;
+  readonly sizes?: readonly string[];
+  readonly collapsible?: boolean;
+  readonly motionOrigin?: "start" | "end" | "top" | "bottom";
 }
 
 export interface IkaError {

@@ -220,6 +220,8 @@ const editableEditing = new WeakSet<HTMLElement>();
 const editableDrafts = new WeakMap<HTMLElement, string>();
 const editableValues = new WeakMap<HTMLElement, string>();
 const editableStates = new WeakMap<HTMLElement, string>();
+const editableControlledValues = new WeakMap<HTMLElement, string>();
+const editableControlledStates = new WeakMap<HTMLElement, string>();
 
 const propertyKeysByTag: Readonly<
   Record<IkaElementTagName, ReadonlySet<string>>
@@ -1128,8 +1130,22 @@ export class IkaElement extends HTMLElementBase {
         appendInternal(root, "fieldset", (element) => {
           if (kind === "ika-radio-group")
             element.setAttribute("role", "radiogroup");
-          const options = Array.isArray(value.options) ? value.options : [];
+          const options: readonly IkaJsonValue[] = Array.isArray(value.options)
+            ? value.options
+            : [];
           const buttons: HTMLButtonElement[] = [];
+          const firstEnabled = options.find(
+            (option) =>
+              isIkaJsonRecord(option) &&
+              option.disabled !== true &&
+              typeof option.id === "string",
+          );
+          const selectedId =
+            textValue(value.value) ||
+            (isIkaJsonRecord(firstEnabled) &&
+            typeof firstEnabled.id === "string"
+              ? firstEnabled.id
+              : undefined);
           for (const option of options) {
             if (!isIkaJsonRecord(option) || typeof option.id !== "string")
               continue;
@@ -1141,9 +1157,9 @@ export class IkaElement extends HTMLElementBase {
               propertyBoolean(value, "disabled") || option.disabled === true;
             button.setAttribute(
               "aria-checked",
-              String(option.id === value.value),
+              String(option.id === selectedId),
             );
-            button.tabIndex = option.id === value.value ? 0 : -1;
+            button.tabIndex = option.id === selectedId ? 0 : -1;
             button.addEventListener("click", () => {
               buttons.forEach((candidate) => {
                 const selected = candidate === button;
@@ -1317,10 +1333,32 @@ export class IkaElement extends HTMLElementBase {
   ): void {
     const disabled = propertyBoolean(value, "disabled");
     const editor = propertyText(value, "editor") || "text";
-    const state =
-      editableStates.get(this) || propertyText(value, "state") || "clean";
     const controlledValue = propertyText(value, "value");
-    if (!editableValues.has(this)) editableValues.set(this, controlledValue);
+    const controlledState = propertyText(value, "state") || "clean";
+    const previousControlledValue = editableControlledValues.get(this);
+    const previousControlledState = editableControlledStates.get(this);
+    const controlledValueChanged =
+      previousControlledValue !== undefined &&
+      previousControlledValue !== controlledValue;
+    const controlledStateChanged =
+      previousControlledState !== undefined &&
+      previousControlledState !== controlledState;
+    if (
+      !editableEditing.has(this) &&
+      (previousControlledValue === undefined || controlledValueChanged)
+    ) {
+      editableValues.set(this, controlledValue);
+      editableDrafts.delete(this);
+      if (controlledValueChanged) editableStates.set(this, controlledState);
+    }
+    if (
+      !editableEditing.has(this) &&
+      (previousControlledState === undefined || controlledStateChanged)
+    )
+      editableStates.set(this, controlledState);
+    editableControlledValues.set(this, controlledValue);
+    editableControlledStates.set(this, controlledState);
+    const state = editableStates.get(this) || controlledState;
     const currentValue = editableValues.get(this) ?? controlledValue;
     this.dataset.editable = String(!disabled);
     this.dataset.editing = String(editableEditing.has(this));
@@ -2183,8 +2221,10 @@ export class IkaSplitViewElement extends IkaElement {
     clearInternalContent(root);
     const orientation = propertyText(value, "orientation") || "horizontal";
     this.dataset.orientation = orientation;
-    this.dataset.activePane =
-      propertyText(value, "activePane") || this.#activePane || "";
+    const controlledActivePane = propertyText(value, "activePane");
+    const activePane =
+      controlledActivePane || this.#activePane || this.#panes[0]?.id || "";
+    this.dataset.activePane = activePane;
     this.dataset.collapsible = String(value.collapsible === true);
     this.dataset.motionOrigin =
       propertyText(value, "motionOrigin") ||
@@ -2201,36 +2241,68 @@ export class IkaSplitViewElement extends IkaElement {
     container.style.minWidth = "0";
     container.style.gap = "0.75rem";
     container.part = "panes";
+    const selectPane = (id: string): void => {
+      if (controlledActivePane) {
+        this.dispatchEvent(
+          new CustomEvent("ika-active-pane-change", {
+            bubbles: true,
+            composed: true,
+            detail: { id },
+          }),
+        );
+        return;
+      }
+      this.#activePane = id;
+      this.render();
+      this.dispatchEvent(
+        new CustomEvent("ika-active-pane-change", {
+          bubbles: true,
+          composed: true,
+          detail: { id },
+        }),
+      );
+    };
+    const mobileNav = this.ownerDocument.createElement("nav");
+    mobileNav.dataset.ikaInternal = "true";
+    mobileNav.part = "mobile-nav";
+    mobileNav.setAttribute("aria-label", "Split pane navigation");
+    const previous = this.ownerDocument.createElement("button");
+    previous.type = "button";
+    previous.part = "mobile-previous";
+    previous.textContent = "←";
+    previous.setAttribute("aria-label", "Previous pane");
+    const next = this.ownerDocument.createElement("button");
+    next.type = "button";
+    next.part = "mobile-next";
+    next.textContent = "→";
+    next.setAttribute("aria-label", "Next pane");
+    const activeIndex = this.#panes.findIndex((pane) => pane.id === activePane);
+    previous.disabled = activeIndex <= 0;
+    next.disabled = activeIndex < 0 || activeIndex >= this.#panes.length - 1;
+    previous.addEventListener("click", () => {
+      const pane = this.#panes[activeIndex - 1];
+      if (pane) selectPane(pane.id);
+    });
+    next.addEventListener("click", () => {
+      const pane = this.#panes[activeIndex + 1];
+      if (pane) selectPane(pane.id);
+    });
+    const current = this.ownerDocument.createElement("span");
+    current.part = "mobile-current";
+    current.textContent =
+      this.#panes.find((pane) => pane.id === activePane)?.label || activePane;
+    mobileNav.append(previous, current, next);
     for (const [index, pane] of this.#panes.entries()) {
       const section = this.ownerDocument.createElement("section");
       section.dataset.paneId = textValue(pane.id);
       section.id = `ika-split-view-${String(this.#instanceId)}-pane-${String(index + 1)}`;
       section.dataset.collapsible = String(value.collapsible === true);
       section.dataset.collapsed = String(this.#collapsed.has(pane.id));
-      section.dataset.active = String(
-        (propertyText(value, "activePane") || this.#activePane) === pane.id,
-      );
+      section.dataset.active = String(activePane === pane.id);
+      section.dataset.mobileInactive = String(activePane !== pane.id);
       section.tabIndex = 0;
       section.addEventListener("click", () => {
-        if (propertyText(this.effectiveProps, "activePane")) {
-          this.dispatchEvent(
-            new CustomEvent("ika-active-pane-change", {
-              bubbles: true,
-              composed: true,
-              detail: { id: pane.id },
-            }),
-          );
-          return;
-        }
-        this.#activePane = pane.id;
-        this.render();
-        this.dispatchEvent(
-          new CustomEvent("ika-active-pane-change", {
-            bubbles: true,
-            composed: true,
-            detail: { id: pane.id },
-          }),
-        );
+        selectPane(pane.id);
       });
       section.addEventListener("keydown", (event) => {
         if (event.key !== "Enter" && event.key !== " ") return;
@@ -2245,11 +2317,7 @@ export class IkaSplitViewElement extends IkaElement {
         const size =
           sizes[index] ??
           (pane.basis === undefined ? "1fr" : `${String(pane.basis)}fr`);
-        applySplitSize(
-          section,
-          size,
-          (propertyText(value, "activePane") || this.#activePane) === pane.id,
-        );
+        applySplitSize(section, size, activePane === pane.id);
       }
       if (pane.label) {
         const heading = this.ownerDocument.createElement("h3");
@@ -2306,7 +2374,7 @@ export class IkaSplitViewElement extends IkaElement {
         container.append(section);
       }
     }
-    root.append(container);
+    root.append(mobileNav, container);
   }
 }
 
