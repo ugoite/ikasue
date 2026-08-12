@@ -341,7 +341,7 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
       property("target", "string"),
       property("action", "string"),
     ],
-    ["ika-dismiss"],
+    ["ika-dismiss", "ika-action"],
   ),
   progress: contract("progress", [
     property("value", "number", "0"),

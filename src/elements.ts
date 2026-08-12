@@ -997,6 +997,7 @@ export class IkaElement extends HTMLElementBase {
           const items = Array.isArray(value.items) ? value.items : [];
           for (const item of items) {
             if (!isIkaJsonRecord(item) || typeof item.id !== "string") continue;
+            const itemId = item.id;
             const button = this.ownerDocument.createElement("button");
             button.type = "button";
             const itemLabel = textValue(item.label) || item.id;
@@ -1004,7 +1005,7 @@ export class IkaElement extends HTMLElementBase {
             button.title = itemLabel;
             button.part = "nav-item";
             button.disabled = item.disabled === true;
-            if (item.id === value.activeId)
+            if (itemId === value.activeId)
               button.setAttribute("aria-current", "page");
             const icon = this.ownerDocument.createElement("span");
             icon.part = "icon";
@@ -1014,15 +1015,17 @@ export class IkaElement extends HTMLElementBase {
             itemText.part = "label";
             itemText.textContent = itemLabel;
             button.append(icon, itemText);
-            button.addEventListener("click", () =>
+            button.addEventListener("click", () => {
+              if (!Object.prototype.hasOwnProperty.call(this.#props, "activeId"))
+                this.props = { ...this.#props, activeId: itemId };
               this.dispatchEvent(
                 new CustomEvent("ika-select", {
                   bubbles: true,
                   composed: true,
-                  detail: { id: item.id },
+                  detail: { id: itemId },
                 }),
-              ),
-            );
+              );
+            });
             nav.append(button);
           }
           workspace.append(main, nav);
