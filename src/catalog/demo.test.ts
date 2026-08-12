@@ -43,4 +43,9 @@ describe("component demo contract", () => {
       ),
     ).toContain('"danger"');
   });
+
+  it("keeps the representative demos neutral and planar", () => {
+    expect(componentDemo("theme-root").props.tokens).toEqual({});
+    expect(componentDemo("dialog").props.modal).toBe(false);
+  });
 });
