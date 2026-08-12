@@ -79,6 +79,10 @@ export const IKA_VIEW_KINDS: readonly IkaViewKind[] = [
 const IKA_VIEW_PROPERTY_KEYS = new Set([
   "tokens",
   "variant",
+  "editor",
+  "state",
+  "compact",
+  "selectedId",
   "content",
   "density",
   "tone",
@@ -105,6 +109,7 @@ const IKA_VIEW_PROPERTY_KEYS = new Set([
   "role",
   "items",
   "activeId",
+  "activePane",
   "collapsed",
   "overflow",
   "icon",
@@ -127,6 +132,9 @@ const IKA_VIEW_PROPERTY_KEYS = new Set([
   "side",
   "busy",
   "message",
+  "target",
+  "action",
+  "targetId",
   "severity",
   "dismissible",
   "loading",
@@ -162,7 +170,14 @@ const isViewArray = (value: IkaJsonValue): boolean =>
 const isFormField = (value: IkaJsonValue): boolean => {
   if (
     !isIkaJsonRecord(value) ||
-    !hasOnlyKeys(value, ["id", "label", "initialValue", "required"])
+    !hasOnlyKeys(value, [
+      "id",
+      "label",
+      "initialValue",
+      "required",
+      "editor",
+      "state",
+    ])
   )
     return false;
   return (
@@ -172,7 +187,15 @@ const isFormField = (value: IkaJsonValue): boolean => {
     value.label.length > 0 &&
     (value.initialValue === undefined ||
       typeof value.initialValue === "string") &&
-    (value.required === undefined || typeof value.required === "boolean")
+    (value.required === undefined || typeof value.required === "boolean") &&
+    (value.editor === undefined ||
+      ["text", "email", "number", "date", "textarea", "select"].includes(
+        value.editor as string,
+      )) &&
+    (value.state === undefined ||
+      ["clean", "created", "modified", "deleted", "error"].includes(
+        value.state as string,
+      ))
   );
 };
 const isChoiceOption = (value: IkaJsonValue): boolean =>
@@ -182,7 +205,25 @@ const isChoiceOption = (value: IkaJsonValue): boolean =>
   value.id.length > 0 &&
   typeof value.label === "string" &&
   (value.disabled === undefined || typeof value.disabled === "boolean");
-const isItem = isChoiceOption;
+const isItem = (value: IkaJsonValue): boolean =>
+  isIkaJsonRecord(value) &&
+  hasOnlyKeys(value, [
+    "id",
+    "label",
+    "content",
+    "disabled",
+    "icon",
+    "pressed",
+    "busy",
+  ]) &&
+  typeof value.id === "string" &&
+  value.id.length > 0 &&
+  typeof value.label === "string" &&
+  (value.content === undefined || typeof value.content === "string") &&
+  (value.disabled === undefined || typeof value.disabled === "boolean") &&
+  (value.icon === undefined || typeof value.icon === "string") &&
+  (value.pressed === undefined || typeof value.pressed === "boolean") &&
+  (value.busy === undefined || typeof value.busy === "boolean");
 const isHistoryEntry = (value: IkaJsonValue): boolean =>
   isIkaJsonRecord(value) &&
   hasOnlyKeys(value, ["id", "label", "content", "tone"]) &&
@@ -214,7 +255,13 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
     tone: isEnum("default", "muted", "danger", "success"),
     selectable: isBoolean,
   },
-  "editable-text": { id: isString, value: isString, disabled: isBoolean },
+  "editable-text": {
+    id: isString,
+    value: isString,
+    editor: isEnum("text", "email", "number", "date", "textarea", "select"),
+    state: isEnum("clean", "created", "modified", "deleted", "error"),
+    disabled: isBoolean,
+  },
   "text-field": {
     id: isString,
     label: isString,
@@ -300,6 +347,8 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
     label: isString,
     required: isBoolean,
     content: isString,
+    editor: isEnum("text", "email", "number", "date", "textarea", "select"),
+    state: isEnum("clean", "created", "modified", "deleted", "error"),
   },
   form: {
     fields: isArrayOf(isFormField),
@@ -316,10 +365,13 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
   "history-timeline": {
     entries: isArrayOf(isHistoryEntry),
     orientation: isEnum("horizontal", "vertical"),
+    selectedId: isString,
+    compact: isBoolean,
   },
   "split-view": {
     panes: isArrayOf(isIkaSplitViewPane),
     orientation: isEnum("horizontal", "vertical"),
+    activePane: isString,
     sizes: isArrayOf(isString),
     collapsible: isBoolean,
     motionOrigin: isEnum("start", "end", "top", "bottom"),
@@ -339,13 +391,18 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
     modal: isBoolean,
   },
   "status-indicator": {
+    id: isString,
     label: isString,
     status: isEnum("neutral", "info", "success", "warning", "danger"),
+    icon: isString,
+    targetId: isString,
   },
   alert: {
     message: isString,
     severity: isEnum("info", "success", "warning", "danger"),
     dismissible: isBoolean,
+    target: isString,
+    action: isString,
   },
   progress: { value: isNumber, max: isNumber, label: isString },
 };

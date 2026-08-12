@@ -1,13 +1,13 @@
 :root {
-  --sl-color-accent-low: #eef5ff;
+  --sl-color-accent-low: #f0f1ed;
   --sl-color-accent: #315f96;
   --sl-color-accent-high: #183455;
   --ikasue-surface: var(--sl-color-bg, #ffffff);
-  --ikasue-surface-raised: var(--sl-color-bg-nav, #f6f8fb);
-  --ikasue-ink: var(--sl-color-text, #172033);
-  --ikasue-muted: var(--sl-color-gray-3, #596579);
-  --ikasue-line: var(--sl-color-hairline, #aeb8c8);
-  --ikasue-selection: var(--sl-color-accent-low, #e6efff);
+  --ikasue-surface-raised: var(--sl-color-bg-nav, #fff);
+  --ikasue-ink: var(--sl-color-text, #111);
+  --ikasue-muted: var(--sl-color-gray-3, #666861);
+  --ikasue-line: var(--sl-color-hairline, #dedfd9);
+  --ikasue-selection: var(--sl-color-accent-low, #f0f1ed);
   --ikasue-code-surface: var(--sl-color-gray-6, #172033);
   --ikasue-code-ink: var(--sl-color-gray-1, #f5f7fb);
   --ikasue-accent: var(--sl-color-accent, #315f96);
@@ -16,11 +16,11 @@
 
 [data-ikasue-frame] {
   --ikasue-surface: var(--sl-color-bg, #ffffff);
-  --ikasue-surface-raised: var(--sl-color-bg-nav, #f6f8fb);
-  --ikasue-ink: var(--sl-color-text, #172033);
-  --ikasue-muted: var(--sl-color-gray-3, #596579);
-  --ikasue-line: var(--sl-color-hairline, #aeb8c8);
-  --ikasue-selection: var(--sl-color-accent-low, #e6efff);
+  --ikasue-surface-raised: var(--sl-color-bg-nav, #fff);
+  --ikasue-ink: var(--sl-color-text, #111);
+  --ikasue-muted: var(--sl-color-gray-3, #666861);
+  --ikasue-line: var(--sl-color-hairline, #dedfd9);
+  --ikasue-selection: var(--sl-color-accent-low, #f0f1ed);
   --ikasue-code-surface: var(--sl-color-gray-6, #172033);
   --ikasue-code-ink: var(--sl-color-gray-1, #f5f7fb);
   --ikasue-accent: var(--sl-color-accent, #315f96);
@@ -36,7 +36,7 @@
 
 [data-theme="dark"] [data-ikasue-frame] {
   --ikasue-link: #b8d7ff;
-  --ikasue-selection: #243b5e;
+  --ikasue-selection: #2b2e2a;
   color-scheme: dark;
 }
 

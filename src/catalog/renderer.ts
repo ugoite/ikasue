@@ -1,45 +1,11 @@
-import {
-  alert,
-  checkbox,
-  dataGrid,
-  editableText,
-  field,
-  form,
-  historyTimeline,
-  iconButton,
-  progress,
-  radioGroup,
-  segmentedControl,
-  sidebar,
-  statusIndicator,
-  tabs,
-  textComponent,
-  textField,
-  themeRoot,
-  toolbar,
-} from "../components";
+import { historyTimeline, tabs, textComponent, themeRoot } from "../components";
 import { flex, grid, scrollArea, separator, stack } from "../layout";
-import {
-  commitFormFields,
-  createFormState,
-  setFormDraft,
-  setFormErrors,
-  setFormStatus,
-} from "../form";
-import {
-  bottomPanel,
-  dialog,
-  loadingRegion,
-  sidePanel,
-  splitView,
-} from "../workspace";
+import { bottomPanel, dialog, loadingRegion, sidePanel } from "../workspace";
 import type {
-  AlertSpec,
   DataGridSpec,
   DialogSpec,
   FieldSpec,
   FlexSpec,
-  FormSpec,
   GridSpec,
   HistoryTimelineSpec,
   LoadingRegionSpec,
@@ -49,6 +15,8 @@ import type {
   TabsSpec,
   DataGridCell,
 } from "../types";
+import { defineIkaSue, tagNameForKind } from "../elements";
+import type { IkaJsonRecord, IkaViewKind } from "../contract";
 import type { CatalogComponentId, CatalogLocale } from "./types";
 import { findRegistryEntry } from "./registry";
 import { element, type Cleanup } from "./dom";
@@ -92,22 +60,34 @@ const justify = (value: string): string =>
 const setStyle = (node: HTMLElement, name: string, value: string): void => {
   node.style.setProperty(name, value);
 };
-const labelFor = (
-  document: Document,
-  text: string,
-  labelId: string,
-  inputId: string,
-): HTMLLabelElement => {
-  const label = element(document, "label", text);
-  label.id = labelId;
-  label.htmlFor = inputId;
-  return label;
-};
 const section = (document: Document, title: string): HTMLElement => {
   const node = element(document, "section");
   node.className = "ikasue-demo-section";
   node.append(element(document, "h2", title));
   return node;
+};
+
+const demoProps = (value: Record<string, unknown>): IkaJsonRecord =>
+  value as IkaJsonRecord;
+
+const ikaDemoElement = (
+  document: Document,
+  kind: IkaViewKind,
+  props: Record<string, unknown>,
+  fallback: string,
+): HTMLElement => {
+  const registry = document.defaultView?.customElements;
+  if (!registry) return element(document, "span", fallback);
+  try {
+    defineIkaSue(registry);
+    const node = document.createElement(tagNameForKind(kind)) as HTMLElement & {
+      props?: IkaJsonRecord;
+    };
+    node.props = demoProps(props);
+    return node;
+  } catch {
+    return element(document, "span", fallback);
+  }
 };
 
 function renderFlex(
@@ -1005,6 +985,12 @@ function renderDialog(
   target.append(opener, dialogNode);
 }
 
+// Kept for the catalog's direct-DOM fallback; the primary demo path uses the
+// same custom elements and semantic states as the public runtime.
+void renderSplitView;
+void renderField;
+void renderDataGrid;
+
 function renderComponentDemo(
   document: Document,
   target: HTMLElement,
@@ -1080,41 +1066,57 @@ function renderComponentDemo(
       );
       return;
     case "sidebar": {
-      const spec = sidebar({
-        items: [
-          { id: "home", label: "Home", content: "Home" },
-          { id: "settings", label: "Settings", content: "Settings" },
-        ],
-      });
-      const nav = element(document, "nav");
-      nav.setAttribute("aria-label", "Sidebar");
-      spec.items.forEach((item) => {
-        nav.append(element(document, "a", item.label));
-      });
-      target.append(nav);
+      target.append(
+        ikaDemoElement(
+          document,
+          "sidebar",
+          {
+            items: [
+              { id: "home", label: "Home", content: "Home", icon: "⌂" },
+              {
+                id: "settings",
+                label: "Settings",
+                content: "Settings",
+                icon: "⚙",
+              },
+            ],
+            activeId: "home",
+          },
+          "Sidebar",
+        ),
+      );
       return;
     }
     case "toolbar": {
-      const spec = toolbar({
-        items: [
-          { id: "save", label: "Save" },
-          { id: "refresh", label: "Refresh" },
-        ],
-      });
-      const node = element(document, "div");
-      node.setAttribute("role", "toolbar");
-      spec.items.forEach((item) => {
-        node.append(element(document, "button", item.label));
-      });
-      target.append(node);
+      target.append(
+        ikaDemoElement(
+          document,
+          "toolbar",
+          {
+            items: [
+              { id: "save", label: "Save", content: "Save", icon: "↓" },
+              {
+                id: "refresh",
+                label: "Refresh",
+                content: "Refresh",
+                icon: "↻",
+              },
+            ],
+          },
+          "Toolbar",
+        ),
+      );
       return;
     }
     case "icon-button": {
-      const spec = iconButton({ label: "More" });
-      const node = element(document, "button", spec.label);
-      node.type = spec.type;
-      node.disabled = spec.disabled;
-      target.append(node);
+      target.append(
+        ikaDemoElement(
+          document,
+          "icon-button",
+          { id: "more", label: "More", icon: "⋯", type: "button" },
+          "More",
+        ),
+      );
       return;
     }
     case "text":
@@ -1127,206 +1129,164 @@ function renderComponentDemo(
       );
       return;
     case "text-field": {
-      const spec = textField({ id: "name", label: "Name", value: "ikasue" });
-      const inputId = allocator.allocate("input", spec.id, 1);
-      const labelId = allocator.allocate("label", spec.id, 1);
-      const label = element(document, "label", spec.label);
-      label.id = labelId;
-      label.htmlFor = inputId;
-      const input = element(document, "input");
-      input.id = inputId;
-      input.value = spec.value;
-      input.placeholder = spec.placeholder;
-      input.disabled = spec.disabled;
-      input.required = spec.required;
-      input.setAttribute("aria-labelledby", labelId);
-      target.append(label, input);
+      target.append(
+        ikaDemoElement(
+          document,
+          "text-field",
+          { id: "name", label: "Name", value: "ikasue" },
+          "Name",
+        ),
+      );
       return;
     }
     case "editable-text": {
-      const spec = editableText({ id: "title", value: "Editable title" });
-      const input = element(document, "input");
-      input.value = spec.value;
-      input.disabled = spec.disabled;
-      target.append(input);
+      target.append(
+        ikaDemoElement(
+          document,
+          "editable-text",
+          {
+            id: "title",
+            value: "Editable title",
+            editor: "text",
+            state: "clean",
+          },
+          "Editable title",
+        ),
+      );
       return;
     }
     case "checkbox": {
-      const spec = checkbox({ id: "enabled", label: "Enabled", checked: true });
-      const input = element(document, "input");
-      input.type = "checkbox";
-      const inputId = allocator.allocate("checkbox", spec.id, 1);
-      const labelId = allocator.allocate("label", spec.id, 1);
-      input.id = inputId;
-      input.checked = spec.checked;
-      input.disabled = spec.disabled;
-      target.append(input, labelFor(document, spec.label, labelId, inputId));
+      target.append(
+        ikaDemoElement(
+          document,
+          "checkbox",
+          { id: "enabled", label: "Enabled", checked: true },
+          "Enabled",
+        ),
+      );
       return;
     }
     case "radio-group":
     case "segmented-control": {
-      const spec =
-        id === "radio-group"
-          ? radioGroup({
-              options: [
-                { id: "one", label: "One" },
-                { id: "two", label: "Two" },
-              ],
-            })
-          : segmentedControl({
-              options: [
-                { id: "one", label: "One" },
-                { id: "two", label: "Two" },
-              ],
-            });
-      const group = element(document, "div");
-      spec.options.forEach((item) => {
-        group.append(element(document, "button", item.label));
-      });
-      target.append(group);
+      target.append(
+        ikaDemoElement(
+          document,
+          id,
+          {
+            options: [
+              { id: "one", label: "One" },
+              { id: "two", label: "Two" },
+            ],
+            value: "one",
+            ...(id === "segmented-control" ? { variant: "elastic" } : {}),
+          },
+          id,
+        ),
+      );
       return;
     }
     case "field":
-      renderField(
-        document,
-        target,
-        field({ id: "name", label: "Name", content: "ikasue" }),
-        allocator,
+      target.append(
+        ikaDemoElement(
+          document,
+          "field",
+          {
+            id: "name",
+            label: "Name",
+            content: "ikasue",
+            editor: "text",
+            state: "clean",
+          },
+          "Name",
+        ),
       );
       return;
-    case "form": {
-      const spec: FormSpec = form({
-        fields: [{ id: "name", label: "Name", initialValue: "ikasue" }],
-        onSubmit: () => undefined,
-      });
-      const node = element(document, "form");
-      let state = createFormState(spec.fields, spec.values);
-      let request = 0;
-      const status = element(document, "output");
-      status.setAttribute("role", "status");
-      const errors = element(document, "div");
-      errors.setAttribute("role", "alert");
-      const updateStatus = (): void => {
-        status.textContent = state.status;
-        errors.replaceChildren(
-          ...Object.entries(state.errors).map(([, message]) =>
-            element(document, "p", message),
-          ),
-        );
-      };
-      spec.fields.forEach((item, index) => {
-        const safeId = allocator.allocate("field", item.id, index + 1);
-        const labelId = allocator.allocate("label", item.id, index + 1);
-        const label = element(document, "label", item.label);
-        label.id = labelId;
-        label.htmlFor = safeId;
-        const input = element(document, "input");
-        input.id = safeId;
-        input.value = state.values[item.id] ?? "";
-        input.required = item.required === true;
-        input.setAttribute("aria-labelledby", labelId);
-        input.addEventListener("input", () => {
-          state = setFormDraft(state, item.id, input.value);
-          updateStatus();
-        });
-        node.append(label, input);
-      });
-      const submit = element(document, "button", "Submit");
-      submit.type = "submit";
-      node.append(submit, status, errors);
-      node.addEventListener("submit", (event) => {
-        event.preventDefault();
-        const token = ++request;
-        state = setFormStatus(state, "submitting");
-        updateStatus();
-        const snapshot = { ...state.values, ...state.drafts };
-        const fail = (): void => {
-          if (token !== request) return;
-          state = setFormErrors(state, { form: "Submit failed" });
-          state = setFormStatus(state, "error");
-          updateStatus();
-        };
-        let result: ReturnType<NonNullable<FormSpec["onSubmit"]>>;
-        try {
-          result = spec.onSubmit ? spec.onSubmit(snapshot) : undefined;
-        } catch {
-          fail();
-          return;
-        }
-        void Promise.resolve(result)
-          .then((value) => {
-            if (token !== request) return;
-            const runtimeValue: unknown = value;
-            if (
-              runtimeValue !== undefined &&
-              runtimeValue !== "success" &&
-              runtimeValue !== "error"
-            ) {
-              fail();
-              return;
-            }
-            if (runtimeValue === "error") {
-              fail();
-              return;
-            }
-            state = commitFormFields(state, snapshot);
-            state = setFormErrors(state, {});
-            state = setFormStatus(
-              state,
-              Object.keys(state.drafts).length > 0 ? "dirty" : "success",
-            );
-            updateStatus();
-          })
-          .catch(() => {
-            fail();
-          });
-      });
-      updateStatus();
-      target.append(node);
+    case "form":
+      target.append(
+        ikaDemoElement(
+          document,
+          "form",
+          {
+            fields: [
+              {
+                id: "name",
+                label: "Name",
+                initialValue: "ikasue",
+                editor: "text",
+                state: "clean",
+              },
+            ],
+            values: { name: "ikasue" },
+            status: "clean",
+          },
+          "Form",
+        ),
+      );
       return;
-    }
     case "data-grid":
-      renderDataGrid(
-        document,
-        target,
-        dataGrid({
-          columns: [
-            { id: "name", label: "Name" },
-            { id: "status", label: "Status" },
-          ],
-          rows: [{ id: "one", label: "One" }],
-          cells: [
-            { row: "one", column: "name", value: "ikasue" },
-            { row: "one", column: "status", value: "Ready" },
-          ],
-        }),
-        allocator,
+      target.append(
+        ikaDemoElement(
+          document,
+          "data-grid",
+          {
+            columns: [
+              { id: "name", label: "Name" },
+              { id: "status", label: "Status" },
+            ],
+            rows: [
+              {
+                id: "one",
+                label: "One",
+                cells: {
+                  name: { value: "ikasue", state: "modified" },
+                  status: { value: "Ready", state: "clean" },
+                },
+              },
+            ],
+            selection: { row: "one", column: "name" },
+            editable: true,
+            density: "default",
+          },
+          "DataGrid",
+        ),
       );
       return;
     case "status-indicator": {
-      const spec = statusIndicator({ label: "Ready", status: "success" });
-      const node = element(document, "span", spec.label);
-      node.setAttribute("role", "status");
-      target.append(node);
+      target.append(
+        ikaDemoElement(
+          document,
+          "status-indicator",
+          { id: "status", label: "Ready", status: "success", icon: "✓" },
+          "Ready",
+        ),
+      );
       return;
     }
     case "alert": {
-      const spec: AlertSpec = alert({
-        message: "Attention required",
-        severity: "warning",
-      });
-      const node = element(document, "div", spec.message);
-      node.setAttribute("role", "alert");
-      target.append(node);
+      target.append(
+        ikaDemoElement(
+          document,
+          "alert",
+          {
+            message: "Attention required",
+            severity: "warning",
+            target: "name",
+            action: "Review",
+          },
+          "Attention required",
+        ),
+      );
       return;
     }
     case "progress": {
-      const spec = progress({ value: 48, label: "Working" });
-      const node = element(document, "progress");
-      node.max = spec.max;
-      if (spec.value !== undefined) node.value = spec.value;
-      node.setAttribute("aria-label", spec.label);
-      target.append(node);
+      target.append(
+        ikaDemoElement(
+          document,
+          "progress",
+          { value: 48, max: 100, label: "Working" },
+          "Working",
+        ),
+      );
       return;
     }
     case "dialog":
@@ -1338,44 +1298,49 @@ function renderComponentDemo(
       );
       return;
     case "split-view":
-      return renderSplitView(
-        document,
-        target,
-        splitView(
-          [
-            {
-              id: "list",
-              label: "List",
-              content: "Items",
-              size: "1fr",
-              collapsible: true,
-            },
-            {
-              id: "detail",
-              label: "Detail",
-              content: "Selection",
-              size: "2fr",
-            },
-          ],
+      target.append(
+        ikaDemoElement(
+          document,
+          "split-view",
           {
+            panes: [
+              { id: "list", label: "List", content: "Items", basis: 1 },
+              {
+                id: "detail",
+                label: "Detail",
+                content: "Selection",
+                basis: 2,
+              },
+            ],
             orientation: "horizontal",
             activePane: "detail",
             collapsible: true,
           },
+          "Split view",
         ),
-        allocator,
       );
+      return;
     case "side-panel": {
       const spec: SidePanelSpec = sidePanel({
         title: "Inspector",
         content: "Details",
         open: true,
       });
-      const node = element(document, "aside", spec.content);
-      node.className = "ikasue-side-panel";
-      node.hidden = !spec.open;
-      node.setAttribute("aria-label", spec.title);
-      target.append(node);
+      target.className = "ikasue-workspace-demo ikasue-workspace-demo-side";
+      target.append(
+        element(document, "main", "Workspace content"),
+        ikaDemoElement(
+          document,
+          "side-panel",
+          {
+            title: spec.title,
+            content: spec.content,
+            side: spec.side,
+            open: spec.open,
+          },
+          spec.content,
+        ),
+      );
       return;
     }
     case "bottom-panel": {
@@ -1384,11 +1349,16 @@ function renderComponentDemo(
         content: "Logs",
         open: true,
       });
-      const node = element(document, "section", spec.content);
-      node.className = "ikasue-bottom-panel";
-      node.hidden = !spec.open;
-      node.setAttribute("aria-label", spec.title);
-      target.append(node);
+      target.className = "ikasue-workspace-demo ikasue-workspace-demo-bottom";
+      target.append(
+        element(document, "main", "Workspace content"),
+        ikaDemoElement(
+          document,
+          "bottom-panel",
+          { title: spec.title, content: spec.content, open: spec.open },
+          spec.content,
+        ),
+      );
       return;
     }
     case "loading-region": {
@@ -1397,27 +1367,33 @@ function renderComponentDemo(
         busy: true,
         progress: 48,
       });
-      target.className = "ikasue-loading-region";
-      target.setAttribute("aria-busy", String(spec.busy));
-      target.append(element(document, "p", spec.content));
-      if (spec.busy) {
-        const node = element(document, "progress");
-        node.max = 100;
-        if (spec.progress !== undefined) node.value = spec.progress;
-        node.setAttribute("aria-label", spec.label);
-        target.append(node);
-      }
+      target.append(
+        ikaDemoElement(
+          document,
+          "loading-region",
+          { content: spec.content, busy: spec.busy, label: spec.label },
+          spec.content,
+        ),
+      );
       return;
     }
     case "history-timeline": {
       const spec: HistoryTimelineSpec = historyTimeline({
         entries: [{ id: "one", label: "Created", content: "Initial state" }],
       });
-      const list = element(document, "ol");
-      spec.entries.forEach((item) => {
-        list.append(element(document, "li", `${item.label}: ${item.content}`));
-      });
-      target.append(list);
+      target.append(
+        ikaDemoElement(
+          document,
+          "history-timeline",
+          {
+            entries: spec.entries,
+            orientation: spec.orientation,
+            selectedId: "one",
+            compact: true,
+          },
+          "History",
+        ),
+      );
       return;
     }
   }

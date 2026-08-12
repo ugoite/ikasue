@@ -9,7 +9,12 @@
     "panes": {
       "type": "array",
       "items": { "$ref": "#/$defs/pane" }
-    }
+    },
+    "orientation": { "enum": ["horizontal", "vertical"] },
+    "activePane": { "type": "string" },
+    "sizes": { "type": "array", "items": { "type": "string" } },
+    "collapsible": { "type": "boolean" },
+    "motionOrigin": { "enum": ["start", "end", "top", "bottom"] }
   },
   "$defs": {
     "pane": {

@@ -1,8 +1,28 @@
 ---
 title: 原則
-description: 標準Webレイアウトに適用する平面的なvisual languageとinteraction language。
+description: 標準Web APIの上に、Ikasue固有のvisual languageとinteraction languageを保つための原則。
 ---
 
-# 原則
+# Ikasueの原則
 
-geometryは標準Webレイアウトが所有します。ikasueは情報を読みやすく保ち、選択中のworkへ面積を譲り、出現方向とmotionを一致させます。
+IkasueのAPI名とsemanticは普通のWebでよい。しかし、仕事中の情報がどう読まれ、選択され、編集され、場所を譲るかは普通にしない。geometryは標準CSSに任せ、visual languageとinteraction languageをこの10原則で揃える。
+
+1. **Flat Surface** — shadow、floating card、overlay drawerを既定にしない。必要な領域はflowやgrid trackを変えて同じ面に作る。
+2. **Directional Origin** — 右の情報は右から、下の情報は下から出す。motionは情報の地理を説明する。
+3. **Space Negotiation** — workspaceではfocusとselectionに応じて面積を譲る。専用の再配置resolverは戻さない。
+4. **Finite Viewport** — overflowは用途別componentが所有する。万能な軸抽象化は作らない。
+5. **Information Is Editable** — 読む状態を標準にし、編集能力だけを追加する。常時input chromeにしない。
+6. **Selection Owns Area** — 選択は下線だけでなく、少し面積を受け取り淡い無彩色面を持つ。
+7. **No Card Taxonomy** — 分類のために箱を増やさない。余白、一枚線、順序、edgeで分ける。
+8. **Semantic Color Only** — 黒は構造、青・緑・赤・黄は状態。通常selectionに意味色を使わない。
+9. **Readable During Work** — loadingや更新中も以前の内容を消さず、対象regionだけをmotionで示す。
+10. **Keyboard Is Geometry** — Tab、Arrow、Home/End、copy/pasteの移動方向を視覚方向と一致させる。
+
+## 仕事中の例
+
+- `EditableText` は初期表示でtextareaを出さず、破線下線からEnter/F2で一本の実線下線へ移る。
+- `Tabs` と `SegmentedControl` は選択中の項目へ面積を譲る。activeを単なる色やunderlineだけで示さない。
+- `Sidebar`、`SidePanel`、`BottomPanel` はmainの上に浮かず、railやtrackを増やしてmainを押す。
+- `LoadingRegion` は既存の文字を残したまま、対象region全体へneutral waveを走らせる。
+
+各componentのページでは、設計思想、使う場面、避ける場面、Keyboard、State、Live behaviorを同じ順序で確認できる。
