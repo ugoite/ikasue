@@ -71,6 +71,7 @@ export const IKA_PRIMITIVE_ATTRIBUTE_NAMES = [
   "collapsed",
   "open",
   "modal",
+  "openerId",
   "collapsible",
   "busy",
   "status",
@@ -356,12 +357,17 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
     property("busy", "boolean", false),
     property("label", "string", "Loading"),
   ]),
-  dialog: contract("dialog", [
-    property("title", "string", ""),
-    property("content", "string", ""),
-    property("open", "boolean", false),
-    property("modal", "boolean", true),
-  ]),
+  dialog: contract(
+    "dialog",
+    [
+      property("title", "string", ""),
+      property("content", "string", ""),
+      property("open", "boolean", false),
+      property("modal", "boolean", true),
+      property("openerId", "string"),
+    ],
+    ["ika-close"],
+  ),
   "status-indicator": contract("status-indicator", [
     property("id", "string", ""),
     property("label", "string", ""),

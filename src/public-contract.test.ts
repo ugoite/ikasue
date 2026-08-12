@@ -117,7 +117,10 @@ describe("public contract", () => {
     expect(api.tabs().items).toEqual([]);
     expect(api.separator().orientation).toBe("horizontal");
     expect(api.loadingRegion({ busy: true }).busy).toBe(true);
-    expect(api.dialog({ modal: true }).modal).toBe(true);
+    expect(api.dialog({ modal: true, openerId: "open" })).toMatchObject({
+      modal: true,
+      openerId: "open",
+    });
     expect(
       api.setDataGridClipboard(api.createDataGridState([]), "error").clipboard,
     ).toBe("error");
