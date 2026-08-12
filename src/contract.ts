@@ -135,6 +135,8 @@ const IKA_VIEW_PROPERTY_KEYS = new Set([
   "title",
   "main",
   "open",
+  "railWidth",
+  "openWidth",
   "side",
   "drafts",
   "errors",
@@ -338,6 +340,8 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
     items: isArrayOf(isItem),
     activeId: isString,
     collapsed: isBoolean,
+    railWidth: isMinSize,
+    openWidth: isMinSize,
   },
   toolbar: {
     items: isArrayOf(isItem),
@@ -352,6 +356,7 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
     type: isEnum("button", "submit", "reset"),
     disabled: isBoolean,
     pressed: isBoolean,
+    busy: isBoolean,
   },
   checkbox: {
     id: isString,

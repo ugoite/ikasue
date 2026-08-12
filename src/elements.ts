@@ -24,6 +24,7 @@ import {
 } from "./contract";
 import { IkaSueError } from "./errors";
 import { IKA_PRIMITIVE_ATTRIBUTE_NAMES } from "./abi";
+import { isMinSize } from "./layout";
 import {
   assertIkaRowPage,
   createDataGridPortModel,
@@ -229,7 +230,14 @@ const propertyKeysByTag: Readonly<
   ]),
   "ika-scroll-area": new Set(["content", "axis", "overscroll"]),
   "ika-separator": new Set(["orientation", "weight", "role"]),
-  "ika-sidebar": new Set(["main", "items", "activeId", "collapsed"]),
+  "ika-sidebar": new Set([
+    "main",
+    "items",
+    "activeId",
+    "collapsed",
+    "railWidth",
+    "openWidth",
+  ]),
   "ika-toolbar": new Set(["items", "activeId", "collapsed", "overflow"]),
   "ika-icon-button": new Set([
     "id",
@@ -238,6 +246,7 @@ const propertyKeysByTag: Readonly<
     "type",
     "disabled",
     "pressed",
+    "busy",
   ]),
   "ika-checkbox": new Set(["id", "label", "checked", "disabled"]),
   "ika-radio-group": new Set(["id", "options", "value", "disabled"]),
@@ -470,6 +479,10 @@ function propertyText(value: IkaJsonRecord, key: string): string {
 
 function propertyBoolean(value: IkaJsonRecord, key: string): boolean {
   return value[key] === true;
+}
+
+function cssLength(value: unknown, fallback: string): string {
+  return isMinSize(value) ? value.trim() : fallback;
 }
 
 function applySplitSize(
@@ -719,30 +732,66 @@ export class IkaElement extends HTMLElementBase {
         this.renderEditableText(root, value);
         break;
       case "ika-text-field":
-        appendInternal(root, "label", (element) => {
-          element.textContent = label;
-          const input = this.ownerDocument.createElement("input");
-          input.part = "input";
-          input.id = propertyText(value, "id");
-          input.value = propertyText(value, "value");
-          input.placeholder = propertyText(value, "placeholder");
-          input.disabled = propertyBoolean(value, "disabled");
-          input.required = propertyBoolean(value, "required");
+        {
+          const inputId =
+            propertyText(value, "id") ||
+            domIdFor(this, "text-field-input", label);
+          const labelId = domIdFor(this, "text-field-label", inputId);
           const description = propertyText(value, "description");
           const error = propertyText(value, "error");
-          if (description) input.setAttribute("aria-description", description);
-          input.setAttribute("aria-invalid", String(Boolean(error)));
-          input.addEventListener("input", () =>
-            this.dispatchEvent(
-              new CustomEvent("ika-input", {
-                bubbles: true,
-                composed: true,
-                detail: { value: input.value },
-              }),
-            ),
-          );
-          element.append(input);
-        });
+          const descriptionId = description
+            ? domIdFor(this, "text-field-description", inputId)
+            : undefined;
+          const errorId = error
+            ? domIdFor(this, "text-field-error", inputId)
+            : undefined;
+          const externalDescribedBy = this.getAttribute("aria-describedby");
+          const describedBy = [externalDescribedBy, descriptionId, errorId]
+            .filter((value): value is string => Boolean(value))
+            .join(" ");
+          if (error) this.setAttribute("aria-invalid", "true");
+          else this.removeAttribute("aria-invalid");
+          appendInternal(root, "label", (element) => {
+            element.id = labelId;
+            element.setAttribute("for", inputId);
+            element.textContent = label;
+            const input = this.ownerDocument.createElement("input");
+            input.part = "input";
+            input.id = inputId;
+            input.value = propertyText(value, "value");
+            input.placeholder = propertyText(value, "placeholder");
+            input.disabled = propertyBoolean(value, "disabled");
+            input.required = propertyBoolean(value, "required");
+            input.setAttribute("aria-label", label);
+            if (describedBy)
+              input.setAttribute("aria-describedby", describedBy);
+            input.setAttribute("aria-invalid", String(Boolean(error)));
+            if (errorId) input.setAttribute("aria-errormessage", errorId);
+            input.addEventListener("input", () =>
+              this.dispatchEvent(
+                new CustomEvent("ika-input", {
+                  bubbles: true,
+                  composed: true,
+                  detail: { value: input.value },
+                }),
+              ),
+            );
+            element.append(input);
+          });
+          if (description)
+            appendInternal(root, "p", (element) => {
+              element.part = "description";
+              element.id = descriptionId ?? "";
+              element.textContent = description;
+            });
+          if (error)
+            appendInternal(root, "p", (element) => {
+              element.part = "error";
+              element.id = errorId ?? "";
+              element.setAttribute("role", "alert");
+              element.textContent = error;
+            });
+        }
         break;
       case "ika-separator":
         this.dataset.orientation =
@@ -765,6 +814,8 @@ export class IkaElement extends HTMLElementBase {
           button.part = "button";
           button.disabled = propertyBoolean(value, "disabled");
           button.setAttribute("aria-pressed", String(value.pressed === true));
+          button.dataset.busy = String(value.busy === true);
+          button.setAttribute("aria-busy", String(value.busy === true));
           button.setAttribute("aria-label", label);
           button.title = label;
           const icon = this.ownerDocument.createElement("span");
@@ -975,10 +1026,9 @@ export class IkaElement extends HTMLElementBase {
           }
           const panel = this.ownerDocument.createElement("aside");
           panel.part = "panel";
-          panel.setAttribute(
-            "aria-hidden",
-            String(!propertyBoolean(value, "open")),
-          );
+          const open = propertyBoolean(value, "open");
+          panel.setAttribute("aria-hidden", String(!open));
+          panel.toggleAttribute("inert", !open);
           const title = propertyText(value, "title");
           const content = propertyText(value, "content");
           if (title) {
@@ -1009,6 +1059,14 @@ export class IkaElement extends HTMLElementBase {
         });
         break;
       case "ika-sidebar":
+        this.style.setProperty(
+          "--ikasue-sidebar-rail-width",
+          cssLength(value.railWidth, "44px"),
+        );
+        this.style.setProperty(
+          "--ikasue-sidebar-open-width",
+          cssLength(value.openWidth, "18rem"),
+        );
         this.dataset.collapsed = String(value.collapsed === true);
         this.dataset.activeId = propertyText(value, "activeId");
         appendInternal(root, "div", (workspace) => {
@@ -1846,7 +1904,12 @@ export class IkaDataGridElement extends IkaElement {
       const rowNode = this.ownerDocument.createElement("tr");
       rowNode.dataset.rowId = row.id;
       rowNode.setAttribute("role", "row");
-      rowNode.tabIndex = 0;
+      rowNode.setAttribute(
+        "aria-selected",
+        String(
+          value.selectionMode !== "cell" && this.#selection?.row === row.id,
+        ),
+      );
       for (const column of this.#columns) {
         const cell = this.ownerDocument.createElement("td");
         cell.part = "cell";
@@ -1858,7 +1921,10 @@ export class IkaDataGridElement extends IkaElement {
         const selection = this.#selection;
         const selected =
           selection?.row === row.id && selection.column === column.id;
+        const editing =
+          this.#editing?.row === row.id && this.#editing.column === column.id;
         cell.dataset.selected = String(selected);
+        cell.setAttribute("aria-selected", String(selected));
         cell.dataset.rowPeer = String(
           value.selectionMode !== "cell" &&
             selection?.row === row.id &&
@@ -1871,7 +1937,14 @@ export class IkaDataGridElement extends IkaElement {
         );
         cell.dataset.state = gridCellState(rawValue);
         cell.textContent = gridCellValue(rawValue);
-        cell.tabIndex = 0;
+        cell.tabIndex = editing
+          ? -1
+          : selected ||
+              (selection === undefined &&
+                row.id === this.#rows[0]?.id &&
+                column.id === this.#columns[0]?.id)
+            ? 0
+            : -1;
         cell.addEventListener("click", () => {
           this.selection = { row: row.id, column: column.id };
           this.dispatchEvent(
@@ -1936,11 +2009,7 @@ export class IkaDataGridElement extends IkaElement {
           this.startEditing({ row: row.id, column: column.id });
           this.commitGridCell(row.id, column.id, pasted);
         });
-        if (
-          this.#editing?.row === row.id &&
-          this.#editing.column === column.id &&
-          value.editable === true
-        ) {
+        if (editing && value.editable === true) {
           const input = this.ownerDocument.createElement("input");
           input.part = "input";
           input.value = gridCellValue(rawValue);
@@ -2390,13 +2459,14 @@ export class IkaSplitViewElement extends IkaElement {
     mobileNav.append(previous, current, next);
     for (const [index, pane] of this.#panes.entries()) {
       const section = this.ownerDocument.createElement("section");
+      const collapsed = this.#collapsed.has(pane.id);
       section.dataset.paneId = textValue(pane.id);
       section.id = `ika-split-view-${String(this.#instanceId)}-pane-${String(index + 1)}`;
       section.dataset.collapsible = String(value.collapsible === true);
-      section.dataset.collapsed = String(this.#collapsed.has(pane.id));
+      section.dataset.collapsed = String(collapsed);
       section.dataset.active = String(activePane === pane.id);
       section.dataset.mobileInactive = String(activePane !== pane.id);
-      section.tabIndex = 0;
+      section.tabIndex = collapsed ? -1 : 0;
       section.addEventListener("click", () => {
         selectPane(pane.id);
       });
@@ -2405,8 +2475,9 @@ export class IkaSplitViewElement extends IkaElement {
         event.preventDefault();
         section.click();
       });
-      section.setAttribute("aria-hidden", String(this.#collapsed.has(pane.id)));
-      if (this.#collapsed.has(pane.id)) {
+      section.setAttribute("aria-hidden", String(collapsed));
+      section.toggleAttribute("inert", collapsed);
+      if (collapsed) {
         section.style.flex = "0 0 0";
         section.style.flexBasis = "0";
       } else {
