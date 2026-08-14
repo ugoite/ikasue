@@ -2208,7 +2208,7 @@ export class IkaDataGridElement extends IkaElement {
     const body = this.ownerDocument.createElement("tbody");
     const loadedOffset =
       this.#total === undefined
-        ? 0
+        ? (this.#lastQuery?.offset ?? 0)
         : Math.min(this.#lastQuery?.offset ?? 0, this.#total);
     const loadedEnd =
       this.#total === undefined
