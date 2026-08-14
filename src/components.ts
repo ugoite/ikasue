@@ -1,5 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 
+import {
+  isIkaDataGridRow,
+  type IkaDataGridColumn,
+  type IkaDataGridRow,
+  type IkaJsonRecord,
+} from "./contract";
 import type {
   AlertOptions,
   AlertSpec,
@@ -42,11 +48,6 @@ import type {
   ProgressSpec,
 } from "./types";
 import { isMinSize } from "./layout";
-import type {
-  IkaDataGridColumn,
-  IkaDataGridRow,
-  IkaJsonRecord,
-} from "./contract";
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
@@ -449,7 +450,8 @@ export function dataGrid(options?: DataGridOptions): DataGridSpec {
     if (!id || rowIds.has(id)) return [];
     rowIds.add(id);
     const cells = record(source?.cells);
-    return [{ id, cells: (cells ?? {}) as IkaJsonRecord }];
+    const candidate = { id, cells: (cells ?? {}) as IkaJsonRecord };
+    return isIkaDataGridRow(candidate) ? [candidate] : [{ id, cells: {} }];
   });
   const validColumnIds = new Set(columns.map((column) => column.id));
   const validRowIds = new Set(rows.map((row) => row.id));

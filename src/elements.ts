@@ -76,11 +76,13 @@ export interface IkaDataGridViewport {
   readonly total?: number;
 }
 
+const IKA_DATA_GRID_ROW_HEIGHT = 40;
+
 /** Derives a stable host query from the grid's visible viewport. */
 export function dataGridQueryForViewport(
   viewport: IkaDataGridViewport,
 ): IkaDataGridQuery {
-  const rowHeight = 40;
+  const rowHeight = IKA_DATA_GRID_ROW_HEIGHT;
   const scrollTop = Number.isFinite(viewport.scrollTop)
     ? Math.max(0, viewport.scrollTop)
     : 0;
@@ -2119,7 +2121,31 @@ export class IkaDataGridElement extends IkaElement {
     }
     head.append(headRow);
     const body = this.ownerDocument.createElement("tbody");
-    for (const row of this.#rows) {
+    const loadedOffset =
+      this.#total === undefined
+        ? 0
+        : Math.min(this.#lastQuery?.offset ?? 0, this.#total);
+    const loadedEnd =
+      this.#total === undefined
+        ? this.#rows.length
+        : Math.min(this.#total, loadedOffset + this.#rows.length);
+    const appendSpacer = (height: number): void => {
+      if (height <= 0) return;
+      const spacer = this.ownerDocument.createElement("tr");
+      spacer.dataset.ikaInternal = "true";
+      spacer.setAttribute("aria-hidden", "true");
+      const cell = this.ownerDocument.createElement("td");
+      cell.colSpan = Math.max(this.#columns.length, 1);
+      cell.style.height = `${String(height)}px`;
+      cell.style.padding = "0";
+      cell.style.border = "0";
+      cell.style.lineHeight = "0";
+      spacer.append(cell);
+      body.append(spacer);
+    };
+    if (this.#total !== undefined)
+      appendSpacer(loadedOffset * IKA_DATA_GRID_ROW_HEIGHT);
+    for (const [rowNumber, row] of this.#rows.entries()) {
       const rowNode = this.ownerDocument.createElement("tr");
       rowNode.dataset.rowId = row.id;
       rowNode.setAttribute("role", "row");
@@ -2128,6 +2154,10 @@ export class IkaDataGridElement extends IkaElement {
         String(
           value.selectionMode !== "cell" && this.#selection?.row === row.id,
         ),
+      );
+      rowNode.setAttribute(
+        "aria-rowindex",
+        String(loadedOffset + rowNumber + 2),
       );
       for (const column of this.#columns) {
         const cell = this.ownerDocument.createElement("td");
@@ -2241,6 +2271,10 @@ export class IkaDataGridElement extends IkaElement {
       }
       body.append(rowNode);
     }
+    if (this.#total !== undefined)
+      appendSpacer(
+        Math.max(0, this.#total - loadedEnd) * IKA_DATA_GRID_ROW_HEIGHT,
+      );
     table.append(head, body);
     root.append(table);
     if (this.#loading) {
