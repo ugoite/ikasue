@@ -10,6 +10,7 @@ The component contracts are split into `common.schema.json`,
 `view.schema.json` describes serializable UI lowering.
 
 TypeScript bindings live in `src/contract.ts`; Rust/WASM hosts can deserialize
-the same values with `serde`. The browser binding adds methods and direct
-model objects around the contract, but values sent through `CustomEvent`,
-`MessagePort`, or a serialized view remain JSON-safe.
+the same values with `serde`. The browser binding adds only Custom Element
+properties, data-only events, and imperative methods around the contract.
+Values crossing `CustomEvent`, `MessagePort`, or a serialized view remain
+JSON-safe; data access and transport belong to the host.

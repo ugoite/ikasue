@@ -1837,6 +1837,7 @@ export class IkaDataGridElement extends IkaElement {
   #loading = false;
   #error: string | undefined;
   #lastQuery: IkaDataGridQuery | undefined;
+  #queryScheduled = false;
   #onScroll = (): void => {
     this.dispatchQuery();
   };
@@ -1996,11 +1997,12 @@ export class IkaDataGridElement extends IkaElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener("scroll", this.#onScroll);
-    this.dispatchQuery(true);
+    this.scheduleQuery(true);
   }
 
   disconnectedCallback(): void {
     this.removeEventListener("scroll", this.#onScroll);
+    this.#queryScheduled = false;
   }
 
   override focus(options?: FocusOptions): void {
@@ -2060,6 +2062,16 @@ export class IkaDataGridElement extends IkaElement {
         detail: query,
       }),
     );
+  }
+
+  private scheduleQuery(force = false): void {
+    if (force) this.#lastQuery = undefined;
+    if (this.#queryScheduled || !this.isConnected) return;
+    this.#queryScheduled = true;
+    queueMicrotask(() => {
+      this.#queryScheduled = false;
+      if (this.isConnected) this.dispatchQuery();
+    });
   }
 
   protected override get renderRoot(): HTMLElement | ShadowRoot {

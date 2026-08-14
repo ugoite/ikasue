@@ -302,7 +302,7 @@ export const IKA_ELEMENT_CONTRACTS: Readonly<
       property("editable", "boolean", false),
       property("density", "default | compact", "default"),
     ],
-    ["ika-query", "ika-select", "ika-edit", "ika-error"],
+    ["ika-query", "ika-select", "ika-edit"],
     ["focus()", "scrollToRow(row)", "startEditing(selection)"],
   ),
   "history-timeline": contract("history-timeline", [

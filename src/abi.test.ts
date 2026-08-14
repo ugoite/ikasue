@@ -261,9 +261,7 @@ describe("ikasue Web ABI", () => {
       ]),
     );
     expect(contract.properties.map(({ name }) => name)).not.toContain("model");
-    expect(contract.events).toEqual(
-      expect.arrayContaining(["ika-query", "ika-select", "ika-edit"]),
-    );
+    expect(contract.events).toEqual(["ika-query", "ika-select", "ika-edit"]);
     expect(contract.events).not.toContain("ika-model-event");
     expect(contract.methods).not.toEqual(
       expect.arrayContaining([
@@ -285,6 +283,13 @@ describe("ikasue Web ABI", () => {
         },
       }),
     ).toBe(true);
+    expect(
+      isIkaView({
+        version: IKASUE_ABI_VERSION,
+        kind: "data-grid",
+        props: { columns: [], rows: [], total: 1.5 },
+      }),
+    ).toBe(false);
   });
 
   it("derives a bounded query from viewport geometry", () => {

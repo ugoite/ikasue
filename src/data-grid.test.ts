@@ -36,25 +36,23 @@ describe("data grid state", () => {
     expect(setDataGridClipboard(failed, "idle").clipboard).toBe("idle");
   });
 
-  it("distinguishes omitted domains from explicit empty domains", () => {
+  it("normalizes the controlled component boundary", () => {
     const derived = dataGrid({
-      cells: [{ row: "r", column: "c", value: "x" }],
+      columns: [{ id: "c", label: "c" }],
+      rows: [{ id: "r", cells: { c: "x" } }],
+      total: 1,
+      loading: true,
+      error: "Request failed",
       editable: true,
       density: "compact",
     });
-    expect(derived.columnsProvided).toBe(false);
-    expect(derived.rowsProvided).toBe(false);
     expect(derived.columns).toEqual([{ id: "c", label: "c" }]);
+    expect(derived.rows).toEqual([{ id: "r", cells: { c: "x" } }]);
+    expect(derived.total).toBe(1);
+    expect(derived.loading).toBe(true);
+    expect(derived.error).toBe("Request failed");
     expect(derived.editable).toBe(true);
     expect(derived.density).toBe("compact");
-    const empty = dataGrid({
-      columns: [],
-      rows: [],
-      cells: [{ row: "r", column: "c", value: "x" }],
-    });
-    expect(empty.columnsProvided).toBe(true);
-    expect(empty.rowsProvided).toBe(true);
-    expect(empty.cells).toEqual([]);
   });
 
   it("creates a dirty cell when a valid domain coordinate was blank", () => {
