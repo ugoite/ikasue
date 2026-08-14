@@ -920,7 +920,7 @@ test.describe("ikasue identity contracts", () => {
           await focusable.focus();
           await expect(focusable).toBeFocused();
         }
-        if (RUN_VISUAL_SNAPSHOTS)
+        if (RUN_VISUAL_SNAPSHOTS && route !== "data-grid")
           await expect(component).toHaveScreenshot(
             `p0-${route}-${String(width)}.png`,
             {

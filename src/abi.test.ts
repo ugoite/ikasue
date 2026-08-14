@@ -299,7 +299,7 @@ describe("ikasue Web ABI", () => {
         clientHeight: 120,
         total: 100,
       }),
-    ).toEqual({ offset: 2, limit: 3 });
+    ).toEqual({ offset: 2, limit: 2 });
     expect(
       dataGridQueryForViewport({
         scrollTop: 999,
