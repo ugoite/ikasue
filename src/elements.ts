@@ -89,10 +89,11 @@ export function dataGridQueryForViewport(
   const clientHeight = Number.isFinite(viewport.clientHeight)
     ? Math.max(0, viewport.clientHeight)
     : 0;
-  const visibleRows = Math.max(
-    1,
-    Math.ceil((clientHeight || rowHeight * 10) / rowHeight),
-  );
+  const contentHeight =
+    viewport.total === undefined
+      ? clientHeight || rowHeight * 10
+      : Math.max(rowHeight, clientHeight - rowHeight);
+  const visibleRows = Math.max(1, Math.ceil(contentHeight / rowHeight));
   const rawOffset = Math.floor(scrollTop / rowHeight);
   const offset =
     viewport.total === undefined
@@ -2060,7 +2061,6 @@ export class IkaDataGridElement extends IkaElement {
 
   private selectGridCell(selection: IkaDataGridSelection): void {
     this.selection = selection;
-    this.focusGridCell(selection.row, selection.column);
     this.dispatchEvent(
       new CustomEvent("ika-select", {
         bubbles: true,
@@ -2068,6 +2068,7 @@ export class IkaDataGridElement extends IkaElement {
         detail: selection,
       }),
     );
+    this.focusGridCell(selection.row, selection.column);
   }
 
   private clearGridSelection(): void {
@@ -2164,13 +2165,14 @@ export class IkaDataGridElement extends IkaElement {
     table.setAttribute("aria-busy", String(loading));
     table.setAttribute(
       "aria-rowcount",
-      String(this.#total ?? this.#rows.length),
+      String((this.#total ?? this.#rows.length) + 1),
     );
     table.setAttribute("aria-colcount", String(this.#columns.length));
     const head = this.ownerDocument.createElement("thead");
     const headRow = this.ownerDocument.createElement("tr");
     headRow.style.height = `${String(IKA_DATA_GRID_ROW_HEIGHT)}px`;
     headRow.setAttribute("role", "row");
+    headRow.setAttribute("aria-rowindex", "1");
     head.style.position = "sticky";
     head.style.top = "0";
     head.style.zIndex = "1";
@@ -2393,23 +2395,27 @@ export class IkaDataGridElement extends IkaElement {
     this.#editing = undefined;
     this.dataset.clipboard = "idle";
     this.render();
-    if (moveNext) {
-      const rowIndex = this.#rows.findIndex((row) => row.id === rowId);
-      const columnIndex = this.#columns.findIndex(
-        (column) => column.id === columnId,
-      );
-      const nextRow =
-        columnIndex + 1 < this.#columns.length
-          ? rowIndex
-          : Math.min(rowIndex + 1, this.#rows.length - 1);
-      const nextColumn =
-        columnIndex + 1 < this.#columns.length ? columnIndex + 1 : 0;
-      const nextRowValue = this.#rows[nextRow];
-      const nextColumnValue = this.#columns[nextColumn];
-      if (nextRowValue && nextColumnValue)
-        this.focusGridCell(nextRowValue.id, nextColumnValue.id);
-      else this.focusGridCell(rowId, columnId);
-    } else this.focusGridCell(rowId, columnId);
+    const restoreFocus = (): void => {
+      if (moveNext) {
+        const rowIndex = this.#rows.findIndex((row) => row.id === rowId);
+        const columnIndex = this.#columns.findIndex(
+          (column) => column.id === columnId,
+        );
+        const nextRow =
+          columnIndex + 1 < this.#columns.length
+            ? rowIndex
+            : Math.min(rowIndex + 1, this.#rows.length - 1);
+        const nextColumn =
+          columnIndex + 1 < this.#columns.length ? columnIndex + 1 : 0;
+        const nextRowValue = this.#rows[nextRow];
+        const nextColumnValue = this.#columns[nextColumn];
+        if (nextRowValue && nextColumnValue) {
+          this.focusGridCell(nextRowValue.id, nextColumnValue.id);
+          return;
+        }
+      }
+      this.focusGridCell(rowId, columnId);
+    };
     const detail: IkaDataGridEdit = {
       row: rowId,
       column: columnId,
@@ -2426,6 +2432,7 @@ export class IkaDataGridElement extends IkaElement {
         detail,
       }),
     );
+    restoreFocus();
   }
 }
 
