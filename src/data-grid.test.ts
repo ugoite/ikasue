@@ -53,6 +53,12 @@ describe("data grid state", () => {
     expect(derived.error).toBe("Request failed");
     expect(derived.editable).toBe(true);
     expect(derived.density).toBe("compact");
+    expect(
+      dataGrid({
+        columns: [{ id: "c", label: "c" }],
+        rows: [{ id: "r", cells: { c: { raw: true } } }],
+      }).rows,
+    ).toEqual([{ id: "r", cells: {} }]);
   });
 
   it("creates a dirty cell when a valid domain coordinate was blank", () => {

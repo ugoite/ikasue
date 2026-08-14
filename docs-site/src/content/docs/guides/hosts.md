@@ -212,19 +212,23 @@ Rust側のAPIはbindingです。runtimeとDOM rendererをRustに移植するも�
 elementはmodelやMessagePortを所有しません。elementが所有するのはDOM geometryとinteractionだけです。hostはWorker、REST client、database、native IPCなどを使ってdata accessを実行し、結果をcontrolled propertyへ戻します。
 
 ```ts
+let latestQuery = 0;
 grid.addEventListener("ika-query", async (event) => {
   const query = (event as CustomEvent<{ offset: number; limit: number }>)
     .detail;
+  const requestId = ++latestQuery;
   grid.loading = true;
   try {
     const page = await loadRows(query);
+    if (requestId !== latestQuery) return;
     grid.rows = page.rows;
     grid.total = page.total;
     grid.error = undefined;
   } catch (error) {
+    if (requestId !== latestQuery) return;
     grid.error = error instanceof Error ? error.message : "Request failed";
   } finally {
-    grid.loading = false;
+    if (requestId === latestQuery) grid.loading = false;
   }
 });
 ```
