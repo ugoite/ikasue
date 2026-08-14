@@ -1836,6 +1836,8 @@ export class IkaDataGridElement extends IkaElement {
   #rows: readonly IkaDataGridRow[] = [];
   #selection: IkaDataGridSelection | undefined;
   #editing: IkaDataGridSelection | undefined;
+  #editingDraft:
+    (IkaDataGridSelection & { readonly value: string }) | undefined;
   #total: number | undefined;
   #loading = false;
   #loadingOverride: boolean | undefined;
@@ -1874,6 +1876,7 @@ export class IkaDataGridElement extends IkaElement {
     let columns = this.#columns;
     let rows = this.#rows;
     let selection = this.#selection;
+    let editing = this.#editing;
     let total = this.#total;
     let loading = this.#loading;
     let error = this.#error;
@@ -1901,8 +1904,11 @@ export class IkaDataGridElement extends IkaElement {
       else if (isIkaDataGridSelection(value.selection))
         selection = value.selection;
       else throw new Error("invalid selection");
-      if (value.editing !== undefined && !isIkaDataGridSelection(value.editing))
-        throw new Error("invalid editing");
+      if (value.editing !== undefined) {
+        if (!isIkaDataGridSelection(value.editing))
+          throw new Error("invalid editing");
+        editing = value.editing;
+      }
     } catch {
       this.reportInvalidContract();
       return;
@@ -1915,7 +1921,12 @@ export class IkaDataGridElement extends IkaElement {
     this.#error = error;
     this.#errorOverride = undefined;
     this.#selection = selection;
-    this.#editing = value.editing;
+    if (
+      this.#editing?.row !== editing?.row ||
+      this.#editing?.column !== editing?.column
+    )
+      this.#editingDraft = undefined;
+    this.#editing = editing;
     super.props = value;
   }
 
@@ -2013,6 +2024,11 @@ export class IkaDataGridElement extends IkaElement {
       this.reportInvalidContract();
       return;
     }
+    if (
+      this.#editing?.row !== value?.row ||
+      this.#editing?.column !== value?.column
+    )
+      this.#editingDraft = undefined;
     this.#editing = value;
     if (value) this.#selection = value;
     this.render();
@@ -2139,6 +2155,26 @@ export class IkaDataGridElement extends IkaElement {
 
   protected override render(): void {
     const root = this.renderRoot;
+    const previousInput = root.querySelector<HTMLInputElement>(
+      'input[part="input"]',
+    );
+    const previousCell = previousInput?.closest<HTMLElement>(
+      '[role="gridcell"][data-row-id][data-column-id]',
+    );
+    const previousEditing = this.#editing;
+    if (
+      previousInput &&
+      previousCell &&
+      previousEditing &&
+      previousCell.dataset.rowId === previousEditing.row &&
+      previousCell.dataset.columnId === previousEditing.column
+    ) {
+      this.#editingDraft = {
+        row: previousEditing.row,
+        column: previousEditing.column,
+        value: previousInput.value,
+      };
+    }
     const activeElement = this.ownerDocument.activeElement;
     const focusedCell = activeElement?.closest<HTMLElement>(
       '[role="gridcell"][data-row-id][data-column-id]',
@@ -2178,7 +2214,7 @@ export class IkaDataGridElement extends IkaElement {
     table.setAttribute("aria-busy", String(loading));
     table.setAttribute(
       "aria-rowcount",
-      String((this.#total ?? this.#rows.length) + 1),
+      this.#total === undefined ? "-1" : String(this.#total + 1),
     );
     table.setAttribute("aria-colcount", String(this.#columns.length));
     const head = this.ownerDocument.createElement("thead");
@@ -2228,8 +2264,7 @@ export class IkaDataGridElement extends IkaElement {
       spacer.append(cell);
       body.append(spacer);
     };
-    if (this.#total !== undefined)
-      appendSpacer(loadedOffset * IKA_DATA_GRID_ROW_HEIGHT);
+    appendSpacer(loadedOffset * IKA_DATA_GRID_ROW_HEIGHT);
     let editingInput: HTMLInputElement | undefined;
     for (const [rowNumber, row] of this.#rows.entries()) {
       const rowNode = this.ownerDocument.createElement("tr");
@@ -2355,7 +2390,11 @@ export class IkaDataGridElement extends IkaElement {
         if (editing && value.editable === true) {
           const input = this.ownerDocument.createElement("input");
           input.part = "input";
-          input.value = gridCellValue(rawValue);
+          input.value =
+            this.#editingDraft?.row === row.id &&
+            this.#editingDraft.column === column.id
+              ? this.#editingDraft.value
+              : gridCellValue(rawValue);
           cell.replaceChildren(input);
           editingInput = input;
           input.addEventListener("keydown", (event) => {
@@ -2363,6 +2402,7 @@ export class IkaDataGridElement extends IkaElement {
             if (event.key === "Escape") {
               event.preventDefault();
               this.#editing = undefined;
+              this.#editingDraft = undefined;
               this.render();
             } else if (event.key === "Enter" || event.key === "Tab") {
               event.preventDefault();
@@ -2429,6 +2469,7 @@ export class IkaDataGridElement extends IkaElement {
         : undefined;
     })();
     this.#editing = undefined;
+    this.#editingDraft = undefined;
     if (nextSelection) this.#selection = nextSelection;
     this.dataset.clipboard = "idle";
     this.render();

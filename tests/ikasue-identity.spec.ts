@@ -647,8 +647,54 @@ test.describe("ikasue identity contracts", () => {
     const input = grid.locator('[part="input"]');
     await expect(input).toBeVisible();
     await input.fill("changed");
+    await grid.evaluate((node) => {
+      const element = node as HTMLElement & {
+        props: Record<string, unknown>;
+      };
+      element.props = { ...element.props, loading: true };
+      element.props = { ...element.props, loading: false };
+    });
+    await expect(input).toHaveValue("changed");
     await input.press("Enter");
     await expect(grid.locator('[data-state="modified"]')).toHaveCount(1);
+
+    const unknownPage = await grid.evaluate(async (node) => {
+      const element = node as HTMLElement & {
+        props: Record<string, unknown>;
+      };
+      const originalProps = { ...element.props };
+      Object.defineProperty(element, "clientHeight", {
+        configurable: true,
+        value: 120,
+      });
+      Object.defineProperty(element, "scrollTop", {
+        configurable: true,
+        value: 80,
+      });
+      element.props = {
+        columns: [{ id: "name", label: "Name" }],
+        rows: [{ id: "page-row", cells: { name: "Page row" } }],
+        editable: false,
+      };
+      element.dispatchEvent(new Event("scroll"));
+      await new Promise<void>((resolve) => {
+        queueMicrotask(resolve);
+      });
+      const result = {
+        rowCount: element.querySelector("table")?.getAttribute("aria-rowcount"),
+        spacerHeight: element
+          .querySelector('tr[data-ika-internal="true"] td')
+          ?.getAttribute("style"),
+        rowIndex: element
+          .querySelector('[data-row-id="page-row"]')
+          ?.getAttribute("aria-rowindex"),
+      };
+      element.props = originalProps;
+      return result;
+    });
+    expect(unknownPage.rowCount).toBe("-1");
+    expect(unknownPage.spacerHeight).toContain("height: 80px");
+    expect(unknownPage.rowIndex).toBe("4");
 
     const copied = await grid
       .locator('[data-row-id="one"][data-column-id="name"]')
