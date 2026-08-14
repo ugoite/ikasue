@@ -89,10 +89,10 @@ export function dataGridQueryForViewport(
   const clientHeight = Number.isFinite(viewport.clientHeight)
     ? Math.max(0, viewport.clientHeight)
     : 0;
-  const contentHeight =
-    viewport.total === undefined
-      ? clientHeight || rowHeight * 10
-      : Math.max(rowHeight, clientHeight - rowHeight);
+  const contentHeight = Math.max(
+    rowHeight,
+    clientHeight ? clientHeight - rowHeight : rowHeight * 10,
+  );
   const visibleRows = Math.max(1, Math.ceil(contentHeight / rowHeight));
   const rawOffset = Math.floor(scrollTop / rowHeight);
   const offset =
@@ -2052,6 +2052,7 @@ export class IkaDataGridElement extends IkaElement {
   }
 
   startEditing(request: IkaDataGridSelection): void {
+    if (this.effectiveProps.editable !== true) return;
     if (!isIkaDataGridSelection(request)) {
       this.reportInvalidContract();
       return;
@@ -2138,6 +2139,18 @@ export class IkaDataGridElement extends IkaElement {
 
   protected override render(): void {
     const root = this.renderRoot;
+    const activeElement = this.ownerDocument.activeElement;
+    const focusedCell = activeElement?.closest<HTMLElement>(
+      '[role="gridcell"][data-row-id][data-column-id]',
+    );
+    const focusedRow =
+      focusedCell && this.contains(focusedCell)
+        ? focusedCell.dataset.rowId
+        : undefined;
+    const focusedColumn =
+      focusedCell && this.contains(focusedCell)
+        ? focusedCell.dataset.columnId
+        : undefined;
     if (serializedChildrenForElement.has(this)) {
       clearInternalContent(root);
       return;
@@ -2316,7 +2329,10 @@ export class IkaDataGridElement extends IkaElement {
             }
             return;
           }
-          if (event.key === "F2" || event.key === "Enter") {
+          if (
+            (event.key === "F2" || event.key === "Enter") &&
+            value.editable === true
+          ) {
             event.preventDefault();
             this.startEditing({ row: row.id, column: column.id });
           }
@@ -2370,6 +2386,8 @@ export class IkaDataGridElement extends IkaElement {
     table.append(head, body);
     root.append(table);
     editingInput?.focus();
+    if (!editingInput && focusedRow && focusedColumn)
+      this.focusGridCell(focusedRow, focusedColumn);
     if (loading) {
       appendInternal(root, "div", (element) => {
         element.part = "loading";
@@ -2392,30 +2410,28 @@ export class IkaDataGridElement extends IkaElement {
     next: string,
     moveNext = false,
   ): void {
+    const nextSelection = (() => {
+      if (!moveNext) return undefined;
+      const rowIndex = this.#rows.findIndex((row) => row.id === rowId);
+      const columnIndex = this.#columns.findIndex(
+        (column) => column.id === columnId,
+      );
+      const nextRow =
+        columnIndex + 1 < this.#columns.length
+          ? rowIndex
+          : Math.min(rowIndex + 1, this.#rows.length - 1);
+      const nextColumn =
+        columnIndex + 1 < this.#columns.length ? columnIndex + 1 : 0;
+      const nextRowValue = this.#rows[nextRow];
+      const nextColumnValue = this.#columns[nextColumn];
+      return nextRowValue && nextColumnValue
+        ? { row: nextRowValue.id, column: nextColumnValue.id }
+        : undefined;
+    })();
     this.#editing = undefined;
+    if (nextSelection) this.#selection = nextSelection;
     this.dataset.clipboard = "idle";
     this.render();
-    const restoreFocus = (): void => {
-      if (moveNext) {
-        const rowIndex = this.#rows.findIndex((row) => row.id === rowId);
-        const columnIndex = this.#columns.findIndex(
-          (column) => column.id === columnId,
-        );
-        const nextRow =
-          columnIndex + 1 < this.#columns.length
-            ? rowIndex
-            : Math.min(rowIndex + 1, this.#rows.length - 1);
-        const nextColumn =
-          columnIndex + 1 < this.#columns.length ? columnIndex + 1 : 0;
-        const nextRowValue = this.#rows[nextRow];
-        const nextColumnValue = this.#columns[nextColumn];
-        if (nextRowValue && nextColumnValue) {
-          this.focusGridCell(nextRowValue.id, nextColumnValue.id);
-          return;
-        }
-      }
-      this.focusGridCell(rowId, columnId);
-    };
     const detail: IkaDataGridEdit = {
       row: rowId,
       column: columnId,
@@ -2432,7 +2448,16 @@ export class IkaDataGridElement extends IkaElement {
         detail,
       }),
     );
-    restoreFocus();
+    if (nextSelection)
+      this.dispatchEvent(
+        new CustomEvent("ika-select", {
+          bubbles: true,
+          composed: true,
+          detail: nextSelection,
+        }),
+      );
+    const focusTarget = nextSelection ?? { row: rowId, column: columnId };
+    this.focusGridCell(focusTarget.row, focusTarget.column);
   }
 }
 
