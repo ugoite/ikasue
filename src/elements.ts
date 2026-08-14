@@ -1837,7 +1837,9 @@ export class IkaDataGridElement extends IkaElement {
   #editing: IkaDataGridSelection | undefined;
   #total: number | undefined;
   #loading = false;
+  #loadingOverride: boolean | undefined;
   #error: string | undefined;
+  #errorOverride: { readonly value: string | undefined } | undefined;
   #lastQuery: IkaDataGridQuery | undefined;
   #queryScheduled = false;
   #queryListenerAttached = false;
@@ -1908,7 +1910,9 @@ export class IkaDataGridElement extends IkaElement {
     this.#rows = rows;
     this.#total = total;
     this.#loading = loading;
+    this.#loadingOverride = undefined;
     this.#error = error;
+    this.#errorOverride = undefined;
     this.#selection = selection;
     this.#editing = value.editing;
     super.props = value;
@@ -1959,7 +1963,7 @@ export class IkaDataGridElement extends IkaElement {
   }
 
   get loading(): boolean {
-    return this.#loading;
+    return this.#loadingOverride ?? this.#loading;
   }
 
   set loading(value: boolean) {
@@ -1968,11 +1972,12 @@ export class IkaDataGridElement extends IkaElement {
       return;
     }
     this.#loading = value;
+    this.#loadingOverride = value;
     this.render();
   }
 
   get error(): string | undefined {
-    return this.#error;
+    return this.#errorOverride ? this.#errorOverride.value : this.#error;
   }
 
   set error(value: string | undefined) {
@@ -1981,6 +1986,7 @@ export class IkaDataGridElement extends IkaElement {
       return;
     }
     this.#error = value;
+    this.#errorOverride = { value };
     this.render();
   }
 
@@ -2054,6 +2060,7 @@ export class IkaDataGridElement extends IkaElement {
 
   private selectGridCell(selection: IkaDataGridSelection): void {
     this.selection = selection;
+    this.focusGridCell(selection.row, selection.column);
     this.dispatchEvent(
       new CustomEvent("ika-select", {
         bubbles: true,
@@ -2061,6 +2068,31 @@ export class IkaDataGridElement extends IkaElement {
         detail: selection,
       }),
     );
+  }
+
+  private clearGridSelection(): void {
+    this.#selection = undefined;
+    this.render();
+    this.dispatchEvent(
+      new CustomEvent("ika-select", {
+        bubbles: true,
+        composed: true,
+        detail: null,
+      }),
+    );
+  }
+
+  private focusGridCell(row: string, column: string): void {
+    const target = Array.from(
+      this.renderRoot.querySelectorAll<HTMLElement>(
+        '[role="gridcell"][data-row-id][data-column-id]',
+      ),
+    ).find(
+      (candidate) =>
+        candidate.dataset.rowId === row &&
+        candidate.dataset.columnId === column,
+    );
+    target?.focus();
   }
 
   private dispatchQuery(force = false): void {
@@ -2110,8 +2142,12 @@ export class IkaDataGridElement extends IkaElement {
       return;
     }
     const value = this.effectiveProps;
-    const loading = this.#loading || propertyBoolean(value, "loading");
-    const error = this.#error ?? propertyText(value, "error");
+    const loading =
+      this.#loadingOverride ??
+      (this.#loading || propertyBoolean(value, "loading"));
+    const error = this.#errorOverride
+      ? this.#errorOverride.value
+      : (this.#error ?? propertyText(value, "error"));
     clearInternalContent(root);
     this.dataset.editable = String(value.editable === true);
     this.dataset.density = propertyText(value, "density") || "default";
@@ -2135,6 +2171,10 @@ export class IkaDataGridElement extends IkaElement {
     const headRow = this.ownerDocument.createElement("tr");
     headRow.style.height = `${String(IKA_DATA_GRID_ROW_HEIGHT)}px`;
     headRow.setAttribute("role", "row");
+    head.style.position = "sticky";
+    head.style.top = "0";
+    head.style.zIndex = "1";
+    head.style.background = "var(--ikasue-surface, #fff)";
     for (const column of this.#columns) {
       const cell = this.ownerDocument.createElement("th");
       cell.part = "header-cell";
@@ -2174,7 +2214,8 @@ export class IkaDataGridElement extends IkaElement {
       body.append(spacer);
     };
     if (this.#total !== undefined)
-      appendSpacer(Math.max(0, loadedOffset - 1) * IKA_DATA_GRID_ROW_HEIGHT);
+      appendSpacer(loadedOffset * IKA_DATA_GRID_ROW_HEIGHT);
+    let editingInput: HTMLInputElement | undefined;
     for (const [rowNumber, row] of this.#rows.entries()) {
       const rowNode = this.ownerDocument.createElement("tr");
       rowNode.dataset.rowId = row.id;
@@ -2219,8 +2260,12 @@ export class IkaDataGridElement extends IkaElement {
             selection?.column === column.id &&
             !selected,
         );
+        cell.dataset.editable = String(value.editable === true);
         cell.dataset.state = gridCellState(rawValue);
-        cell.textContent = gridCellValue(rawValue);
+        const readValue = this.ownerDocument.createElement("span");
+        readValue.part = "read-value";
+        readValue.textContent = gridCellValue(rawValue);
+        cell.append(readValue);
         cell.tabIndex = editing
           ? -1
           : selected ||
@@ -2233,10 +2278,16 @@ export class IkaDataGridElement extends IkaElement {
           this.selectGridCell({ row: row.id, column: column.id });
         });
         cell.addEventListener("dblclick", () => {
-          this.startEditing({ row: row.id, column: column.id });
+          if (value.editable === true)
+            this.startEditing({ row: row.id, column: column.id });
         });
         cell.addEventListener("keydown", (event) => {
           if (event.target !== cell) return;
+          if (event.key === "Escape") {
+            event.preventDefault();
+            this.clearGridSelection();
+            return;
+          }
           const rowIndex = this.#rows.findIndex(
             (candidate) => candidate.id === row.id,
           );
@@ -2260,9 +2311,6 @@ export class IkaDataGridElement extends IkaElement {
                 row: nextRowValue.id,
                 column: nextColumnValue.id,
               });
-              this.querySelector<HTMLElement>(
-                `[data-row-id="${CSS.escape(nextRowValue.id)}"][data-column-id="${CSS.escape(nextColumnValue.id)}"]`,
-              )?.focus();
             }
             return;
           }
@@ -2291,7 +2339,7 @@ export class IkaDataGridElement extends IkaElement {
           input.part = "input";
           input.value = gridCellValue(rawValue);
           cell.replaceChildren(input);
-          input.focus();
+          editingInput = input;
           input.addEventListener("keydown", (event) => {
             event.stopPropagation();
             if (event.key === "Escape") {
@@ -2300,7 +2348,12 @@ export class IkaDataGridElement extends IkaElement {
               this.render();
             } else if (event.key === "Enter" || event.key === "Tab") {
               event.preventDefault();
-              this.commitGridCell(row.id, column.id, input.value);
+              this.commitGridCell(
+                row.id,
+                column.id,
+                input.value,
+                event.key === "Tab",
+              );
             }
           });
         }
@@ -2314,6 +2367,7 @@ export class IkaDataGridElement extends IkaElement {
       );
     table.append(head, body);
     root.append(table);
+    editingInput?.focus();
     if (loading) {
       appendInternal(root, "div", (element) => {
         element.part = "loading";
@@ -2330,10 +2384,32 @@ export class IkaDataGridElement extends IkaElement {
     }
   }
 
-  private commitGridCell(rowId: string, columnId: string, next: string): void {
+  private commitGridCell(
+    rowId: string,
+    columnId: string,
+    next: string,
+    moveNext = false,
+  ): void {
     this.#editing = undefined;
     this.dataset.clipboard = "idle";
     this.render();
+    if (moveNext) {
+      const rowIndex = this.#rows.findIndex((row) => row.id === rowId);
+      const columnIndex = this.#columns.findIndex(
+        (column) => column.id === columnId,
+      );
+      const nextRow =
+        columnIndex + 1 < this.#columns.length
+          ? rowIndex
+          : Math.min(rowIndex + 1, this.#rows.length - 1);
+      const nextColumn =
+        columnIndex + 1 < this.#columns.length ? columnIndex + 1 : 0;
+      const nextRowValue = this.#rows[nextRow];
+      const nextColumnValue = this.#columns[nextColumn];
+      if (nextRowValue && nextColumnValue)
+        this.focusGridCell(nextRowValue.id, nextColumnValue.id);
+      else this.focusGridCell(rowId, columnId);
+    } else this.focusGridCell(rowId, columnId);
     const detail: IkaDataGridEdit = {
       row: rowId,
       column: columnId,

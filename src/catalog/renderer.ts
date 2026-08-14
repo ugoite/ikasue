@@ -993,6 +993,9 @@ function renderComponentDemo(
           },
           "DataGrid",
         ) as HTMLElement & { props?: IkaJsonRecord };
+        grid.addEventListener("ika-query", () => {
+          if (grid.props) grid.props = { ...grid.props, loading: false };
+        });
         grid.addEventListener("ika-edit", (event) => {
           const detail = (event as CustomEvent<unknown>).detail;
           if (!isIkaDataGridEdit(detail)) return;
@@ -1016,7 +1019,14 @@ function renderComponentDemo(
         });
         grid.addEventListener("ika-select", (event) => {
           const detail = (event as CustomEvent<unknown>).detail;
-          if (!isIkaDataGridSelection(detail) || !grid.props) return;
+          if (!grid.props) return;
+          if (detail === null) {
+            const next = { ...grid.props };
+            delete next.selection;
+            grid.props = next;
+            return;
+          }
+          if (!isIkaDataGridSelection(detail)) return;
           grid.props = {
             ...grid.props,
             selection: { row: detail.row, column: detail.column },
