@@ -1840,6 +1840,7 @@ export class IkaDataGridElement extends IkaElement {
   #error: string | undefined;
   #lastQuery: IkaDataGridQuery | undefined;
   #queryScheduled = false;
+  #resizeObserver: ResizeObserver | undefined;
   #onScroll = (): void => {
     this.dispatchQuery();
   };
@@ -1999,11 +2000,19 @@ export class IkaDataGridElement extends IkaElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener("scroll", this.#onScroll);
+    if (typeof ResizeObserver === "function") {
+      this.#resizeObserver = new ResizeObserver(() => {
+        this.scheduleQuery();
+      });
+      this.#resizeObserver.observe(this);
+    }
     this.scheduleQuery(true);
   }
 
   disconnectedCallback(): void {
     this.removeEventListener("scroll", this.#onScroll);
+    this.#resizeObserver?.disconnect();
+    this.#resizeObserver = undefined;
     this.#queryScheduled = false;
   }
 
@@ -2148,6 +2157,7 @@ export class IkaDataGridElement extends IkaElement {
     for (const [rowNumber, row] of this.#rows.entries()) {
       const rowNode = this.ownerDocument.createElement("tr");
       rowNode.dataset.rowId = row.id;
+      rowNode.style.height = `${String(IKA_DATA_GRID_ROW_HEIGHT)}px`;
       rowNode.setAttribute("role", "row");
       rowNode.setAttribute(
         "aria-selected",
@@ -2162,8 +2172,12 @@ export class IkaDataGridElement extends IkaElement {
       for (const column of this.#columns) {
         const cell = this.ownerDocument.createElement("td");
         cell.part = "cell";
+        cell.style.height = `${String(IKA_DATA_GRID_ROW_HEIGHT)}px`;
         cell.setAttribute("role", "gridcell");
         cell.style.padding = "var(--ikasue-grid-cell-padding, 0.5rem)";
+        cell.style.overflow = "hidden";
+        cell.style.textOverflow = "ellipsis";
+        cell.style.whiteSpace = "nowrap";
         cell.dataset.rowId = row.id;
         cell.dataset.columnId = column.id;
         const rawValue = row.cells[column.id];
@@ -2201,6 +2215,7 @@ export class IkaDataGridElement extends IkaElement {
           this.startEditing({ row: row.id, column: column.id });
         });
         cell.addEventListener("keydown", (event) => {
+          if (event.target !== cell) return;
           const rowIndex = this.#rows.findIndex(
             (candidate) => candidate.id === row.id,
           );
@@ -2257,6 +2272,7 @@ export class IkaDataGridElement extends IkaElement {
           cell.replaceChildren(input);
           input.focus();
           input.addEventListener("keydown", (event) => {
+            event.stopPropagation();
             if (event.key === "Escape") {
               event.preventDefault();
               this.#editing = undefined;
