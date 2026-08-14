@@ -14,7 +14,13 @@ import type {
   TabsSpec,
 } from "../types";
 import { defineIkaSue, tagNameForKind } from "../elements";
-import type { IkaJsonRecord, IkaViewKind } from "../contract";
+import {
+  isIkaDataGridEdit,
+  isIkaJsonRecord,
+  type IkaJsonRecord,
+  type IkaJsonValue,
+  type IkaViewKind,
+} from "../contract";
 import type { CatalogComponentId, CatalogLocale } from "./types";
 import { findRegistryEntry } from "./registry";
 import { element, type Cleanup } from "./dom";
@@ -951,8 +957,8 @@ function renderComponentDemo(
       );
       return;
     case "data-grid":
-      target.append(
-        ikaDemoElement(
+      {
+        const grid = ikaDemoElement(
           document,
           "data-grid",
           {
@@ -985,8 +991,25 @@ function renderComponentDemo(
             density: "default",
           },
           "DataGrid",
-        ),
-      );
+        ) as HTMLElement & { props?: IkaJsonRecord };
+        grid.addEventListener("ika-edit", (event) => {
+          const detail = (event as CustomEvent<unknown>).detail;
+          if (!isIkaDataGridEdit(detail)) return;
+          const props = grid.props;
+          if (!props || !Array.isArray(props.rows)) return;
+          const rows = (props.rows as readonly IkaJsonValue[]).map((value) => {
+            if (!isIkaJsonRecord(value) || value.id !== detail.row)
+              return value;
+            if (!isIkaJsonRecord(value.cells)) return value;
+            return {
+              ...value,
+              cells: { ...value.cells, [detail.column]: detail.value },
+            };
+          });
+          grid.props = { ...props, rows };
+        });
+        target.append(grid);
+      }
       return;
     case "status-indicator": {
       target.append(
