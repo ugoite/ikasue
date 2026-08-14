@@ -16,6 +16,7 @@ import type {
 import { defineIkaSue, tagNameForKind } from "../elements";
 import {
   isIkaDataGridEdit,
+  isIkaDataGridSelection,
   isIkaJsonRecord,
   type IkaJsonRecord,
   type IkaJsonValue,
@@ -1001,12 +1002,25 @@ function renderComponentDemo(
             if (!isIkaJsonRecord(value) || value.id !== detail.row)
               return value;
             if (!isIkaJsonRecord(value.cells)) return value;
+            const previous = value.cells[detail.column];
+            const cell =
+              isIkaJsonRecord(previous) && typeof previous.value === "string"
+                ? { ...previous, value: detail.value, state: "modified" }
+                : { value: detail.value, state: "modified" };
             return {
               ...value,
-              cells: { ...value.cells, [detail.column]: detail.value },
+              cells: { ...value.cells, [detail.column]: cell },
             };
           });
           grid.props = { ...props, rows };
+        });
+        grid.addEventListener("ika-select", (event) => {
+          const detail = (event as CustomEvent<unknown>).detail;
+          if (!isIkaDataGridSelection(detail) || !grid.props) return;
+          grid.props = {
+            ...grid.props,
+            selection: { row: detail.row, column: detail.column },
+          };
         });
         target.append(grid);
       }

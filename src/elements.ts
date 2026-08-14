@@ -1840,6 +1840,7 @@ export class IkaDataGridElement extends IkaElement {
   #error: string | undefined;
   #lastQuery: IkaDataGridQuery | undefined;
   #queryScheduled = false;
+  #queryListenerAttached = false;
   #resizeObserver: ResizeObserver | undefined;
   #onScroll = (): void => {
     this.dispatchQuery();
@@ -1847,6 +1848,19 @@ export class IkaDataGridElement extends IkaElement {
 
   override get props(): IkaJsonRecord {
     return super.props;
+  }
+
+  override addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions,
+  ): void {
+    if (!listener) return;
+    super.addEventListener(type, listener, options);
+    if (type === "ika-query" && !this.#queryListenerAttached) {
+      this.#queryListenerAttached = true;
+      this.scheduleQuery(true);
+    }
   }
 
   override set props(value: IkaJsonRecord) {
@@ -2096,20 +2110,22 @@ export class IkaDataGridElement extends IkaElement {
       return;
     }
     const value = this.effectiveProps;
+    const loading = this.#loading || propertyBoolean(value, "loading");
+    const error = this.#error ?? propertyText(value, "error");
     clearInternalContent(root);
     this.dataset.editable = String(value.editable === true);
     this.dataset.density = propertyText(value, "density") || "default";
     this.dataset.selectionMode =
       propertyText(value, "selectionMode") || "context";
-    this.dataset.loading = String(this.#loading);
-    if (this.#error) this.dataset.error = "true";
+    this.dataset.loading = String(loading);
+    if (error) this.dataset.error = "true";
     else delete this.dataset.error;
     const table = this.ownerDocument.createElement("table");
     table.dataset.ikaInternal = "true";
     table.part = "table";
     table.setAttribute("role", "grid");
     table.setAttribute("aria-readonly", String(value.editable !== true));
-    table.setAttribute("aria-busy", String(this.#loading));
+    table.setAttribute("aria-busy", String(loading));
     table.setAttribute(
       "aria-rowcount",
       String(this.#total ?? this.#rows.length),
@@ -2117,12 +2133,17 @@ export class IkaDataGridElement extends IkaElement {
     table.setAttribute("aria-colcount", String(this.#columns.length));
     const head = this.ownerDocument.createElement("thead");
     const headRow = this.ownerDocument.createElement("tr");
+    headRow.style.height = `${String(IKA_DATA_GRID_ROW_HEIGHT)}px`;
     headRow.setAttribute("role", "row");
     for (const column of this.#columns) {
       const cell = this.ownerDocument.createElement("th");
       cell.part = "header-cell";
       cell.setAttribute("role", "columnheader");
+      cell.style.height = `${String(IKA_DATA_GRID_ROW_HEIGHT)}px`;
+      cell.style.overflow = "hidden";
       cell.style.padding = "var(--ikasue-grid-cell-padding, 0.5rem)";
+      cell.style.textOverflow = "ellipsis";
+      cell.style.whiteSpace = "nowrap";
       cell.textContent = column.label;
       if (column.width !== undefined)
         cell.style.width = `${String(column.width)}px`;
@@ -2153,7 +2174,7 @@ export class IkaDataGridElement extends IkaElement {
       body.append(spacer);
     };
     if (this.#total !== undefined)
-      appendSpacer(loadedOffset * IKA_DATA_GRID_ROW_HEIGHT);
+      appendSpacer(Math.max(0, loadedOffset - 1) * IKA_DATA_GRID_ROW_HEIGHT);
     for (const [rowNumber, row] of this.#rows.entries()) {
       const rowNode = this.ownerDocument.createElement("tr");
       rowNode.dataset.rowId = row.id;
@@ -2293,18 +2314,18 @@ export class IkaDataGridElement extends IkaElement {
       );
     table.append(head, body);
     root.append(table);
-    if (this.#loading) {
+    if (loading) {
       appendInternal(root, "div", (element) => {
         element.part = "loading";
         element.setAttribute("role", "status");
         element.textContent = "Loading";
       });
     }
-    if (this.#error) {
+    if (error) {
       appendInternal(root, "div", (element) => {
         element.part = "error";
         element.setAttribute("role", "alert");
-        element.textContent = this.#error ?? "";
+        element.textContent = error;
       });
     }
   }
