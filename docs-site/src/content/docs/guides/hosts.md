@@ -5,7 +5,7 @@ description: JavaScript、各種framework、Rust/WASM、worker、WebViewから�
 
 # ホスト環境から使う
 
-ikasueはJSのUI libraryではありません。Webを実行環境とするportable UI runtimeであり、公開境界は`ikasue-web/1` Web ABIです。JavaScript/TypeScript、React、Vue、Svelte、Angular、Rust/WASM、Worker、WebViewのどれをhostにしても、最後は同じ`HTMLElement`を操作します。
+ikasueはJSのUI libraryではありません。Webを実行環境とするportable UI runtimeであり、公開境界は`ikasue-web/2` Web ABIです。JavaScript/TypeScript、React、Vue、Svelte、Angular、Rust/WASM、Worker、WebViewのどれをhostにしても、最後は同じ`HTMLElement`を操作します。
 
 ## まずWeb ABIを登録する
 
@@ -30,7 +30,7 @@ const host = document.querySelector<HTMLElement>("#isolated-root");
 if (!host) throw new Error("#isolated-root is required");
 renderIkaView(
   host,
-  { version: "ikasue-web/1", kind: "text", text: "Isolated host" },
+  { version: "ikasue-web/2", kind: "text", text: "Isolated host" },
   registry,
 );
 ```
@@ -44,8 +44,8 @@ renderIkaView(
 | 境界                       | 使うもの              | 例                                           |
 | -------------------------- | --------------------- | -------------------------------------------- |
 | primitiveな宣言            | attribute             | `density="compact"`、`editable`              |
-| structured data / model    | property              | `grid.columns = columns`、`grid.rows = rows` |
-| user intent / state change | data-only CustomEvent | `ika-selection-change`                       |
+| structured data            | property              | `grid.columns = columns`、`grid.rows = rows` |
+| user intent / state change | data-only CustomEvent | `ika-select`                                 |
 | imperative command         | method                | `grid.focus()`、`grid.scrollToRow("42")`     |
 
 ```ts
@@ -61,7 +61,7 @@ if (!grid) throw new Error("ika-data-grid is required");
 grid.setAttribute("density", "compact");
 grid.columns = [{ id: "name", label: "Name" }];
 grid.rows = [{ id: "42", cells: { name: "ika" } }];
-grid.addEventListener("ika-selection-change", (event) => {
+grid.addEventListener("ika-select", (event) => {
   const selection = (event as CustomEvent).detail;
   // selection is JSON-safe; map it to the host state here.
   console.log(selection);
@@ -111,8 +111,8 @@ export function Results({ rows }: { rows: readonly unknown[] }) {
     (grid as HTMLElement & { rows: readonly unknown[] }).rows = rows;
     const onSelection = (event: Event) =>
       console.log((event as CustomEvent).detail);
-    grid.addEventListener("ika-selection-change", onSelection);
-    return () => grid.removeEventListener("ika-selection-change", onSelection);
+    grid.addEventListener("ika-select", onSelection);
+    return () => grid.removeEventListener("ika-select", onSelection);
   }, [rows]);
   return <ika-data-grid ref={ref} density="compact" />;
 }
@@ -122,7 +122,7 @@ React adapterを作る場合も、adapterはproperty assignment、event binding�
 
 ## Vue
 
-VueではCustom Elementをcompilerのcustom element設定でhost componentとして扱います。primitiveはattribute、objectやarrayはelement propertyへ明示的に渡します。`@ika-selection-change`相当のwrapper eventを発明せず、必要な場合は`addEventListener`をbindingのlifecycleに合わせて管理します。
+VueではCustom Elementをcompilerのcustom element設定でhost componentとして扱います。primitiveはattribute、objectやarrayはelement propertyへ明示的に渡します。`@ika-select`相当のwrapper eventを発明せず、必要な場合は`addEventListener`をbindingのlifecycleに合わせて管理します。
 
 ```vue
 <script setup lang="ts">
@@ -205,26 +205,31 @@ grid.set_attribute("density", "compact")?;
 grid.focus()?;
 ```
 
-Rust側のAPIはbindingです。runtimeとDOM rendererをRustに移植するものではありません。WASMがWorkerにいる場合は次のMessagePort protocolを使います。
+Rust側のAPIはbindingです。runtimeとDOM rendererをRustに移植するものではありません。WASMがWorkerにいる場合も、data accessは次のhost flowに置きます。
 
-## Worker / MessagePort
+## Worker / host data access
 
-小さいデータなら`grid.rows = rows`、大きいデータや別threadでquery/filter/sortしたい場合は`grid.connect(port)`を使います。main threadの`<ika-data-grid>`がDOMとa11yを所有し、Worker側はdata-only request/response/eventだけを処理します。
+elementはmodelやMessagePortを所有しません。elementが所有するのはDOM geometryとinteractionだけです。hostはWorker、REST client、database、native IPCなどを使ってdata accessを実行し、結果をcontrolled propertyへ戻します。
 
 ```ts
-const channel = new MessageChannel();
-grid.connect(channel.port1);
-worker.postMessage({ type: "connect" }, [channel.port2]);
+grid.addEventListener("ika-query", async (event) => {
+  const query = (event as CustomEvent<{ offset: number; limit: number }>)
+    .detail;
+  grid.loading = true;
+  try {
+    const page = await loadRows(query);
+    grid.rows = page.rows;
+    grid.total = page.total;
+    grid.error = undefined;
+  } catch (error) {
+    grid.error = error instanceof Error ? error.message : "Request failed";
+  } finally {
+    grid.loading = false;
+  }
+});
 ```
 
-protocolは次の同じsemanticsを持ちます。
-
-- `request(id, operation, payload)`は`version: "ikasue-web/1"`とともに`rows`または`update`を要求する。
-- `response(id, result)`または`error(id, error)`で完了する。
-- `cancel(id)`はhostの`AbortSignal`と対応する。
-- `event(event, payload)`はmodelからのdata-only通知である。
-
-直接の`model` objectとMessagePort modelはこのprotocol semanticsを共有します。ikasueはSQL、REST、IndexedDB、Rust、Workerのどれも知りません。model/workerがasync dataとcancellationを所有し、elementは結果を表示します。
+`ika-query`だけがelementから出るdata-window requestです。detailはJSON-safeで、transport、storage、cancellation objectを含みません。それらはhostの責務です。
 
 ## WebView / Tauri-style host
 
@@ -234,7 +239,7 @@ WebView系hostでは、native側がJSONを作り、WebView内のCustom Element�
 import { renderIkaView } from "@ugoite/ikasue/view";
 
 const view = {
-  version: "ikasue-web/1",
+  version: "ikasue-web/2",
   kind: "data-grid",
   props: {
     columns: [{ id: "name", label: "Name" }],
@@ -267,7 +272,7 @@ ika-data-grid::part(table) {
 1. JSON-safe contractでdataとstateを定義する。
 2. primitiveはattribute、structured valueはpropertyへ分ける。
 3. user intentはCustomEvent、imperative commandはmethodにする。
-4. 小さいデータはdirect model、大きい/別threadのデータはMessagePortにする。
-5. hostのstate/lifecycleでlistener、model、portをdisposeする。
+4. data accessをhostに置き、controlled resultを再代入する。
+5. hostのstate/lifecycleでlistenerとdata clientをdisposeする。
 
 frameworkや言語を選んでも、最後の境界が同じならikasueのbehaviorとUI semanticsは一つのままです。

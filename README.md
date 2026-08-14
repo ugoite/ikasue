@@ -2,7 +2,7 @@
 
 ikasue is a portable UI runtime whose native ABI is the Web Platform. It is not a React, Vue, or TypeScript renderer: those environments are hosts for the same Custom Elements.
 
-The stable boundary is `ikasue-web/1`: Custom Elements, primitive attributes, JSON-safe properties, data-only CustomEvents, command methods, and CSS custom properties/parts. TypeScript is the first-class binding; Rust/WASM, React, Vue, Svelte, Angular, workers, and WebViews use the same element boundary.
+The pre-v1 boundary is `ikasue-web/2`: Custom Elements, primitive attributes, JSON-safe properties, data-only CustomEvents, command methods, and CSS custom properties/parts. TypeScript is the first-class binding; Rust/WASM, React, Vue, Svelte, Angular, workers, and WebViews use the same element boundary.
 
 ```ts
 import { defineIkaSue } from "@ugoite/ikasue/elements";
@@ -16,7 +16,7 @@ if (grid) {
 }
 ```
 
-The contract schemas live under [`contract/`](contract/). `renderIkaView` only lowers a serializable view to the same elements; it is not a second renderer. Small datasets can use `grid.rows`; large or off-thread datasets can use `grid.model` or `grid.connect(messagePort)`.
+The contract schemas live under [`contract/`](contract/). `renderIkaView` only lowers a serializable view to the same elements; it is not a second renderer. DataGrid is controlled: assign `grid.columns`, `grid.rows`, `grid.total`, `grid.loading`, and `grid.error`, then handle `ika-query`, `ika-select`, and `ika-edit` in the host.
 
 The generic host guide covers plain JavaScript/TypeScript, React, Vue, Svelte, Angular, Rust/WASM, Worker/MessagePort, and WebView/Tauri-style environments.
 

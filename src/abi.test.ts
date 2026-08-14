@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   IKA_ELEMENT_TAGS,
   IkaDataGridElement,
+  dataGridQueryForViewport,
   defineIkaSue,
   tagNameForKind,
 } from "./elements";
@@ -13,6 +14,8 @@ import {
   isIkaView,
   isIkaJsonRecord,
   isIkaJsonValue,
+  isIkaDataGridEdit,
+  isIkaDataGridQuery,
   isIkaMessage,
   isIkaRowRequest,
   isIkaSplitViewPane,
@@ -244,6 +247,63 @@ describe("ikasue Web ABI", () => {
     expect(typeof descriptor?.set).toBe("function");
   });
 
+  it("publishes the controlled DataGrid boundary without host adapters", () => {
+    expect(IKASUE_ABI_VERSION).toBe("ikasue-web/2");
+    const contract = IKA_ELEMENT_CONTRACTS["data-grid"];
+    expect(contract.properties.map(({ name }) => name)).toEqual(
+      expect.arrayContaining([
+        "columns",
+        "rows",
+        "total",
+        "loading",
+        "error",
+        "editable",
+      ]),
+    );
+    expect(contract.properties.map(({ name }) => name)).not.toContain("model");
+    expect(contract.events).toEqual(
+      expect.arrayContaining(["ika-query", "ika-select", "ika-edit"]),
+    );
+    expect(contract.events).not.toContain("ika-model-event");
+    expect(contract.methods).not.toEqual(
+      expect.arrayContaining([
+        "connect(port)",
+        "disconnect()",
+        "loadRows(request)",
+      ]),
+    );
+    expect(
+      isIkaView({
+        version: IKASUE_ABI_VERSION,
+        kind: "data-grid",
+        props: {
+          columns: [],
+          rows: [],
+          total: 0,
+          loading: true,
+          error: "Request failed",
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it("derives a bounded query from viewport geometry", () => {
+    expect(
+      dataGridQueryForViewport({
+        scrollTop: 80,
+        clientHeight: 120,
+        total: 100,
+      }),
+    ).toEqual({ offset: 2, limit: 3 });
+    expect(
+      dataGridQueryForViewport({
+        scrollTop: 999,
+        clientHeight: 0,
+        total: 2,
+      }),
+    ).toEqual({ offset: 2, limit: 1 });
+  });
+
   it("keeps primitive attributes and split geometry aligned", () => {
     const attributes = new Set<string>(IKA_PRIMITIVE_ATTRIBUTE_NAMES);
     expect(attributes.has("activeId")).toBe(true);
@@ -280,8 +340,13 @@ describe("ikasue Web ABI", () => {
   });
 
   it("keeps the MessagePort envelope aligned with the row contract", () => {
-    expect(isIkaRowRequest({ start: 0, limit: 25 })).toBe(true);
-    expect(isIkaRowRequest({ start: -1, limit: 25 })).toBe(false);
+    expect(isIkaRowRequest({ offset: 0, limit: 25 })).toBe(true);
+    expect(isIkaRowRequest({ offset: -1, limit: 25 })).toBe(false);
+    expect(isIkaDataGridQuery({ offset: 20, limit: 10 })).toBe(true);
+    expect(isIkaDataGridQuery({ offset: 20, limit: 0 })).toBe(false);
+    expect(isIkaDataGridEdit({ row: "r1", column: "name", value: "new" })).toBe(
+      true,
+    );
     expect(
       isIkaMessage({
         version: IKASUE_ABI_VERSION,

@@ -10,7 +10,7 @@
     { "$ref": "#/$defs/event" }
   ],
   "$defs": {
-    "version": { "const": "ikasue-web/1" },
+    "version": { "const": "ikasue-web/2" },
     "jsonValue": {
       "oneOf": [
         { "type": "null" },
@@ -59,9 +59,9 @@
     "rowRequest": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["start", "limit"],
+      "required": ["offset", "limit"],
       "properties": {
-        "start": { "type": "integer", "minimum": 0 },
+        "offset": { "type": "integer", "minimum": 0 },
         "limit": { "type": "integer", "minimum": 1 },
         "sort": {
           "type": "array",
