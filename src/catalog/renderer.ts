@@ -993,9 +993,6 @@ function renderComponentDemo(
           },
           "DataGrid",
         ) as HTMLElement & { props?: IkaJsonRecord };
-        grid.addEventListener("ika-query", () => {
-          if (grid.props) grid.props = { ...grid.props, loading: false };
-        });
         grid.addEventListener("ika-edit", (event) => {
           const detail = (event as CustomEvent<unknown>).detail;
           if (!isIkaDataGridEdit(detail)) return;
