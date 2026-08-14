@@ -974,7 +974,8 @@ const copy =
         addDemoChildren(id, element);
         if (id === "data-grid") {
           element.addEventListener("ika-query", () => {
-            element.props = { ...element.props, loading: false };
+            state = { ...state, loading: false };
+            element.props = state;
           });
         }
         preview.append(element);
@@ -1000,8 +1001,7 @@ const copy =
             if (!isIkaDataGridEdit(detail) || !Array.isArray(state.rows))
               return;
             const rows = (state.rows as readonly IkaJsonValue[]).map((row) => {
-              if (!isIkaJsonRecord(row) || row.id !== detail.row)
-                return row;
+              if (!isIkaJsonRecord(row) || row.id !== detail.row) return row;
               if (!isIkaJsonRecord(row.cells)) return row;
               const previous = row.cells[detail.column];
               const cell =
