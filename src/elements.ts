@@ -1846,7 +1846,6 @@ export class IkaDataGridElement extends IkaElement {
   #lastQuery: IkaDataGridQuery | undefined;
   #queryScheduled = false;
   #queryListenerAttached = false;
-  #queryListeners = new Set<EventListenerOrEventListenerObject>();
   #resizeObserver: ResizeObserver | undefined;
   #onScroll = (): void => {
     this.dispatchQuery();
@@ -1862,13 +1861,21 @@ export class IkaDataGridElement extends IkaElement {
     options?: boolean | AddEventListenerOptions,
   ): void {
     if (!listener) return;
+    const signal = typeof options === "object" ? options.signal : undefined;
+    if (signal?.aborted) return;
     super.addEventListener(type, listener, options);
     if (type !== "ika-query") return;
-    this.#queryListeners.add(listener);
     if (!this.#queryListenerAttached) {
       this.#queryListenerAttached = true;
       this.scheduleQuery(true);
     }
+    signal?.addEventListener(
+      "abort",
+      () => {
+        this.#queryListenerAttached = false;
+      },
+      { once: true },
+    );
   }
 
   override removeEventListener(
@@ -1879,8 +1886,7 @@ export class IkaDataGridElement extends IkaElement {
     if (!listener) return;
     super.removeEventListener(type, listener, options);
     if (type !== "ika-query") return;
-    this.#queryListeners.delete(listener);
-    if (this.#queryListeners.size === 0) this.#queryListenerAttached = false;
+    this.#queryListenerAttached = false;
   }
 
   override set props(value: IkaJsonRecord) {
@@ -2145,6 +2151,7 @@ export class IkaDataGridElement extends IkaElement {
     )
       return;
     this.#lastQuery = query;
+    this.#queryListenerAttached = false;
     this.dispatchEvent(
       new CustomEvent("ika-query", {
         bubbles: true,

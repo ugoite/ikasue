@@ -972,12 +972,6 @@ const copy =
           return false;
         }
         addDemoChildren(id, element);
-        if (id === "data-grid") {
-          element.addEventListener("ika-query", () => {
-            state = { ...state, loading: false };
-            element.props = state;
-          });
-        }
         preview.append(element);
         if (id === "data-grid") {
           element.addEventListener("ika-select", (event) => {

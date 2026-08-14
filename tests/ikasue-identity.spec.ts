@@ -671,15 +671,17 @@ test.describe("ikasue identity contracts", () => {
         configurable: true,
         value: 80,
       });
+      const pageRows = [{ id: "page-row", cells: { name: "Page row" } }];
       element.props = {
         columns: [{ id: "name", label: "Name" }],
-        rows: [{ id: "page-row", cells: { name: "Page row" } }],
+        rows: pageRows,
         editable: false,
       };
       element.dispatchEvent(new Event("scroll"));
       await new Promise<void>((resolve) => {
         queueMicrotask(resolve);
       });
+      element.props = { ...element.props, rows: pageRows };
       const result = {
         rowCount: element.querySelector("table")?.getAttribute("aria-rowcount"),
         spacerHeight: element
