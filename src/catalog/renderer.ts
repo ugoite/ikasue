@@ -13,10 +13,10 @@ import type {
   SidePanelSpec,
   SplitViewSpec,
   TabsSpec,
-  DataGridCell,
 } from "../types";
 import { defineIkaSue, tagNameForKind } from "../elements";
-import type { IkaJsonRecord, IkaViewKind } from "../contract";
+import { isIkaJsonRecord } from "../contract";
+import type { IkaJsonRecord, IkaJsonValue, IkaViewKind } from "../contract";
 import type { CatalogComponentId, CatalogLocale } from "./types";
 import { findRegistryEntry } from "./registry";
 import { element, type Cleanup } from "./dom";
@@ -248,9 +248,12 @@ function renderDataGrid(
   header.setAttribute("role", "row");
   const columnIds = new Map<string, string>();
   const cellNodes = new Map<string, HTMLElement>();
-  const cells = new Map(
-    spec.cells.map((cell) => [`${cell.row}\u0000${cell.column}`, cell]),
-  );
+  const keyFor = (row: string, column: string): string =>
+    `${row}\u0000${column}`;
+  const cells = new Map<string, IkaJsonValue>();
+  for (const row of spec.rows)
+    for (const [column, value] of Object.entries(row.cells))
+      cells.set(keyFor(row.id, column), value);
   const rowIndex = new Map(spec.rows.map((row, index) => [row.id, index]));
   const columnIndex = new Map(
     spec.columns.map((column, index) => [column.id, index]),
@@ -260,12 +263,19 @@ function renderDataGrid(
     | {
         readonly key: string;
         readonly original: string;
-        readonly originalCell: DataGridCell;
+        readonly originalCell: IkaJsonValue | undefined;
       }
     | undefined;
   let operation = 0;
-  const keyFor = (row: string, column: string): string =>
-    `${row}\u0000${column}`;
+  const cellValue = (value: IkaJsonValue | undefined): string => {
+    if (value === undefined || value === null) return "";
+    if (typeof value === "string") return value;
+    if (typeof value === "number" || typeof value === "boolean")
+      return String(value);
+    if (isIkaJsonRecord(value) && typeof value.value === "string")
+      return value.value;
+    return JSON.stringify(value);
+  };
   const cancelEdit = (): void => {
     const current = editing;
     if (!current) return;
@@ -274,7 +284,8 @@ function renderDataGrid(
       node.textContent = current.original;
       node.contentEditable = "false";
     }
-    cells.set(current.key, current.originalCell);
+    if (current.originalCell === undefined) cells.delete(current.key);
+    else cells.set(current.key, current.originalCell);
     editing = undefined;
     operation += 1;
   };
@@ -289,10 +300,6 @@ function renderDataGrid(
     readonly column: string;
   }): void => {
     if (!validSelection(value)) return;
-    const changed =
-      selected === undefined ||
-      selected.row !== value.row ||
-      selected.column !== value.column;
     selected = value;
     cancelEdit();
     operation += 1;
@@ -301,23 +308,14 @@ function renderDataGrid(
       node.dataset.selected = String(isSelected);
       node.setAttribute("aria-selected", String(isSelected));
     });
-    if (changed && typeof spec.onSelect === "function") {
-      try {
-        spec.onSelect(value);
-      } catch {
-        // Selection remains recorded even if application code throws.
-      }
-    }
   };
   const beginEdit = (node: HTMLElement, row: string, column: string): void => {
     const key = keyFor(row, column);
     if (editing?.key !== key) cancelEdit();
-    const cell =
-      cells.get(key) ?? ({ row, column, value: "", status: "clean" } as const);
-    cells.set(key, cell);
+    const cell = cells.get(key);
     editing = {
       key: keyFor(row, column),
-      original: cell.value,
+      original: cellValue(cell),
       originalCell: cell,
     };
     node.contentEditable = "true";
@@ -331,15 +329,8 @@ function renderDataGrid(
     editing = undefined;
     operation += 1;
     const cell = cells.get(current.key);
-    if (!cell || cell.value === next) return;
-    cells.set(current.key, { ...cell, value: next, status: "dirty" });
-    if (typeof spec.onEdit === "function") {
-      try {
-        spec.onEdit(row, column, next);
-      } catch {
-        // A completed edit is not rolled back by a callback error.
-      }
-    }
+    if (cellValue(cell) === next) return;
+    cells.set(current.key, next);
   };
   spec.columns.forEach((column, index) => {
     const id = allocator.allocate("column", column.id, index + 1);
@@ -357,7 +348,7 @@ function renderDataGrid(
     rowNode.id = rowId;
     rowNode.setAttribute("role", "row");
     rowNode.setAttribute("aria-rowindex", String(rowNumber + 2));
-    const rowHeader = element(document, "span", row.label ?? row.id);
+    const rowHeader = element(document, "span", row.id);
     const rowHeaderId = allocator.allocate("row-header", row.id, rowNumber + 1);
     rowHeader.id = rowHeaderId;
     rowHeader.setAttribute("role", "rowheader");
@@ -370,7 +361,7 @@ function renderDataGrid(
         `${row.id}-${column.id}`,
         rowNumber * Math.max(spec.columns.length, 1) + columnNumber + 1,
       );
-      const cellNode = element(document, "span", cell?.value ?? "");
+      const cellNode = element(document, "span", cellValue(cell));
       cellNode.id = cellId;
       cellNode.tabIndex = 0;
       cellNode.setAttribute("role", "gridcell");
@@ -488,19 +479,12 @@ function renderDataGrid(
   const clipboardValue = (): string | undefined => {
     if (!validSelection(selected)) return undefined;
     const key = keyFor(selected.row, selected.column);
-    return cellNodes.get(key)?.textContent ?? cells.get(key)?.value ?? "";
+    return cellNodes.get(key)?.textContent ?? cellValue(cells.get(key));
   };
   target.addEventListener("copy", (event) => {
     const value = clipboardValue();
     const selection = validSelection(selected) ? selected : undefined;
     if (value === undefined || !selection || !event.clipboardData) return;
-    let result: unknown = true;
-    try {
-      if (spec.onCopy) result = spec.onCopy(selection);
-    } catch {
-      return;
-    }
-    if (result !== true) return;
     event.preventDefault();
     try {
       event.clipboardData.setData("text/plain", value);
@@ -510,37 +494,18 @@ function renderDataGrid(
   });
   target.addEventListener("paste", (event) => {
     const selection = validSelection(selected) ? selected : undefined;
-    if (!selection || !event.clipboardData) return;
+    if (!selection || !event.clipboardData || !spec.editable) return;
     event.preventDefault();
     const value = event.clipboardData.getData("text/plain");
     const token = ++operation;
-    let result: boolean | Promise<boolean> = true;
-    try {
-      if (spec.onPaste) result = spec.onPaste(selection, value);
-    } catch {
-      result = false;
-    }
-    void Promise.resolve(result)
-      .then((accepted) => {
-        if (token !== operation || !accepted) return;
+    void Promise.resolve()
+      .then(() => {
+        if (token !== operation) return;
         const key = keyFor(selection.row, selection.column);
-        const cell =
-          cells.get(key) ??
-          ({
-            row: selection.row,
-            column: selection.column,
-            value: "",
-            status: "clean",
-          } as const);
-        if (cell.value === value && cells.has(key)) return;
-        cells.set(key, { ...cell, value, status: "dirty" });
+        if (cellValue(cells.get(key)) === value && cells.has(key)) return;
+        cells.set(key, value);
         const node = cellNodes.get(key);
         if (node) node.textContent = value;
-        try {
-          spec.onEdit?.(selection.row, selection.column, value);
-        } catch {
-          // A completed paste is not rolled back by a callback error.
-        }
       })
       .catch(() => undefined);
   });
@@ -1294,6 +1259,9 @@ function renderComponentDemo(
                 },
               },
             ],
+            total: 2,
+            loading: false,
+            error: "",
             selection: { row: "one", column: "name" },
             selectionMode: "context",
             editable: true,

@@ -168,6 +168,8 @@ const isString = (value: IkaJsonValue): boolean => typeof value === "string";
 const isBoolean = (value: IkaJsonValue): boolean => typeof value === "boolean";
 const isNumber = (value: IkaJsonValue): boolean =>
   typeof value === "number" && Number.isFinite(value);
+const isNonNegativeInteger = (value: IkaJsonValue): boolean =>
+  typeof value === "number" && Number.isInteger(value) && value >= 0;
 const isEnum =
   (...values: readonly string[]): IkaPropertyGuard =>
   (value) =>
@@ -399,7 +401,7 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
   "data-grid": {
     columns: isArrayOf(isIkaDataGridColumn),
     rows: isArrayOf(isIkaDataGridRow),
-    total: isNumber,
+    total: isNonNegativeInteger,
     loading: isBoolean,
     error: isString,
     selection: isIkaDataGridSelection,
