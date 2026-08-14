@@ -49,6 +49,7 @@ describe("public contract", () => {
       "setDataGridSelection",
       "setDataGridClipboard",
       "commitDataGridCell",
+      "dataGridQueryForViewport",
       "mountCatalog",
       "getMountLabel",
       "CATALOG_COMPONENTS",
@@ -80,15 +81,14 @@ describe("public contract", () => {
       "RUNTIME_COMPONENT_REGISTRY",
       "componentDocumentationCopy",
       "componentSource",
-      "assertIkaRowPage",
-      "createDataGridPortModel",
       "defineIkaSue",
       "findRegistryEntry",
       "defaultProps",
       "isCatalogComponentId",
       "isCatalogPageId",
       "isIkaDataGridColumn",
-      "isIkaDataGridModelEvent",
+      "isIkaDataGridEdit",
+      "isIkaDataGridQuery",
       "isIkaDataGridRow",
       "isIkaDataGridSelection",
       "isIkaError",
@@ -129,6 +129,23 @@ describe("public contract", () => {
     expect(
       api.setDataGridClipboard(api.createDataGridState([]), "error").clipboard,
     ).toBe("error");
+    const grid = api.dataGrid({
+      columns: [{ id: "name", label: "Name" }],
+      rows: [{ id: "one", cells: { name: "ikasue" } }],
+      total: 1,
+      loading: true,
+      error: "Request failed",
+    });
+    expect(grid).toMatchObject({
+      kind: "data-grid",
+      total: 1,
+      loading: true,
+      error: "Request failed",
+    });
+    expect(grid).not.toHaveProperty("onSelect");
+    expect(grid).not.toHaveProperty("onEdit");
+    expect(grid).not.toHaveProperty("onCopy");
+    expect(grid).not.toHaveProperty("onPaste");
   });
 
   it("preserves whitespace in controlled and displayed values", () => {

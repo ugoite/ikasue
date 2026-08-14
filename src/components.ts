@@ -1,11 +1,16 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 
+import {
+  isIkaDataGridRow,
+  type IkaDataGridColumn,
+  type IkaDataGridRow,
+  type IkaJsonRecord,
+} from "./contract";
 import type {
   AlertOptions,
   AlertSpec,
   CheckboxOptions,
   CheckboxSpec,
-  DataGridCell,
   DataGridSelection,
   DataGridOptions,
   DataGridSpec,
@@ -419,81 +424,37 @@ export function form(options?: FormOptions): FormSpec {
   return Object.freeze(result);
 }
 export function dataGrid(options?: DataGridOptions): DataGridSpec {
-  const sourceOptions = record(options);
-  const columnsProvided = Boolean(sourceOptions && "columns" in sourceOptions);
-  const rowsProvided = Boolean(sourceOptions && "rows" in sourceOptions);
   const columnIds = new Set<string>();
-  const columns = list(options?.columns).flatMap((value) => {
-    const source = record(value);
-    const id = typeof source?.id === "string" ? source.id.trim() : "";
-    const label = typeof source?.label === "string" ? source.label.trim() : "";
-    if (!id || !label || columnIds.has(id)) return [];
-    columnIds.add(id);
-    return [{ id, label }];
-  });
+  const columns: IkaDataGridColumn[] = list(options?.columns).flatMap(
+    (value) => {
+      const source = record(value);
+      const id = typeof source?.id === "string" ? source.id.trim() : "";
+      const label =
+        typeof source?.label === "string" ? source.label.trim() : "";
+      if (!id || !label || columnIds.has(id)) return [];
+      columnIds.add(id);
+      const rawWidth = source?.width;
+      const width =
+        typeof rawWidth === "number" &&
+        Number.isFinite(rawWidth) &&
+        rawWidth >= 0
+          ? rawWidth
+          : undefined;
+      return [{ id, label, ...(width === undefined ? {} : { width }) }];
+    },
+  );
   const rowIds = new Set<string>();
-  const rows = list(options?.rows).flatMap((value) => {
+  const rows: IkaDataGridRow[] = list(options?.rows).flatMap((value) => {
     const source = record(value);
     const id = typeof source?.id === "string" ? source.id.trim() : "";
     if (!id || rowIds.has(id)) return [];
     rowIds.add(id);
-    return [
-      typeof source?.label === "string"
-        ? { id, label: source.label.trim() }
-        : { id },
-    ];
+    const cells = record(source?.cells);
+    const candidate = { id, cells: (cells ?? {}) as IkaJsonRecord };
+    return isIkaDataGridRow(candidate) ? [candidate] : [{ id, cells: {} }];
   });
-  const coordinates = new Set<string>();
-  const normalizedCells = list(options?.cells).flatMap((value) => {
-    const source = record(value);
-    const row = typeof source?.row === "string" ? source.row.trim() : "";
-    const column =
-      typeof source?.column === "string" ? source.column.trim() : "";
-    const cellValue =
-      typeof source?.value === "string" ? source.value : undefined;
-    if (
-      !row ||
-      !column ||
-      cellValue === undefined ||
-      coordinates.has(`${row}\u0000${column}`)
-    )
-      return [];
-    coordinates.add(`${row}\u0000${column}`);
-    const status: DataGridCell["status"] =
-      source?.status === "dirty" || source?.status === "error"
-        ? source.status
-        : "clean";
-    const state: DataGridCell["state"] =
-      source?.state === "created" ||
-      source?.state === "modified" ||
-      source?.state === "deleted" ||
-      source?.state === "error"
-        ? source.state
-        : status === "dirty"
-          ? "modified"
-          : status;
-    return [{ row, column, value: cellValue, status, state }];
-  });
-  const materializedColumns = columnsProvided
-    ? columns
-    : Array.from(new Set(normalizedCells.map((cell) => cell.column))).map(
-        (id) => ({ id, label: id }),
-      );
-  const materializedRows = rowsProvided
-    ? rows
-    : Array.from(new Set(normalizedCells.map((cell) => cell.row))).map(
-        (id) => ({
-          id,
-          label: id,
-        }),
-      );
-  const validColumnIds = new Set(
-    materializedColumns.map((column) => column.id),
-  );
-  const validRowIds = new Set(materializedRows.map((row) => row.id));
-  const cells = normalizedCells.filter(
-    (cell) => validColumnIds.has(cell.column) && validRowIds.has(cell.row),
-  );
+  const validColumnIds = new Set(columns.map((column) => column.id));
+  const validRowIds = new Set(rows.map((row) => row.id));
   const normalizeTarget = (value: unknown): DataGridSelection | undefined => {
     const target = record(value);
     const row = typeof target?.row === "string" ? target.row.trim() : "";
@@ -505,25 +466,25 @@ export function dataGrid(options?: DataGridOptions): DataGridSpec {
   };
   const result: Mutable<DataGridSpec> = {
     kind: "data-grid",
-    columns: materializedColumns,
-    rows: materializedRows,
-    columnsProvided,
-    rowsProvided,
-    cells,
+    columns,
+    rows,
+    loading: options?.loading === true,
     selectionMode: options?.selectionMode === "cell" ? "cell" : "context",
     editable: options?.editable === true,
     density: options?.density === "compact" ? "compact" : "default",
   };
+  if (
+    typeof options?.total === "number" &&
+    Number.isInteger(options.total) &&
+    options.total >= 0
+  )
+    result.total = options.total;
+  if (typeof options?.error === "string") result.error = options.error;
   const selection = normalizeTarget(options?.selection);
   const editing = normalizeTarget(options?.editing);
   if (selection)
     result.selection = { row: selection.row, column: selection.column };
   if (editing) result.editing = { row: editing.row, column: editing.column };
-  if (typeof options?.onSelect === "function")
-    result.onSelect = options.onSelect;
-  if (typeof options?.onEdit === "function") result.onEdit = options.onEdit;
-  if (typeof options?.onCopy === "function") result.onCopy = options.onCopy;
-  if (typeof options?.onPaste === "function") result.onPaste = options.onPaste;
   return Object.freeze(result);
 }
 export function statusIndicator(

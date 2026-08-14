@@ -71,7 +71,7 @@ const componentSourceFor = (id: CatalogComponentId) => {
       ? [
           'element.columns = [{ id: "name", label: "Name" }];',
           'element.rows = [{ id: "42", cells: { name: "ika" } }];',
-          'element.addEventListener("ika-selection-change", (event) => console.log(event.detail));',
+          'element.addEventListener("ika-select", (event) => console.log(event.detail));',
         ]
       : ["element.props = {};"];
   return {
@@ -362,6 +362,9 @@ const componentProperties: Record<
   "data-grid": [
     property("columns", "DataGridColumn[]", "[]"),
     property("rows", "DataGridRow[]", "[]"),
+    property("total", "number"),
+    property("loading", "boolean", false),
+    property("error", "string"),
     property("selection", "DataGridSelection"),
     property("editing", "DataGridSelection"),
     property("selectionMode", "cell | context", "context"),
@@ -654,6 +657,9 @@ const componentDefaults: Record<
   "data-grid": {
     columns: "[]",
     rows: "[]",
+    total: "0",
+    loading: false,
+    error: "",
     selectionMode: "context",
     editable: false,
     density: "default",

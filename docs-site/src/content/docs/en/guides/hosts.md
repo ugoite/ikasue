@@ -5,7 +5,7 @@ description: Use the same ikasue Web ABI from JavaScript, frameworks, Rust/WASM,
 
 # Host environments
 
-ikasue is not a JavaScript UI library. It is a portable UI runtime for the Web, and its public boundary is the `ikasue-web/1` Web ABI. A JavaScript or TypeScript app, React, Vue, Svelte, Angular, Rust/WASM, a Worker, or a WebView host all end by operating the same `HTMLElement`.
+ikasue is not a JavaScript UI library. It is a portable UI runtime for the Web, and its public boundary is the `ikasue-web/2` Web ABI. A JavaScript or TypeScript app, React, Vue, Svelte, Angular, Rust/WASM, a Worker, or a WebView host all end by operating the same `HTMLElement`.
 
 ## Register the Web ABI
 
@@ -30,7 +30,7 @@ const host = document.querySelector<HTMLElement>("#isolated-root");
 if (!host) throw new Error("#isolated-root is required");
 renderIkaView(
   host,
-  { version: "ikasue-web/1", kind: "text", text: "Isolated host" },
+  { version: "ikasue-web/2", kind: "text", text: "Isolated host" },
   registry,
 );
 ```
@@ -44,8 +44,8 @@ Keep the four boundaries distinct.
 | Boundary                   | Use                   | Example                                      |
 | -------------------------- | --------------------- | -------------------------------------------- |
 | primitive declaration      | attribute             | `density="compact"`, `editable`              |
-| structured data / model    | property              | `grid.columns = columns`, `grid.rows = rows` |
-| user intent / state change | data-only CustomEvent | `ika-selection-change`                       |
+| structured data            | property              | `grid.columns = columns`, `grid.rows = rows` |
+| user intent / state change | data-only CustomEvent | `ika-select`                                 |
 | imperative command         | method                | `grid.focus()`, `grid.scrollToRow("42")`     |
 
 ```ts
@@ -61,7 +61,7 @@ if (!grid) throw new Error("ika-data-grid is required");
 grid.setAttribute("density", "compact");
 grid.columns = [{ id: "name", label: "Name" }];
 grid.rows = [{ id: "42", cells: { name: "ika" } }];
-grid.addEventListener("ika-selection-change", (event) => {
+grid.addEventListener("ika-select", (event) => {
   const selection = (event as CustomEvent).detail;
   console.log(selection);
 });
@@ -110,8 +110,8 @@ export function Results({ rows }: { rows: readonly unknown[] }) {
     (grid as HTMLElement & { rows: readonly unknown[] }).rows = rows;
     const onSelection = (event: Event) =>
       console.log((event as CustomEvent).detail);
-    grid.addEventListener("ika-selection-change", onSelection);
-    return () => grid.removeEventListener("ika-selection-change", onSelection);
+    grid.addEventListener("ika-select", onSelection);
+    return () => grid.removeEventListener("ika-select", onSelection);
   }, [rows]);
   return <ika-data-grid ref={ref} density="compact" />;
 }
@@ -203,26 +203,35 @@ grid.set_attribute("density", "compact")?;
 grid.focus()?;
 ```
 
-The Rust API is a binding, not a second runtime. When WASM runs in a Worker, use the MessagePort protocol below.
+The Rust API is a binding, not a second runtime. When WASM runs in a Worker, keep its data access in the host flow below.
 
-## Worker / MessagePort
+## Worker / host data access
 
-Use `grid.rows = rows` for small data. Use `grid.connect(port)` when query, filtering, or sorting belongs in another thread. The main-thread `<ika-data-grid>` owns DOM and accessibility; the Worker handles only data-only requests, responses, events, and cancellation.
+The element never owns a model or a MessagePort. It owns only DOM geometry and interaction. A host may use a Worker, REST client, database, or native IPC for data access, then assign the returned page to the controlled properties.
 
 ```ts
-const channel = new MessageChannel();
-grid.connect(channel.port1);
-worker.postMessage({ type: "connect" }, [channel.port2]);
+let latestQuery = 0;
+grid.addEventListener("ika-query", async (event) => {
+  const query = (event as CustomEvent<{ offset: number; limit: number }>)
+    .detail;
+  const requestId = ++latestQuery;
+  grid.loading = true;
+  try {
+    const page = await loadRows(query);
+    if (requestId !== latestQuery) return;
+    grid.rows = page.rows;
+    grid.total = page.total;
+    grid.error = undefined;
+  } catch (error) {
+    if (requestId !== latestQuery) return;
+    grid.error = error instanceof Error ? error.message : "Request failed";
+  } finally {
+    if (requestId === latestQuery) grid.loading = false;
+  }
+});
 ```
 
-The protocol has one shared meaning:
-
-- `request(id, operation, payload)` carries `version: "ikasue-web/1"` and asks for `rows` or `update`.
-- `response(id, result)` or `error(id, error)` completes it.
-- `cancel(id)` corresponds to the host `AbortSignal`.
-- `event(event, payload)` reports a data-only model event.
-
-The direct model object and the MessagePort model share these semantics. ikasue does not know whether the model uses SQL, REST, IndexedDB, Rust, or a Worker. The model/Worker owns async data and cancellation; the element presents the result.
+`ika-query` is the only data-window request owned by the element. Its detail is JSON-safe and contains no transport, storage, or cancellation object; those remain host responsibilities.
 
 ## WebView / Tauri-style host
 
@@ -232,7 +241,7 @@ For a WebView host, native code creates JSON and sends it to the Custom Element.
 import { renderIkaView } from "@ugoite/ikasue/view";
 
 const view = {
-  version: "ikasue-web/1",
+  version: "ikasue-web/2",
   kind: "data-grid",
   props: {
     columns: [{ id: "name", label: "Name" }],
@@ -263,7 +272,7 @@ ika-data-grid::part(table) {
 1. Define data and state as JSON-safe contract values.
 2. Separate primitive attributes from structured properties.
 3. Use CustomEvents for user intent and methods for imperative commands.
-4. Use a direct model for small data and MessagePort for large or off-thread data.
-5. Dispose listeners, models, and ports from the host lifecycle.
+4. Let the host own data access and reassign controlled results.
+5. Dispose host listeners and data clients from the host lifecycle.
 
 The language or framework can change while the final boundary stays the same, so ikasue behavior and UI semantics remain one implementation.

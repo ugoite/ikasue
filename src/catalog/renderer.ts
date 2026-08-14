@@ -2,7 +2,6 @@ import { historyTimeline, textComponent, themeRoot } from "../components";
 import { flex, grid, scrollArea, separator, stack } from "../layout";
 import { bottomPanel, loadingRegion, sidePanel } from "../workspace";
 import type {
-  DataGridSpec,
   DialogSpec,
   FieldSpec,
   FlexSpec,
@@ -13,10 +12,16 @@ import type {
   SidePanelSpec,
   SplitViewSpec,
   TabsSpec,
-  DataGridCell,
 } from "../types";
 import { defineIkaSue, tagNameForKind } from "../elements";
-import type { IkaJsonRecord, IkaViewKind } from "../contract";
+import {
+  isIkaDataGridEdit,
+  isIkaDataGridSelection,
+  isIkaJsonRecord,
+  type IkaJsonRecord,
+  type IkaJsonValue,
+  type IkaViewKind,
+} from "../contract";
 import type { CatalogComponentId, CatalogLocale } from "./types";
 import { findRegistryEntry } from "./registry";
 import { element, type Cleanup } from "./dom";
@@ -234,321 +239,6 @@ function renderTabs(
   });
   target.append(tabList, panels);
   if (active) update(active);
-}
-
-function renderDataGrid(
-  document: Document,
-  target: HTMLElement,
-  spec: DataGridSpec,
-  allocator: DomAllocator,
-): void {
-  target.setAttribute("role", "grid");
-  target.setAttribute("aria-label", "DataGrid");
-  const header = element(document, "div");
-  header.setAttribute("role", "row");
-  const columnIds = new Map<string, string>();
-  const cellNodes = new Map<string, HTMLElement>();
-  const cells = new Map(
-    spec.cells.map((cell) => [`${cell.row}\u0000${cell.column}`, cell]),
-  );
-  const rowIndex = new Map(spec.rows.map((row, index) => [row.id, index]));
-  const columnIndex = new Map(
-    spec.columns.map((column, index) => [column.id, index]),
-  );
-  let selected = spec.selection;
-  let editing:
-    | {
-        readonly key: string;
-        readonly original: string;
-        readonly originalCell: DataGridCell;
-      }
-    | undefined;
-  let operation = 0;
-  const keyFor = (row: string, column: string): string =>
-    `${row}\u0000${column}`;
-  const cancelEdit = (): void => {
-    const current = editing;
-    if (!current) return;
-    const node = cellNodes.get(current.key);
-    if (node) {
-      node.textContent = current.original;
-      node.contentEditable = "false";
-    }
-    cells.set(current.key, current.originalCell);
-    editing = undefined;
-    operation += 1;
-  };
-  const validSelection = (
-    value: { readonly row: string; readonly column: string } | undefined,
-  ): value is { readonly row: string; readonly column: string } =>
-    value !== undefined &&
-    rowIndex.has(value.row) &&
-    columnIndex.has(value.column);
-  const updateSelection = (value: {
-    readonly row: string;
-    readonly column: string;
-  }): void => {
-    if (!validSelection(value)) return;
-    const changed =
-      selected === undefined ||
-      selected.row !== value.row ||
-      selected.column !== value.column;
-    selected = value;
-    cancelEdit();
-    operation += 1;
-    cellNodes.forEach((node, key) => {
-      const isSelected = key === keyFor(value.row, value.column);
-      node.dataset.selected = String(isSelected);
-      node.setAttribute("aria-selected", String(isSelected));
-    });
-    if (changed && typeof spec.onSelect === "function") {
-      try {
-        spec.onSelect(value);
-      } catch {
-        // Selection remains recorded even if application code throws.
-      }
-    }
-  };
-  const beginEdit = (node: HTMLElement, row: string, column: string): void => {
-    const key = keyFor(row, column);
-    if (editing?.key !== key) cancelEdit();
-    const cell =
-      cells.get(key) ?? ({ row, column, value: "", status: "clean" } as const);
-    cells.set(key, cell);
-    editing = {
-      key: keyFor(row, column),
-      original: cell.value,
-      originalCell: cell,
-    };
-    node.contentEditable = "true";
-    node.focus();
-  };
-  const finishEdit = (node: HTMLElement, row: string, column: string): void => {
-    const current = editing;
-    if (!current || current.key !== keyFor(row, column)) return;
-    const next = node.textContent || "";
-    node.contentEditable = "false";
-    editing = undefined;
-    operation += 1;
-    const cell = cells.get(current.key);
-    if (!cell || cell.value === next) return;
-    cells.set(current.key, { ...cell, value: next, status: "dirty" });
-    if (typeof spec.onEdit === "function") {
-      try {
-        spec.onEdit(row, column, next);
-      } catch {
-        // A completed edit is not rolled back by a callback error.
-      }
-    }
-  };
-  spec.columns.forEach((column, index) => {
-    const id = allocator.allocate("column", column.id, index + 1);
-    columnIds.set(column.id, id);
-    const node = element(document, "span", column.label);
-    node.id = id;
-    node.setAttribute("role", "columnheader");
-    node.setAttribute("aria-colindex", String(index + 1));
-    header.append(node);
-  });
-  target.append(header);
-  spec.rows.forEach((row, rowNumber) => {
-    const rowId = allocator.allocate("row", row.id, rowNumber + 1);
-    const rowNode = element(document, "div");
-    rowNode.id = rowId;
-    rowNode.setAttribute("role", "row");
-    rowNode.setAttribute("aria-rowindex", String(rowNumber + 2));
-    const rowHeader = element(document, "span", row.label ?? row.id);
-    const rowHeaderId = allocator.allocate("row-header", row.id, rowNumber + 1);
-    rowHeader.id = rowHeaderId;
-    rowHeader.setAttribute("role", "rowheader");
-    rowHeader.setAttribute("aria-rowindex", String(rowNumber + 2));
-    rowNode.append(rowHeader);
-    spec.columns.forEach((column, columnNumber) => {
-      const cell = cells.get(keyFor(row.id, column.id));
-      const cellId = allocator.allocate(
-        "cell",
-        `${row.id}-${column.id}`,
-        rowNumber * Math.max(spec.columns.length, 1) + columnNumber + 1,
-      );
-      const cellNode = element(document, "span", cell?.value ?? "");
-      cellNode.id = cellId;
-      cellNode.tabIndex = 0;
-      cellNode.setAttribute("role", "gridcell");
-      cellNode.setAttribute("aria-rowindex", String(rowNumber + 2));
-      cellNode.setAttribute("aria-colindex", String(columnNumber + 1));
-      cellNode.setAttribute(
-        "aria-selected",
-        String(selected?.row === row.id && selected.column === column.id),
-      );
-      const headerId = columnIds.get(column.id);
-      cellNode.setAttribute(
-        "aria-labelledby",
-        [rowHeaderId, headerId]
-          .filter((value): value is string => Boolean(value))
-          .join(" "),
-      );
-      const key = keyFor(row.id, column.id);
-      cellNodes.set(key, cellNode);
-      cellNode.addEventListener("focus", () => {
-        updateSelection({ row: row.id, column: column.id });
-      });
-      cellNode.addEventListener("click", () => {
-        updateSelection({ row: row.id, column: column.id });
-        cellNode.focus();
-      });
-      cellNode.addEventListener("dblclick", () => {
-        updateSelection({ row: row.id, column: column.id });
-        beginEdit(cellNode, row.id, column.id);
-      });
-      cellNode.addEventListener("keydown", (event) => {
-        if (event.key === "Enter" && editing?.key === key) {
-          event.preventDefault();
-          finishEdit(cellNode, row.id, column.id);
-          return;
-        }
-        if (event.key === "Escape" && editing?.key === key) {
-          event.preventDefault();
-          cancelEdit();
-          return;
-        }
-        if (
-          event.key === "Enter" &&
-          selected?.row === row.id &&
-          selected.column === column.id
-        ) {
-          event.preventDefault();
-          beginEdit(cellNode, row.id, column.id);
-          return;
-        }
-        if (editing?.key === key) return;
-        if (
-          ![
-            "ArrowUp",
-            "ArrowDown",
-            "ArrowLeft",
-            "ArrowRight",
-            "Home",
-            "End",
-          ].includes(event.key) ||
-          !selected
-        )
-          return;
-        event.preventDefault();
-        const currentRow = rowIndex.get(selected.row);
-        const currentColumn = columnIndex.get(selected.column);
-        if (currentRow === undefined || currentColumn === undefined) return;
-        const nextRow =
-          event.key === "Home" || event.key === "End"
-            ? currentRow
-            : Math.max(
-                0,
-                Math.min(
-                  spec.rows.length - 1,
-                  currentRow +
-                    (event.key === "ArrowUp"
-                      ? -1
-                      : event.key === "ArrowDown"
-                        ? 1
-                        : 0),
-                ),
-              );
-        const nextColumn =
-          event.key === "Home"
-            ? 0
-            : event.key === "End"
-              ? spec.columns.length - 1
-              : Math.max(
-                  0,
-                  Math.min(
-                    spec.columns.length - 1,
-                    currentColumn +
-                      (event.key === "ArrowLeft"
-                        ? -1
-                        : event.key === "ArrowRight"
-                          ? 1
-                          : 0),
-                  ),
-                );
-        const next =
-          spec.rows[nextRow]?.id && spec.columns[nextColumn]?.id
-            ? {
-                row: spec.rows[nextRow].id,
-                column: spec.columns[nextColumn].id,
-              }
-            : undefined;
-        if (next) {
-          updateSelection(next);
-          cellNodes.get(keyFor(next.row, next.column))?.focus();
-        }
-      });
-      rowNode.append(cellNode);
-    });
-    target.append(rowNode);
-  });
-  const clipboardValue = (): string | undefined => {
-    if (!validSelection(selected)) return undefined;
-    const key = keyFor(selected.row, selected.column);
-    return cellNodes.get(key)?.textContent ?? cells.get(key)?.value ?? "";
-  };
-  target.addEventListener("copy", (event) => {
-    const value = clipboardValue();
-    const selection = validSelection(selected) ? selected : undefined;
-    if (value === undefined || !selection || !event.clipboardData) return;
-    let result: unknown = true;
-    try {
-      if (spec.onCopy) result = spec.onCopy(selection);
-    } catch {
-      return;
-    }
-    if (result !== true) return;
-    event.preventDefault();
-    try {
-      event.clipboardData.setData("text/plain", value);
-    } catch {
-      return;
-    }
-  });
-  target.addEventListener("paste", (event) => {
-    const selection = validSelection(selected) ? selected : undefined;
-    if (!selection || !event.clipboardData) return;
-    event.preventDefault();
-    const value = event.clipboardData.getData("text/plain");
-    const token = ++operation;
-    let result: boolean | Promise<boolean> = true;
-    try {
-      if (spec.onPaste) result = spec.onPaste(selection, value);
-    } catch {
-      result = false;
-    }
-    void Promise.resolve(result)
-      .then((accepted) => {
-        if (token !== operation || !accepted) return;
-        const key = keyFor(selection.row, selection.column);
-        const cell =
-          cells.get(key) ??
-          ({
-            row: selection.row,
-            column: selection.column,
-            value: "",
-            status: "clean",
-          } as const);
-        if (cell.value === value && cells.has(key)) return;
-        cells.set(key, { ...cell, value, status: "dirty" });
-        const node = cellNodes.get(key);
-        if (node) node.textContent = value;
-        try {
-          spec.onEdit?.(selection.row, selection.column, value);
-        } catch {
-          // A completed paste is not rolled back by a callback error.
-        }
-      })
-      .catch(() => undefined);
-  });
-  if (selected) {
-    cellNodes
-      .get(keyFor(selected.row, selected.column))
-      ?.setAttribute("data-selected", "true");
-  }
 }
 
 function renderSplitView(
@@ -997,7 +687,6 @@ function renderDialog(
 void renderTabs;
 void renderSplitView;
 void renderField;
-void renderDataGrid;
 void renderDialog;
 
 function renderComponentDemo(
@@ -1269,8 +958,8 @@ function renderComponentDemo(
       );
       return;
     case "data-grid":
-      target.append(
-        ikaDemoElement(
+      {
+        const grid = ikaDemoElement(
           document,
           "data-grid",
           {
@@ -1294,14 +983,54 @@ function renderComponentDemo(
                 },
               },
             ],
+            total: 2,
+            loading: false,
+            error: "",
             selection: { row: "one", column: "name" },
             selectionMode: "context",
             editable: true,
             density: "default",
           },
           "DataGrid",
-        ),
-      );
+        ) as HTMLElement & { props?: IkaJsonRecord };
+        grid.addEventListener("ika-edit", (event) => {
+          const detail = (event as CustomEvent<unknown>).detail;
+          if (!isIkaDataGridEdit(detail)) return;
+          const props = grid.props;
+          if (!props || !Array.isArray(props.rows)) return;
+          const rows = (props.rows as readonly IkaJsonValue[]).map((value) => {
+            if (!isIkaJsonRecord(value) || value.id !== detail.row)
+              return value;
+            if (!isIkaJsonRecord(value.cells)) return value;
+            const previous = value.cells[detail.column];
+            const cell =
+              isIkaJsonRecord(previous) && typeof previous.value === "string"
+                ? { ...previous, value: detail.value, state: "modified" }
+                : { value: detail.value, state: "modified" };
+            return {
+              ...value,
+              cells: { ...value.cells, [detail.column]: cell },
+            };
+          });
+          grid.props = { ...props, rows };
+        });
+        grid.addEventListener("ika-select", (event) => {
+          const detail = (event as CustomEvent<unknown>).detail;
+          if (!grid.props) return;
+          if (detail === null) {
+            const next = { ...grid.props };
+            delete next.selection;
+            grid.props = next;
+            return;
+          }
+          if (!isIkaDataGridSelection(detail)) return;
+          grid.props = {
+            ...grid.props,
+            selection: { row: detail.row, column: detail.column },
+          };
+        });
+        target.append(grid);
+      }
       return;
     case "status-indicator": {
       target.append(

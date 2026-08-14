@@ -420,6 +420,9 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
           },
         },
       ],
+      total: 2,
+      loading: false,
+      error: "",
       selection: { row: "one", column: "name" },
       selectionMode: "context",
       editable: true,
@@ -428,6 +431,9 @@ const demos: Readonly<Record<CatalogComponentId, ComponentDemo>> = {
     controls: [
       json("columns", "列", "Columns"),
       json("rows", "行", "Rows"),
+      number("total", "総件数", "Total", 0, 1000),
+      boolean("loading", "読み込み中", "Loading"),
+      text("error", "エラー", "Error"),
       json("selection", "選択", "Selection"),
       select("selectionMode", "選択文脈", "Selection mode", [
         "cell",

@@ -6,18 +6,18 @@ ikasue is a portable UI runtime whose native ABI is the Web Platform. It keeps i
 
 ## Web ABI
 
-The stable v1 boundary is `ikasue-web/1`. The canonical nodes are Custom Elements such as `<ika-data-grid>`, `<ika-tabs>`, and `<ika-split-view>`. A host may be plain JavaScript/TypeScript, React, Vue, Svelte, Angular, Rust/WASM, a Worker-backed model, or a WebView/native binding.
+The pre-v1 boundary is `ikasue-web/2`. The canonical nodes are Custom Elements such as `<ika-data-grid>`, `<ika-tabs>`, and `<ika-split-view>`. A host may be plain JavaScript/TypeScript, React, Vue, Svelte, Angular, Rust/WASM, a Worker-backed data source, or a WebView/native binding.
 
 The ABI has four distinct surfaces:
 
 - attributes for primitive declarative configuration;
-- properties for structured state, data, and models;
+- properties for structured state and data;
 - data-only CustomEvent details for user intent and state changes;
 - methods for imperative UI commands.
 
 The contract is JSON-safe and versioned. It contains no functions, DOM values, promises, dates, maps, sets, or class instances. The JSON Schemas under `contract/` are the language-neutral source; TypeScript and Rust/WASM are bindings over it. `defineIkaSue(registry)` is idempotent for a registry and supports scoped registries for isolated hosts.
 
-Small data can be assigned directly with `element.rows = rows`. Large or remote data uses `element.model = model` or `element.connect(messagePort)`. Direct models and the MessagePort adapter share request, response, error, event, and cancellation semantics. `renderIkaView` only lowers a serializable view to the same Custom Elements; it is not a second renderer.
+DataGrid data is controlled by the host through `element.rows`, `element.total`, `element.loading`, and `element.error`. Ikasue owns viewport geometry and emits an `ika-query` with `offset` and `limit`; the host performs data access and assigns the resulting rows. `ika-select` and `ika-edit` carry user intent back to the host. `renderIkaView` only lowers a serializable view to the same Custom Elements; it is not a second renderer.
 
 ## Public layers
 

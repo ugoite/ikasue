@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "required": ["version", "kind"],
   "properties": {
-    "version": { "const": "ikasue-web/1" },
+    "version": { "const": "ikasue-web/2" },
     "kind": { "$ref": "#/$defs/kind" },
     "props": { "type": "object" },
     "children": { "$ref": "#/$defs/viewArray" },
@@ -628,6 +628,9 @@
           "items": { "$ref": "#/$defs/dataGridColumn" }
         },
         "rows": { "type": "array", "items": { "$ref": "#/$defs/dataGridRow" } },
+        "total": { "type": "integer", "minimum": 0 },
+        "loading": { "type": "boolean" },
+        "error": { "type": "string" },
         "selection": { "$ref": "#/$defs/selection" },
         "editing": { "$ref": "#/$defs/selection" },
         "selectionMode": { "enum": ["cell", "context"] },

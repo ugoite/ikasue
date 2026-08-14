@@ -816,7 +816,10 @@ const copy =
   import { defineIkaSue } from "../../../src/elements";
   import { componentSourceForProps } from "../../../src/catalog/demo";
   import {
+    isIkaDataGridEdit,
+    isIkaDataGridSelection,
     isIkaJsonValue,
+    isIkaJsonRecord,
     isIkaViewProps,
     type IkaJsonRecord,
     type IkaJsonValue,
@@ -970,6 +973,44 @@ const copy =
         }
         addDemoChildren(id, element);
         preview.append(element);
+        if (id === "data-grid") {
+          element.addEventListener("ika-select", (event) => {
+            const detail = (event as CustomEvent<unknown>).detail;
+            if (detail === null) {
+              const next = { ...state };
+              delete next.selection;
+              state = next;
+              element.props = state;
+              return;
+            }
+            if (!isIkaDataGridSelection(detail)) return;
+            state = {
+              ...state,
+              selection: { row: detail.row, column: detail.column },
+            };
+            element.props = state;
+          });
+          element.addEventListener("ika-edit", (event) => {
+            const detail = (event as CustomEvent<unknown>).detail;
+            if (!isIkaDataGridEdit(detail) || !Array.isArray(state.rows))
+              return;
+            const rows = (state.rows as readonly IkaJsonValue[]).map((row) => {
+              if (!isIkaJsonRecord(row) || row.id !== detail.row) return row;
+              if (!isIkaJsonRecord(row.cells)) return row;
+              const previous = row.cells[detail.column];
+              const cell =
+                isIkaJsonRecord(previous) && typeof previous.value === "string"
+                  ? { ...previous, value: detail.value, state: "modified" }
+                  : { value: detail.value, state: "modified" };
+              return {
+                ...row,
+                cells: { ...row.cells, [detail.column]: cell },
+              };
+            });
+            state = { ...state, rows };
+            element.props = state;
+          });
+        }
         if (id === "editable-text") {
           const stateStrip = preview.ownerDocument.createElement("div");
           stateStrip.className = "editable-live-states";

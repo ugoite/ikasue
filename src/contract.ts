@@ -8,7 +8,7 @@
 
 import { isMinSize, isSplitBasis } from "./layout";
 
-export const IKASUE_ABI_VERSION = "ikasue-web/1" as const;
+export const IKASUE_ABI_VERSION = "ikasue-web/2" as const;
 
 export type IkaJsonPrimitive = null | boolean | number | string;
 export type IkaJsonValue =
@@ -151,6 +151,7 @@ const IKA_VIEW_PROPERTY_KEYS = new Set([
   "openerId",
   "loading",
   "max",
+  "total",
 ]);
 
 export interface IkaView {
@@ -167,6 +168,8 @@ const isString = (value: IkaJsonValue): boolean => typeof value === "string";
 const isBoolean = (value: IkaJsonValue): boolean => typeof value === "boolean";
 const isNumber = (value: IkaJsonValue): boolean =>
   typeof value === "number" && Number.isFinite(value);
+const isNonNegativeInteger = (value: IkaJsonValue): boolean =>
+  typeof value === "number" && Number.isInteger(value) && value >= 0;
 const isEnum =
   (...values: readonly string[]): IkaPropertyGuard =>
   (value) =>
@@ -398,6 +401,9 @@ const IKA_VIEW_PROPERTY_GUARDS: Readonly<
   "data-grid": {
     columns: isArrayOf(isIkaDataGridColumn),
     rows: isArrayOf(isIkaDataGridRow),
+    total: isNonNegativeInteger,
+    loading: isBoolean,
+    error: isString,
     selection: isIkaDataGridSelection,
     editing: isIkaDataGridSelection,
     selectionMode: isEnum("cell", "context"),
@@ -495,9 +501,28 @@ export interface IkaDataGridSelection {
   readonly column: string;
 }
 
+export interface IkaDataGridQuery {
+  readonly offset: number;
+  readonly limit: number;
+  readonly sort?: readonly {
+    readonly column: string;
+    readonly direction: "asc" | "desc";
+  }[];
+  readonly filter?: string;
+}
+
+export interface IkaDataGridEdit {
+  readonly row: string;
+  readonly column: string;
+  readonly value: string;
+}
+
 export interface IkaDataGridSpec {
   readonly columns: readonly IkaDataGridColumn[];
   readonly rows?: readonly IkaDataGridRow[];
+  readonly total?: number;
+  readonly loading?: boolean;
+  readonly error?: string;
   readonly selection?: IkaDataGridSelection;
   readonly editing?: IkaDataGridSelection;
   readonly selectionMode?: "cell" | "context";
@@ -549,7 +574,7 @@ export interface IkaError {
 }
 
 export interface IkaRowRequest {
-  readonly start: number;
+  readonly offset: number;
   readonly limit: number;
   readonly sort?: readonly {
     readonly column: string;
@@ -565,11 +590,11 @@ export interface IkaRowPage {
 
 export function isIkaRowRequest(value: unknown): value is IkaRowRequest {
   if (!isIkaJsonRecord(value)) return false;
-  if (!hasOnlyKeys(value, ["start", "limit", "sort", "filter"])) return false;
+  if (!hasOnlyKeys(value, ["offset", "limit", "sort", "filter"])) return false;
   if (
-    typeof value.start !== "number" ||
-    !Number.isInteger(value.start) ||
-    value.start < 0 ||
+    typeof value.offset !== "number" ||
+    !Number.isInteger(value.offset) ||
+    value.offset < 0 ||
     typeof value.limit !== "number" ||
     !Number.isInteger(value.limit) ||
     value.limit <= 0
@@ -729,6 +754,46 @@ export function isIkaDataGridSelection(
     value.row.length > 0 &&
     typeof value.column === "string" &&
     value.column.length > 0
+  );
+}
+
+export function isIkaDataGridQuery(value: unknown): value is IkaDataGridQuery {
+  if (!isIkaJsonRecord(value)) return false;
+  if (!hasOnlyKeys(value, ["offset", "limit", "sort", "filter"])) return false;
+  if (
+    typeof value.offset !== "number" ||
+    !Number.isInteger(value.offset) ||
+    value.offset < 0 ||
+    typeof value.limit !== "number" ||
+    !Number.isInteger(value.limit) ||
+    value.limit <= 0
+  )
+    return false;
+  if (value.filter !== undefined && typeof value.filter !== "string")
+    return false;
+  return (
+    value.sort === undefined ||
+    (Array.isArray(value.sort) &&
+      value.sort.every(
+        (item) =>
+          isIkaJsonRecord(item) &&
+          hasOnlyKeys(item, ["column", "direction"]) &&
+          typeof item.column === "string" &&
+          item.column.length > 0 &&
+          (item.direction === "asc" || item.direction === "desc"),
+      ))
+  );
+}
+
+export function isIkaDataGridEdit(value: unknown): value is IkaDataGridEdit {
+  return (
+    isIkaJsonRecord(value) &&
+    hasOnlyKeys(value, ["row", "column", "value"]) &&
+    typeof value.row === "string" &&
+    value.row.length > 0 &&
+    typeof value.column === "string" &&
+    value.column.length > 0 &&
+    typeof value.value === "string"
   );
 }
 

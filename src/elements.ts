@@ -2,19 +2,19 @@ import "./styles.css";
 import {
   IKASUE_ABI_VERSION,
   isIkaDataGridColumn,
+  isIkaDataGridEdit,
   isIkaDataGridRow,
   isIkaDataGridSelection,
   isIkaJsonRecord,
-  isIkaJsonValue,
-  isIkaRowRequest,
   isIkaSplitViewPane,
   isIkaTabsItem,
   isIkaView,
   isIkaViewProps,
   type IkaDataGridColumn,
+  type IkaDataGridEdit,
+  type IkaDataGridQuery,
   type IkaDataGridRow,
   type IkaDataGridSelection,
-  type IkaRowRequest,
   type IkaSplitViewPane,
   type IkaTabsItem,
   type IkaJsonRecord,
@@ -25,12 +25,6 @@ import {
 import { IkaSueError } from "./errors";
 import { IKA_PRIMITIVE_ATTRIBUTE_NAMES } from "./abi";
 import { isMinSize } from "./layout";
-import {
-  assertIkaRowPage,
-  createDataGridPortModel,
-  isIkaDataGridModelEvent,
-  type IkaDataGridModel,
-} from "./transport";
 
 const runtimeGlobals = globalThis as unknown as {
   readonly HTMLElement?: typeof HTMLElement;
@@ -75,6 +69,42 @@ export const IKA_ELEMENT_TAGS = [
 ] as const;
 
 export type IkaElementTagName = (typeof IKA_ELEMENT_TAGS)[number];
+
+export interface IkaDataGridViewport {
+  readonly scrollTop: number;
+  readonly clientHeight: number;
+  readonly total?: number;
+}
+
+const IKA_DATA_GRID_ROW_HEIGHT = 40;
+
+/** Derives a stable host query from the grid's visible viewport. */
+export function dataGridQueryForViewport(
+  viewport: IkaDataGridViewport,
+): IkaDataGridQuery {
+  const rowHeight = IKA_DATA_GRID_ROW_HEIGHT;
+  const scrollTop = Number.isFinite(viewport.scrollTop)
+    ? Math.max(0, viewport.scrollTop)
+    : 0;
+  const clientHeight = Number.isFinite(viewport.clientHeight)
+    ? Math.max(0, viewport.clientHeight)
+    : 0;
+  const contentHeight = Math.max(
+    rowHeight,
+    clientHeight ? clientHeight - rowHeight : rowHeight * 10,
+  );
+  const visibleRows = Math.max(1, Math.ceil(contentHeight / rowHeight));
+  const rawOffset = Math.floor(scrollTop / rowHeight);
+  const offset =
+    viewport.total === undefined
+      ? rawOffset
+      : Math.min(rawOffset, Math.max(0, viewport.total));
+  const limit =
+    viewport.total === undefined
+      ? visibleRows
+      : Math.max(1, Math.min(visibleRows, viewport.total - offset || 1));
+  return { offset, limit };
+}
 
 export const IKA_TAG_BY_KIND: Readonly<Record<IkaViewKind, IkaElementTagName>> =
   {
@@ -352,6 +382,9 @@ const propertyKeysByTag: Readonly<
   "ika-data-grid": new Set([
     "columns",
     "rows",
+    "total",
+    "loading",
+    "error",
     "selection",
     "editing",
     "selectionMode",
@@ -1803,15 +1836,57 @@ export class IkaDataGridElement extends IkaElement {
   #rows: readonly IkaDataGridRow[] = [];
   #selection: IkaDataGridSelection | undefined;
   #editing: IkaDataGridSelection | undefined;
-  #model: IkaDataGridModel | undefined;
-  #requestController: AbortController | undefined;
-  #connectedPort: MessagePort | undefined;
-  #unsubscribeModel: (() => void) | undefined;
-  #rowRequest: IkaRowRequest = { start: 0, limit: 100 };
+  #editingDraft:
+    (IkaDataGridSelection & { readonly value: string }) | undefined;
   #total: number | undefined;
+  #loading = false;
+  #loadingOverride: boolean | undefined;
+  #error: string | undefined;
+  #errorOverride: { readonly value: string | undefined } | undefined;
+  #lastQuery: IkaDataGridQuery | undefined;
+  #queryScheduled = false;
+  #queryListenerAttached = false;
+  #resizeObserver: ResizeObserver | undefined;
+  #onScroll = (): void => {
+    this.dispatchQuery();
+  };
 
   override get props(): IkaJsonRecord {
     return super.props;
+  }
+
+  override addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions,
+  ): void {
+    if (!listener) return;
+    const signal = typeof options === "object" ? options.signal : undefined;
+    if (signal?.aborted) return;
+    super.addEventListener(type, listener, options);
+    if (type !== "ika-query") return;
+    if (!this.#queryListenerAttached) {
+      this.#queryListenerAttached = true;
+      this.scheduleQuery(true);
+    }
+    signal?.addEventListener(
+      "abort",
+      () => {
+        this.#queryListenerAttached = false;
+      },
+      { once: true },
+    );
+  }
+
+  override removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | EventListenerOptions,
+  ): void {
+    if (!listener) return;
+    super.removeEventListener(type, listener, options);
+    if (type !== "ika-query") return;
+    this.#queryListenerAttached = false;
   }
 
   override set props(value: IkaJsonRecord) {
@@ -1822,23 +1897,57 @@ export class IkaDataGridElement extends IkaElement {
     let columns = this.#columns;
     let rows = this.#rows;
     let selection = this.#selection;
+    let editing = this.#editing;
+    let total = this.#total;
+    let loading = this.#loading;
+    let error = this.#error;
     try {
       if (value.columns !== undefined) columns = asColumns(value.columns);
       if (value.rows !== undefined) rows = asRows(value.rows);
+      if (value.total !== undefined) {
+        if (
+          typeof value.total !== "number" ||
+          !Number.isInteger(value.total) ||
+          value.total < 0
+        )
+          throw new Error("invalid total");
+        total = value.total;
+      } else total = undefined;
+      if (value.loading !== undefined) {
+        if (typeof value.loading !== "boolean")
+          throw new Error("invalid loading");
+        loading = value.loading;
+      } else loading = false;
+      if (value.error !== undefined && typeof value.error !== "string")
+        throw new Error("invalid error");
+      error = value.error;
       if (value.selection === undefined) selection = undefined;
       else if (isIkaDataGridSelection(value.selection))
         selection = value.selection;
       else throw new Error("invalid selection");
+      if (value.editing !== undefined) {
+        if (!isIkaDataGridSelection(value.editing))
+          throw new Error("invalid editing");
+        editing = value.editing;
+      }
     } catch {
       this.reportInvalidContract();
       return;
     }
     this.#columns = columns;
     this.#rows = rows;
+    this.#total = total;
+    this.#loading = loading;
+    this.#loadingOverride = undefined;
+    this.#error = error;
+    this.#errorOverride = undefined;
     this.#selection = selection;
-    if (value.editing === undefined) this.#editing = undefined;
-    else if (isIkaDataGridSelection(value.editing))
-      this.#editing = value.editing;
+    if (
+      this.#editing?.row !== editing?.row ||
+      this.#editing?.column !== editing?.column
+    )
+      this.#editingDraft = undefined;
+    this.#editing = editing;
     super.props = value;
   }
 
@@ -1870,6 +1979,50 @@ export class IkaDataGridElement extends IkaElement {
     this.render();
   }
 
+  get total(): number | undefined {
+    return this.#total;
+  }
+
+  set total(value: number | undefined) {
+    if (
+      value !== undefined &&
+      (!Number.isInteger(value) || value < 0 || !Number.isFinite(value))
+    ) {
+      this.reportInvalidContract();
+      return;
+    }
+    this.#total = value;
+    this.render();
+  }
+
+  get loading(): boolean {
+    return this.#loadingOverride ?? this.#loading;
+  }
+
+  set loading(value: boolean) {
+    if (typeof value !== "boolean") {
+      this.reportInvalidContract();
+      return;
+    }
+    this.#loading = value;
+    this.#loadingOverride = value;
+    this.render();
+  }
+
+  get error(): string | undefined {
+    return this.#errorOverride ? this.#errorOverride.value : this.#error;
+  }
+
+  set error(value: string | undefined) {
+    if (value !== undefined && typeof value !== "string") {
+      this.reportInvalidContract();
+      return;
+    }
+    this.#error = value;
+    this.#errorOverride = { value };
+    this.render();
+  }
+
   get selection(): IkaDataGridSelection | undefined {
     return this.#selection;
   }
@@ -1892,68 +2045,33 @@ export class IkaDataGridElement extends IkaElement {
       this.reportInvalidContract();
       return;
     }
+    if (
+      this.#editing?.row !== value?.row ||
+      this.#editing?.column !== value?.column
+    )
+      this.#editingDraft = undefined;
     this.#editing = value;
     if (value) this.#selection = value;
     this.render();
   }
 
-  get model(): IkaDataGridModel | undefined {
-    return this.#model;
-  }
-
-  get rowRequest(): IkaRowRequest {
-    return this.#rowRequest;
-  }
-
-  get total(): number | undefined {
-    return this.#total;
-  }
-
-  set model(value: IkaDataGridModel | undefined) {
-    this.#releaseModel();
-    this.#model = value;
-    if (value?.subscribe)
-      this.#unsubscribeModel = value.subscribe((event) => {
-        if (!isIkaDataGridModelEvent(event)) {
-          this.reportInvalidContract();
-          return;
-        }
-        this.dispatchEvent(
-          new CustomEvent("ika-model-event", {
-            bubbles: true,
-            composed: true,
-            detail: event,
-          }),
-        );
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.addEventListener("scroll", this.#onScroll);
+    if (typeof ResizeObserver === "function") {
+      this.#resizeObserver = new ResizeObserver(() => {
+        this.scheduleQuery();
       });
-    if (value) void this.loadModelRows();
-  }
-
-  connect(port: MessagePort): void {
-    this.disconnect();
-    this.model = createDataGridPortModel(port);
-    this.#connectedPort = port;
-  }
-
-  disconnect(): void {
-    this.#releaseModel();
-  }
-
-  #releaseModel(): void {
-    this.#requestController?.abort();
-    this.#requestController = undefined;
-    this.#unsubscribeModel?.();
-    this.#unsubscribeModel = undefined;
-    const model = this.#model;
-    const port = this.#connectedPort;
-    this.#connectedPort = undefined;
-    this.#model = undefined;
-    model?.dispose?.();
-    port?.close();
+      this.#resizeObserver.observe(this);
+    }
+    this.scheduleQuery(true);
   }
 
   disconnectedCallback(): void {
-    this.disconnect();
+    this.removeEventListener("scroll", this.#onScroll);
+    this.#resizeObserver?.disconnect();
+    this.#resizeObserver = undefined;
+    this.#queryScheduled = false;
   }
 
   override focus(options?: FocusOptions): void {
@@ -1970,60 +2088,87 @@ export class IkaDataGridElement extends IkaElement {
     target?.scrollIntoView({ block: "nearest" });
   }
 
-  /** Requests a specific data window from the configured model. */
-  async loadRows(request: IkaRowRequest): Promise<void> {
-    if (!isIkaRowRequest(request)) {
-      this.reportInvalidContract();
-      return;
-    }
-    this.#rowRequest = request;
-    await this.loadModelRows(request);
-  }
-
-  /** Sends a portable update command through a model when one is connected. */
-  async update(mutation: IkaJsonRecord): Promise<IkaJsonRecord | undefined> {
-    if (!this.#model?.update) return undefined;
-    if (!isIkaJsonRecord(mutation)) {
-      this.reportInvalidContract();
-      return undefined;
-    }
-    try {
-      const result = await this.#model.update(mutation, {
-        signal: new AbortController().signal,
-      });
-      if (!isIkaJsonRecord(result)) {
-        this.dispatchModelError(
-          new Error("ikasue model returned an invalid update"),
-        );
-        return undefined;
-      }
-      this.dispatchEvent(
-        new CustomEvent("ika-update", {
-          bubbles: true,
-          composed: true,
-          detail: result,
-        }),
-      );
-      return result;
-    } catch (error) {
-      this.dispatchModelError(error);
-      return undefined;
-    }
-  }
-
   startEditing(request: IkaDataGridSelection): void {
+    if (this.effectiveProps.editable !== true) return;
     if (!isIkaDataGridSelection(request)) {
       this.reportInvalidContract();
       return;
     }
     this.editing = request;
+  }
+
+  private selectGridCell(selection: IkaDataGridSelection): void {
+    this.selection = selection;
     this.dispatchEvent(
-      new CustomEvent("ika-edit-start", {
+      new CustomEvent("ika-select", {
         bubbles: true,
         composed: true,
-        detail: request,
+        detail: selection,
       }),
     );
+    this.focusGridCell(selection.row, selection.column);
+  }
+
+  private clearGridSelection(): void {
+    this.#selection = undefined;
+    this.render();
+    this.dispatchEvent(
+      new CustomEvent("ika-select", {
+        bubbles: true,
+        composed: true,
+        detail: null,
+      }),
+    );
+  }
+
+  private focusGridCell(row: string, column: string): void {
+    const target = Array.from(
+      this.renderRoot.querySelectorAll<HTMLElement>(
+        '[role="gridcell"][data-row-id][data-column-id]',
+      ),
+    ).find(
+      (candidate) =>
+        candidate.dataset.rowId === row &&
+        candidate.dataset.columnId === column,
+    );
+    target?.focus();
+  }
+
+  private dispatchQuery(force = false): void {
+    const host = this as unknown as {
+      readonly clientHeight: number;
+      readonly scrollTop: number;
+    };
+    const query = dataGridQueryForViewport({
+      scrollTop: host.scrollTop,
+      clientHeight: host.clientHeight,
+      ...(this.#total === undefined ? {} : { total: this.#total }),
+    });
+    if (
+      !force &&
+      this.#lastQuery?.offset === query.offset &&
+      this.#lastQuery.limit === query.limit
+    )
+      return;
+    this.#lastQuery = query;
+    this.#queryListenerAttached = false;
+    this.dispatchEvent(
+      new CustomEvent("ika-query", {
+        bubbles: true,
+        composed: true,
+        detail: query,
+      }),
+    );
+  }
+
+  private scheduleQuery(force = false): void {
+    if (force) this.#lastQuery = undefined;
+    if (this.#queryScheduled || !this.isConnected) return;
+    this.#queryScheduled = true;
+    queueMicrotask(() => {
+      this.#queryScheduled = false;
+      if (this.isConnected) this.dispatchQuery();
+    });
   }
 
   protected override get renderRoot(): HTMLElement | ShadowRoot {
@@ -2032,29 +2177,86 @@ export class IkaDataGridElement extends IkaElement {
 
   protected override render(): void {
     const root = this.renderRoot;
+    const previousInput = root.querySelector<HTMLInputElement>(
+      'input[part="input"]',
+    );
+    const previousCell = previousInput?.closest<HTMLElement>(
+      '[role="gridcell"][data-row-id][data-column-id]',
+    );
+    const previousEditing = this.#editing;
+    if (
+      previousInput &&
+      previousCell &&
+      previousEditing &&
+      previousCell.dataset.rowId === previousEditing.row &&
+      previousCell.dataset.columnId === previousEditing.column
+    ) {
+      this.#editingDraft = {
+        row: previousEditing.row,
+        column: previousEditing.column,
+        value: previousInput.value,
+      };
+    }
+    const activeElement = this.ownerDocument.activeElement;
+    const focusedCell = activeElement?.closest<HTMLElement>(
+      '[role="gridcell"][data-row-id][data-column-id]',
+    );
+    const focusedRow =
+      focusedCell && this.contains(focusedCell)
+        ? focusedCell.dataset.rowId
+        : undefined;
+    const focusedColumn =
+      focusedCell && this.contains(focusedCell)
+        ? focusedCell.dataset.columnId
+        : undefined;
     if (serializedChildrenForElement.has(this)) {
       clearInternalContent(root);
       return;
     }
     const value = this.effectiveProps;
+    const loading =
+      this.#loadingOverride ??
+      (this.#loading || propertyBoolean(value, "loading"));
+    const error = this.#errorOverride
+      ? this.#errorOverride.value
+      : (this.#error ?? propertyText(value, "error"));
     clearInternalContent(root);
     this.dataset.editable = String(value.editable === true);
     this.dataset.density = propertyText(value, "density") || "default";
     this.dataset.selectionMode =
       propertyText(value, "selectionMode") || "context";
+    this.dataset.loading = String(loading);
+    if (error) this.dataset.error = "true";
+    else delete this.dataset.error;
     const table = this.ownerDocument.createElement("table");
     table.dataset.ikaInternal = "true";
     table.part = "table";
     table.setAttribute("role", "grid");
     table.setAttribute("aria-readonly", String(value.editable !== true));
+    table.setAttribute("aria-busy", String(loading));
+    table.setAttribute(
+      "aria-rowcount",
+      this.#total === undefined ? "-1" : String(this.#total + 1),
+    );
+    table.setAttribute("aria-colcount", String(this.#columns.length));
     const head = this.ownerDocument.createElement("thead");
     const headRow = this.ownerDocument.createElement("tr");
+    headRow.style.height = `${String(IKA_DATA_GRID_ROW_HEIGHT)}px`;
     headRow.setAttribute("role", "row");
+    headRow.setAttribute("aria-rowindex", "1");
+    head.style.position = "sticky";
+    head.style.top = "0";
+    head.style.zIndex = "1";
+    head.style.background = "var(--ikasue-surface, #fff)";
     for (const column of this.#columns) {
       const cell = this.ownerDocument.createElement("th");
       cell.part = "header-cell";
       cell.setAttribute("role", "columnheader");
+      cell.style.height = `${String(IKA_DATA_GRID_ROW_HEIGHT)}px`;
+      cell.style.overflow = "hidden";
       cell.style.padding = "var(--ikasue-grid-cell-padding, 0.5rem)";
+      cell.style.textOverflow = "ellipsis";
+      cell.style.whiteSpace = "nowrap";
       cell.textContent = column.label;
       if (column.width !== undefined)
         cell.style.width = `${String(column.width)}px`;
@@ -2062,9 +2264,34 @@ export class IkaDataGridElement extends IkaElement {
     }
     head.append(headRow);
     const body = this.ownerDocument.createElement("tbody");
-    for (const row of this.#rows) {
+    const loadedOffset =
+      this.#total === undefined
+        ? (this.#lastQuery?.offset ?? 0)
+        : Math.min(this.#lastQuery?.offset ?? 0, this.#total);
+    const loadedEnd =
+      this.#total === undefined
+        ? this.#rows.length
+        : Math.min(this.#total, loadedOffset + this.#rows.length);
+    const appendSpacer = (height: number): void => {
+      if (height <= 0) return;
+      const spacer = this.ownerDocument.createElement("tr");
+      spacer.dataset.ikaInternal = "true";
+      spacer.setAttribute("aria-hidden", "true");
+      const cell = this.ownerDocument.createElement("td");
+      cell.colSpan = Math.max(this.#columns.length, 1);
+      cell.style.height = `${String(height)}px`;
+      cell.style.padding = "0";
+      cell.style.border = "0";
+      cell.style.lineHeight = "0";
+      spacer.append(cell);
+      body.append(spacer);
+    };
+    appendSpacer(loadedOffset * IKA_DATA_GRID_ROW_HEIGHT);
+    let editingInput: HTMLInputElement | undefined;
+    for (const [rowNumber, row] of this.#rows.entries()) {
       const rowNode = this.ownerDocument.createElement("tr");
       rowNode.dataset.rowId = row.id;
+      rowNode.style.height = `${String(IKA_DATA_GRID_ROW_HEIGHT)}px`;
       rowNode.setAttribute("role", "row");
       rowNode.setAttribute(
         "aria-selected",
@@ -2072,11 +2299,19 @@ export class IkaDataGridElement extends IkaElement {
           value.selectionMode !== "cell" && this.#selection?.row === row.id,
         ),
       );
+      rowNode.setAttribute(
+        "aria-rowindex",
+        String(loadedOffset + rowNumber + 2),
+      );
       for (const column of this.#columns) {
         const cell = this.ownerDocument.createElement("td");
         cell.part = "cell";
+        cell.style.height = `${String(IKA_DATA_GRID_ROW_HEIGHT)}px`;
         cell.setAttribute("role", "gridcell");
         cell.style.padding = "var(--ikasue-grid-cell-padding, 0.5rem)";
+        cell.style.overflow = "hidden";
+        cell.style.textOverflow = "ellipsis";
+        cell.style.whiteSpace = "nowrap";
         cell.dataset.rowId = row.id;
         cell.dataset.columnId = column.id;
         const rawValue = row.cells[column.id];
@@ -2097,8 +2332,12 @@ export class IkaDataGridElement extends IkaElement {
             selection?.column === column.id &&
             !selected,
         );
+        cell.dataset.editable = String(value.editable === true);
         cell.dataset.state = gridCellState(rawValue);
-        cell.textContent = gridCellValue(rawValue);
+        const readValue = this.ownerDocument.createElement("span");
+        readValue.part = "read-value";
+        readValue.textContent = gridCellValue(rawValue);
+        cell.append(readValue);
         cell.tabIndex = editing
           ? -1
           : selected ||
@@ -2108,19 +2347,19 @@ export class IkaDataGridElement extends IkaElement {
             ? 0
             : -1;
         cell.addEventListener("click", () => {
-          this.selection = { row: row.id, column: column.id };
-          this.dispatchEvent(
-            new CustomEvent("ika-selection-change", {
-              bubbles: true,
-              composed: true,
-              detail: this.#selection,
-            }),
-          );
+          this.selectGridCell({ row: row.id, column: column.id });
         });
         cell.addEventListener("dblclick", () => {
-          this.startEditing({ row: row.id, column: column.id });
+          if (value.editable === true)
+            this.startEditing({ row: row.id, column: column.id });
         });
         cell.addEventListener("keydown", (event) => {
+          if (event.target !== cell) return;
+          if (event.key === "Escape") {
+            event.preventDefault();
+            this.clearGridSelection();
+            return;
+          }
           const rowIndex = this.#rows.findIndex(
             (candidate) => candidate.id === row.id,
           );
@@ -2140,18 +2379,17 @@ export class IkaDataGridElement extends IkaElement {
             const nextColumnValue = this.#columns[nextColumn];
             if (nextRowValue && nextColumnValue) {
               event.preventDefault();
-              this.selection = {
+              this.selectGridCell({
                 row: nextRowValue.id,
                 column: nextColumnValue.id,
-              };
-              this.render();
-              this.querySelector<HTMLElement>(
-                `[data-row-id="${CSS.escape(nextRowValue.id)}"][data-column-id="${CSS.escape(nextColumnValue.id)}"]`,
-              )?.focus();
+              });
             }
             return;
           }
-          if (event.key === "F2" || event.key === "Enter") {
+          if (
+            (event.key === "F2" || event.key === "Enter") &&
+            value.editable === true
+          ) {
             event.preventDefault();
             this.startEditing({ row: row.id, column: column.id });
           }
@@ -2165,7 +2403,7 @@ export class IkaDataGridElement extends IkaElement {
         });
         cell.addEventListener("paste", (event) => {
           const pasted = event.clipboardData?.getData("text/plain");
-          if (!pasted || value.editable !== true) return;
+          if (pasted === undefined || value.editable !== true) return;
           event.preventDefault();
           this.dataset.clipboard = "pasting";
           this.startEditing({ row: row.id, column: column.id });
@@ -2174,17 +2412,28 @@ export class IkaDataGridElement extends IkaElement {
         if (editing && value.editable === true) {
           const input = this.ownerDocument.createElement("input");
           input.part = "input";
-          input.value = gridCellValue(rawValue);
+          input.value =
+            this.#editingDraft?.row === row.id &&
+            this.#editingDraft.column === column.id
+              ? this.#editingDraft.value
+              : gridCellValue(rawValue);
           cell.replaceChildren(input);
-          input.focus();
+          editingInput = input;
           input.addEventListener("keydown", (event) => {
+            event.stopPropagation();
             if (event.key === "Escape") {
               event.preventDefault();
               this.#editing = undefined;
+              this.#editingDraft = undefined;
               this.render();
             } else if (event.key === "Enter" || event.key === "Tab") {
               event.preventDefault();
-              this.commitGridCell(row.id, column.id, input.value);
+              this.commitGridCell(
+                row.id,
+                column.id,
+                input.value,
+                event.key === "Tab",
+              );
             }
           });
         }
@@ -2192,81 +2441,86 @@ export class IkaDataGridElement extends IkaElement {
       }
       body.append(rowNode);
     }
+    if (this.#total !== undefined)
+      appendSpacer(
+        Math.max(0, this.#total - loadedEnd) * IKA_DATA_GRID_ROW_HEIGHT,
+      );
     table.append(head, body);
     root.append(table);
-    if (this.#model && this.#rows.length === 0 && !this.#requestController)
-      void this.loadModelRows(this.#rowRequest);
-  }
-
-  private commitGridCell(rowId: string, columnId: string, next: string): void {
-    this.#rows = this.#rows.map((row) => {
-      if (row.id !== rowId) return row;
-      return {
-        ...row,
-        cells: {
-          ...row.cells,
-          [columnId]: { value: next, state: "modified" },
-        },
-      };
-    });
-    this.#editing = undefined;
-    this.dataset.clipboard = "idle";
-    this.render();
-    this.dispatchEvent(
-      new CustomEvent("ika-edit-commit", {
-        bubbles: true,
-        composed: true,
-        detail: { row: rowId, column: columnId, value: next },
-      }),
-    );
-  }
-
-  async loadModelRows(
-    request: IkaRowRequest = this.#rowRequest,
-  ): Promise<void> {
-    if (!this.#model) return;
-    this.#requestController?.abort();
-    const controller = new AbortController();
-    this.#requestController = controller;
-    try {
-      const page = assertIkaRowPage(
-        await this.#model.requestRows(request, { signal: controller.signal }),
-      );
-      if (controller.signal.aborted) return;
-      this.#rows = page.rows;
-      this.#total = page.total;
-      this.render();
-    } catch (error) {
-      if (controller.signal.aborted) return;
-      this.dispatchModelError(error);
-    } finally {
-      if (this.#requestController === controller)
-        this.#requestController = undefined;
+    editingInput?.focus();
+    if (!editingInput && focusedRow && focusedColumn)
+      this.focusGridCell(focusedRow, focusedColumn);
+    if (loading) {
+      appendInternal(root, "div", (element) => {
+        element.part = "loading";
+        element.setAttribute("role", "status");
+        element.textContent = "Loading";
+      });
+    }
+    if (error) {
+      appendInternal(root, "div", (element) => {
+        element.part = "error";
+        element.setAttribute("role", "alert");
+        element.textContent = error;
+      });
     }
   }
 
-  private dispatchModelError(error: unknown): void {
-    const modelError =
-      typeof error === "object" && error !== null
-        ? (error as { readonly code?: unknown; readonly details?: unknown })
-        : {};
+  private commitGridCell(
+    rowId: string,
+    columnId: string,
+    next: string,
+    moveNext = false,
+  ): void {
+    const nextSelection = (() => {
+      if (!moveNext) return undefined;
+      const rowIndex = this.#rows.findIndex((row) => row.id === rowId);
+      const columnIndex = this.#columns.findIndex(
+        (column) => column.id === columnId,
+      );
+      const nextRow =
+        columnIndex + 1 < this.#columns.length
+          ? rowIndex
+          : Math.min(rowIndex + 1, this.#rows.length - 1);
+      const nextColumn =
+        columnIndex + 1 < this.#columns.length ? columnIndex + 1 : 0;
+      const nextRowValue = this.#rows[nextRow];
+      const nextColumnValue = this.#columns[nextColumn];
+      return nextRowValue && nextColumnValue
+        ? { row: nextRowValue.id, column: nextColumnValue.id }
+        : undefined;
+    })();
+    this.#editing = undefined;
+    this.#editingDraft = undefined;
+    if (nextSelection) this.#selection = nextSelection;
+    this.dataset.clipboard = "idle";
+    this.render();
+    const detail: IkaDataGridEdit = {
+      row: rowId,
+      column: columnId,
+      value: next,
+    };
+    if (!isIkaDataGridEdit(detail)) {
+      this.reportInvalidContract();
+      return;
+    }
     this.dispatchEvent(
-      new CustomEvent("ika-error", {
+      new CustomEvent("ika-edit", {
         bubbles: true,
         composed: true,
-        detail: {
-          code:
-            typeof modelError.code === "string"
-              ? modelError.code
-              : "model-error",
-          message:
-            error instanceof Error ? error.message : "model request failed",
-          ...(isIkaJsonValue(modelError.details)
-            ? { details: modelError.details }
-            : {}),
-        },
+        detail,
       }),
     );
+    if (nextSelection)
+      this.dispatchEvent(
+        new CustomEvent("ika-select", {
+          bubbles: true,
+          composed: true,
+          detail: nextSelection,
+        }),
+      );
+    const focusTarget = nextSelection ?? { row: rowId, column: columnId };
+    this.focusGridCell(focusTarget.row, focusTarget.column);
   }
 }
 

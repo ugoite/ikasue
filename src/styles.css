@@ -837,6 +837,10 @@ ika-data-grid [part="cell"][data-state="error"] {
   background: var(--ikasue-error-fill);
 }
 
+ika-data-grid [part="cell"][data-editable="true"] [part="read-value"] {
+  border-block-end: 1px dashed var(--ikasue-line-strong);
+}
+
 ika-data-grid[data-density="compact"] {
   --ikasue-grid-cell-padding: 0.35rem;
 }
@@ -856,6 +860,17 @@ ika-data-grid [part="input"] {
   padding: 0;
   outline: 0;
   background: transparent;
+}
+
+ika-data-grid [part="loading"],
+ika-data-grid [part="error"] {
+  padding-block: 0.5rem;
+  color: var(--ikasue-muted);
+  font-size: 0.8rem;
+}
+
+ika-data-grid [part="error"] {
+  color: var(--ikasue-error-ink);
 }
 
 ika-history-timeline [part="timeline"] {

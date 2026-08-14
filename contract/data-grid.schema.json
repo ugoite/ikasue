@@ -14,6 +14,9 @@
       "type": "array",
       "items": { "$ref": "#/$defs/row" }
     },
+    "total": { "type": "integer", "minimum": 0 },
+    "loading": { "type": "boolean" },
+    "error": { "type": "string" },
     "selection": { "$ref": "#/$defs/selection" },
     "editing": { "$ref": "#/$defs/selection" },
     "selectionMode": { "enum": ["cell", "context"] },

@@ -1,6 +1,11 @@
 /* eslint-disable @typescript-eslint/no-invalid-void-type */
 
-import type { IkaView } from "./contract";
+import type {
+  IkaDataGridColumn,
+  IkaDataGridRow,
+  IkaDataGridSelection,
+  IkaView,
+} from "./contract";
 
 export type LayoutChild =
   | string
@@ -519,10 +524,7 @@ export interface DataGridCell {
   readonly state?: EditableTextState;
 }
 
-export interface DataGridSelection {
-  readonly row: string;
-  readonly column: string;
-}
+export type DataGridSelection = IkaDataGridSelection;
 
 export interface DataGridState {
   readonly rowIds: readonly string[];
@@ -533,45 +535,31 @@ export interface DataGridState {
   readonly clipboard: "idle" | "copying" | "pasting" | "error";
 }
 
-type GridColumn = { readonly id: string; readonly label: string };
-type GridRow = { readonly id: string; readonly label?: string };
-type ClipboardHandler = (selection: DataGridSelection) => boolean;
-type PasteHandler = (
-  selection: DataGridSelection,
-  value: string,
-) => boolean | Promise<boolean>;
-
 export interface DataGridOptions {
-  readonly columns?: readonly GridColumn[];
-  readonly rows?: readonly GridRow[];
-  readonly cells?: readonly DataGridCell[];
+  readonly columns?: readonly IkaDataGridColumn[];
+  readonly rows?: readonly IkaDataGridRow[];
+  readonly total?: number;
+  readonly loading?: boolean;
+  readonly error?: string;
   readonly selection?: DataGridSelection;
   readonly editing?: DataGridSelection;
   readonly selectionMode?: "cell" | "context";
   readonly editable?: boolean;
   readonly density?: "default" | "compact";
-  readonly onSelect?: (selection: DataGridSelection | undefined) => void;
-  readonly onEdit?: (row: string, column: string, value: string) => void;
-  readonly onCopy?: ClipboardHandler;
-  readonly onPaste?: PasteHandler;
 }
 
 export interface DataGridSpec {
   readonly kind: "data-grid";
-  readonly columns: readonly GridColumn[];
-  readonly rows: readonly GridRow[];
-  readonly columnsProvided: boolean;
-  readonly rowsProvided: boolean;
-  readonly cells: readonly DataGridCell[];
+  readonly columns: readonly IkaDataGridColumn[];
+  readonly rows: readonly IkaDataGridRow[];
+  readonly total?: number;
+  readonly loading: boolean;
+  readonly error?: string;
   readonly selection?: DataGridSelection;
   readonly editing?: DataGridSelection;
   readonly selectionMode: "cell" | "context";
   readonly editable: boolean;
   readonly density: "default" | "compact";
-  readonly onSelect?: (selection: DataGridSelection | undefined) => void;
-  readonly onEdit?: (row: string, column: string, value: string) => void;
-  readonly onCopy?: ClipboardHandler;
-  readonly onPaste?: PasteHandler;
 }
 
 export interface StatusIndicatorOptions {
