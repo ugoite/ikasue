@@ -71,7 +71,7 @@ const componentSourceFor = (id: CatalogComponentId) => {
       ? [
           'element.columns = [{ id: "name", label: "Name" }];',
           'element.rows = [{ id: "42", cells: { name: "ika" } }];',
-          'element.addEventListener("ika-selection-change", (event) => console.log(event.detail));',
+          'element.addEventListener("ika-select", (event) => console.log(event.detail));',
         ]
       : ["element.props = {};"];
   return {

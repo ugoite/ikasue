@@ -89,19 +89,17 @@ export {
   IkaSplitViewElement,
   IkaTabsElement,
   tagNameForKind,
+  dataGridQueryForViewport,
 } from "./elements";
 export { renderIkaView } from "./view";
 export { IkaSueError } from "./errors";
 export { IKA_ELEMENT_CONTRACTS } from "./abi";
 export {
-  assertIkaRowPage,
-  createDataGridPortModel,
-  isIkaDataGridModelEvent,
-} from "./transport";
-export {
   IKASUE_ABI_VERSION,
   IKA_VIEW_KINDS,
   isIkaDataGridColumn,
+  isIkaDataGridEdit,
+  isIkaDataGridQuery,
   isIkaDataGridRow,
   isIkaDataGridSelection,
   isIkaError,
@@ -182,6 +180,8 @@ export type {
 } from "./types";
 export type {
   IkaDataGridColumn,
+  IkaDataGridEdit,
+  IkaDataGridQuery,
   IkaDataGridRow,
   IkaDataGridSelection,
   IkaDataGridSpec,
@@ -199,8 +199,11 @@ export type {
   IkaView,
   IkaViewKind,
 } from "./contract";
-export type { IkaDataGridModel, IkaDataGridModelEvent } from "./transport";
-export type { IkaElementTagName, IkaSueRegistry } from "./elements";
+export type {
+  IkaDataGridViewport,
+  IkaElementTagName,
+  IkaSueRegistry,
+} from "./elements";
 export type { IkaElementContract, IkaElementPropertyContract } from "./abi";
 export type {
   CatalogComponentId,

@@ -1,7 +1,7 @@
 # ikasue contract
 
 The files in this directory are the stable data-only boundary of the
-`ikasue-web/1` ABI. They use JSON Schema 2020-12 and intentionally contain no
+`ikasue-web/2` ABI. They use JSON Schema 2020-12 and intentionally contain no
 functions, DOM values, promises, dates, maps, sets, or class instances.
 
 The component contracts are split into `common.schema.json`,

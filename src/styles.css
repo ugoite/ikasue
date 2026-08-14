@@ -858,6 +858,17 @@ ika-data-grid [part="input"] {
   background: transparent;
 }
 
+ika-data-grid [part="loading"],
+ika-data-grid [part="error"] {
+  padding-block: 0.5rem;
+  color: var(--ikasue-muted);
+  font-size: 0.8rem;
+}
+
+ika-data-grid [part="error"] {
+  color: var(--ikasue-error-ink);
+}
+
 ika-history-timeline [part="timeline"] {
   display: grid;
   gap: 10px;

@@ -12,7 +12,6 @@
     "src/elements.ts",
     "src/view.ts",
     "src/contract.ts",
-    "src/transport.ts",
     "src/errors.ts",
     "src/vite-env.d.ts"
   ]

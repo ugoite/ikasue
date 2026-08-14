@@ -2,19 +2,19 @@ import "./styles.css";
 import {
   IKASUE_ABI_VERSION,
   isIkaDataGridColumn,
+  isIkaDataGridEdit,
   isIkaDataGridRow,
   isIkaDataGridSelection,
   isIkaJsonRecord,
-  isIkaJsonValue,
-  isIkaRowRequest,
   isIkaSplitViewPane,
   isIkaTabsItem,
   isIkaView,
   isIkaViewProps,
   type IkaDataGridColumn,
+  type IkaDataGridEdit,
+  type IkaDataGridQuery,
   type IkaDataGridRow,
   type IkaDataGridSelection,
-  type IkaRowRequest,
   type IkaSplitViewPane,
   type IkaTabsItem,
   type IkaJsonRecord,
@@ -25,12 +25,6 @@ import {
 import { IkaSueError } from "./errors";
 import { IKA_PRIMITIVE_ATTRIBUTE_NAMES } from "./abi";
 import { isMinSize } from "./layout";
-import {
-  assertIkaRowPage,
-  createDataGridPortModel,
-  isIkaDataGridModelEvent,
-  type IkaDataGridModel,
-} from "./transport";
 
 const runtimeGlobals = globalThis as unknown as {
   readonly HTMLElement?: typeof HTMLElement;
@@ -75,6 +69,39 @@ export const IKA_ELEMENT_TAGS = [
 ] as const;
 
 export type IkaElementTagName = (typeof IKA_ELEMENT_TAGS)[number];
+
+export interface IkaDataGridViewport {
+  readonly scrollTop: number;
+  readonly clientHeight: number;
+  readonly total?: number;
+}
+
+/** Derives a stable host query from the grid's visible viewport. */
+export function dataGridQueryForViewport(
+  viewport: IkaDataGridViewport,
+): IkaDataGridQuery {
+  const rowHeight = 40;
+  const scrollTop = Number.isFinite(viewport.scrollTop)
+    ? Math.max(0, viewport.scrollTop)
+    : 0;
+  const clientHeight = Number.isFinite(viewport.clientHeight)
+    ? Math.max(0, viewport.clientHeight)
+    : 0;
+  const visibleRows = Math.max(
+    1,
+    Math.ceil((clientHeight || rowHeight * 10) / rowHeight),
+  );
+  const rawOffset = Math.floor(scrollTop / rowHeight);
+  const offset =
+    viewport.total === undefined
+      ? rawOffset
+      : Math.min(rawOffset, Math.max(0, viewport.total));
+  const limit =
+    viewport.total === undefined
+      ? visibleRows
+      : Math.max(1, Math.min(visibleRows, viewport.total - offset || 1));
+  return { offset, limit };
+}
 
 export const IKA_TAG_BY_KIND: Readonly<Record<IkaViewKind, IkaElementTagName>> =
   {
@@ -352,6 +379,9 @@ const propertyKeysByTag: Readonly<
   "ika-data-grid": new Set([
     "columns",
     "rows",
+    "total",
+    "loading",
+    "error",
     "selection",
     "editing",
     "selectionMode",
@@ -1803,12 +1833,13 @@ export class IkaDataGridElement extends IkaElement {
   #rows: readonly IkaDataGridRow[] = [];
   #selection: IkaDataGridSelection | undefined;
   #editing: IkaDataGridSelection | undefined;
-  #model: IkaDataGridModel | undefined;
-  #requestController: AbortController | undefined;
-  #connectedPort: MessagePort | undefined;
-  #unsubscribeModel: (() => void) | undefined;
-  #rowRequest: IkaRowRequest = { start: 0, limit: 100 };
   #total: number | undefined;
+  #loading = false;
+  #error: string | undefined;
+  #lastQuery: IkaDataGridQuery | undefined;
+  #onScroll = (): void => {
+    this.dispatchQuery();
+  };
 
   override get props(): IkaJsonRecord {
     return super.props;
@@ -1822,23 +1853,46 @@ export class IkaDataGridElement extends IkaElement {
     let columns = this.#columns;
     let rows = this.#rows;
     let selection = this.#selection;
+    let total = this.#total;
+    let loading = this.#loading;
+    let error = this.#error;
     try {
       if (value.columns !== undefined) columns = asColumns(value.columns);
       if (value.rows !== undefined) rows = asRows(value.rows);
+      if (value.total !== undefined) {
+        if (
+          typeof value.total !== "number" ||
+          !Number.isInteger(value.total) ||
+          value.total < 0
+        )
+          throw new Error("invalid total");
+        total = value.total;
+      } else total = undefined;
+      if (value.loading !== undefined) {
+        if (typeof value.loading !== "boolean")
+          throw new Error("invalid loading");
+        loading = value.loading;
+      } else loading = false;
+      if (value.error !== undefined && typeof value.error !== "string")
+        throw new Error("invalid error");
+      error = value.error;
       if (value.selection === undefined) selection = undefined;
       else if (isIkaDataGridSelection(value.selection))
         selection = value.selection;
       else throw new Error("invalid selection");
+      if (value.editing !== undefined && !isIkaDataGridSelection(value.editing))
+        throw new Error("invalid editing");
     } catch {
       this.reportInvalidContract();
       return;
     }
     this.#columns = columns;
     this.#rows = rows;
+    this.#total = total;
+    this.#loading = loading;
+    this.#error = error;
     this.#selection = selection;
-    if (value.editing === undefined) this.#editing = undefined;
-    else if (isIkaDataGridSelection(value.editing))
-      this.#editing = value.editing;
+    this.#editing = value.editing;
     super.props = value;
   }
 
@@ -1870,6 +1924,48 @@ export class IkaDataGridElement extends IkaElement {
     this.render();
   }
 
+  get total(): number | undefined {
+    return this.#total;
+  }
+
+  set total(value: number | undefined) {
+    if (
+      value !== undefined &&
+      (!Number.isInteger(value) || value < 0 || !Number.isFinite(value))
+    ) {
+      this.reportInvalidContract();
+      return;
+    }
+    this.#total = value;
+    this.render();
+  }
+
+  get loading(): boolean {
+    return this.#loading;
+  }
+
+  set loading(value: boolean) {
+    if (typeof value !== "boolean") {
+      this.reportInvalidContract();
+      return;
+    }
+    this.#loading = value;
+    this.render();
+  }
+
+  get error(): string | undefined {
+    return this.#error;
+  }
+
+  set error(value: string | undefined) {
+    if (value !== undefined && typeof value !== "string") {
+      this.reportInvalidContract();
+      return;
+    }
+    this.#error = value;
+    this.render();
+  }
+
   get selection(): IkaDataGridSelection | undefined {
     return this.#selection;
   }
@@ -1897,63 +1993,14 @@ export class IkaDataGridElement extends IkaElement {
     this.render();
   }
 
-  get model(): IkaDataGridModel | undefined {
-    return this.#model;
-  }
-
-  get rowRequest(): IkaRowRequest {
-    return this.#rowRequest;
-  }
-
-  get total(): number | undefined {
-    return this.#total;
-  }
-
-  set model(value: IkaDataGridModel | undefined) {
-    this.#releaseModel();
-    this.#model = value;
-    if (value?.subscribe)
-      this.#unsubscribeModel = value.subscribe((event) => {
-        if (!isIkaDataGridModelEvent(event)) {
-          this.reportInvalidContract();
-          return;
-        }
-        this.dispatchEvent(
-          new CustomEvent("ika-model-event", {
-            bubbles: true,
-            composed: true,
-            detail: event,
-          }),
-        );
-      });
-    if (value) void this.loadModelRows();
-  }
-
-  connect(port: MessagePort): void {
-    this.disconnect();
-    this.model = createDataGridPortModel(port);
-    this.#connectedPort = port;
-  }
-
-  disconnect(): void {
-    this.#releaseModel();
-  }
-
-  #releaseModel(): void {
-    this.#requestController?.abort();
-    this.#requestController = undefined;
-    this.#unsubscribeModel?.();
-    this.#unsubscribeModel = undefined;
-    const model = this.#model;
-    const port = this.#connectedPort;
-    this.#connectedPort = undefined;
-    this.#model = undefined;
-    model?.dispose?.();
-    port?.close();
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.addEventListener("scroll", this.#onScroll);
+    this.dispatchQuery(true);
   }
 
   disconnectedCallback(): void {
-    this.disconnect();
+    this.removeEventListener("scroll", this.#onScroll);
   }
 
   override focus(options?: FocusOptions): void {
@@ -1970,58 +2017,47 @@ export class IkaDataGridElement extends IkaElement {
     target?.scrollIntoView({ block: "nearest" });
   }
 
-  /** Requests a specific data window from the configured model. */
-  async loadRows(request: IkaRowRequest): Promise<void> {
-    if (!isIkaRowRequest(request)) {
-      this.reportInvalidContract();
-      return;
-    }
-    this.#rowRequest = request;
-    await this.loadModelRows(request);
-  }
-
-  /** Sends a portable update command through a model when one is connected. */
-  async update(mutation: IkaJsonRecord): Promise<IkaJsonRecord | undefined> {
-    if (!this.#model?.update) return undefined;
-    if (!isIkaJsonRecord(mutation)) {
-      this.reportInvalidContract();
-      return undefined;
-    }
-    try {
-      const result = await this.#model.update(mutation, {
-        signal: new AbortController().signal,
-      });
-      if (!isIkaJsonRecord(result)) {
-        this.dispatchModelError(
-          new Error("ikasue model returned an invalid update"),
-        );
-        return undefined;
-      }
-      this.dispatchEvent(
-        new CustomEvent("ika-update", {
-          bubbles: true,
-          composed: true,
-          detail: result,
-        }),
-      );
-      return result;
-    } catch (error) {
-      this.dispatchModelError(error);
-      return undefined;
-    }
-  }
-
   startEditing(request: IkaDataGridSelection): void {
     if (!isIkaDataGridSelection(request)) {
       this.reportInvalidContract();
       return;
     }
     this.editing = request;
+  }
+
+  private selectGridCell(selection: IkaDataGridSelection): void {
+    this.selection = selection;
     this.dispatchEvent(
-      new CustomEvent("ika-edit-start", {
+      new CustomEvent("ika-select", {
         bubbles: true,
         composed: true,
-        detail: request,
+        detail: selection,
+      }),
+    );
+  }
+
+  private dispatchQuery(force = false): void {
+    const host = this as unknown as {
+      readonly clientHeight: number;
+      readonly scrollTop: number;
+    };
+    const query = dataGridQueryForViewport({
+      scrollTop: host.scrollTop,
+      clientHeight: host.clientHeight,
+      ...(this.#total === undefined ? {} : { total: this.#total }),
+    });
+    if (
+      !force &&
+      this.#lastQuery?.offset === query.offset &&
+      this.#lastQuery.limit === query.limit
+    )
+      return;
+    this.#lastQuery = query;
+    this.dispatchEvent(
+      new CustomEvent("ika-query", {
+        bubbles: true,
+        composed: true,
+        detail: query,
       }),
     );
   }
@@ -2042,11 +2078,20 @@ export class IkaDataGridElement extends IkaElement {
     this.dataset.density = propertyText(value, "density") || "default";
     this.dataset.selectionMode =
       propertyText(value, "selectionMode") || "context";
+    this.dataset.loading = String(this.#loading);
+    if (this.#error) this.dataset.error = "true";
+    else delete this.dataset.error;
     const table = this.ownerDocument.createElement("table");
     table.dataset.ikaInternal = "true";
     table.part = "table";
     table.setAttribute("role", "grid");
     table.setAttribute("aria-readonly", String(value.editable !== true));
+    table.setAttribute("aria-busy", String(this.#loading));
+    table.setAttribute(
+      "aria-rowcount",
+      String(this.#total ?? this.#rows.length),
+    );
+    table.setAttribute("aria-colcount", String(this.#columns.length));
     const head = this.ownerDocument.createElement("thead");
     const headRow = this.ownerDocument.createElement("tr");
     headRow.setAttribute("role", "row");
@@ -2108,14 +2153,7 @@ export class IkaDataGridElement extends IkaElement {
             ? 0
             : -1;
         cell.addEventListener("click", () => {
-          this.selection = { row: row.id, column: column.id };
-          this.dispatchEvent(
-            new CustomEvent("ika-selection-change", {
-              bubbles: true,
-              composed: true,
-              detail: this.#selection,
-            }),
-          );
+          this.selectGridCell({ row: row.id, column: column.id });
         });
         cell.addEventListener("dblclick", () => {
           this.startEditing({ row: row.id, column: column.id });
@@ -2140,11 +2178,10 @@ export class IkaDataGridElement extends IkaElement {
             const nextColumnValue = this.#columns[nextColumn];
             if (nextRowValue && nextColumnValue) {
               event.preventDefault();
-              this.selection = {
+              this.selectGridCell({
                 row: nextRowValue.id,
                 column: nextColumnValue.id,
-              };
-              this.render();
+              });
               this.querySelector<HTMLElement>(
                 `[data-row-id="${CSS.escape(nextRowValue.id)}"][data-column-id="${CSS.escape(nextColumnValue.id)}"]`,
               )?.focus();
@@ -2165,7 +2202,7 @@ export class IkaDataGridElement extends IkaElement {
         });
         cell.addEventListener("paste", (event) => {
           const pasted = event.clipboardData?.getData("text/plain");
-          if (!pasted || value.editable !== true) return;
+          if (pasted === undefined || value.editable !== true) return;
           event.preventDefault();
           this.dataset.clipboard = "pasting";
           this.startEditing({ row: row.id, column: column.id });
@@ -2194,77 +2231,40 @@ export class IkaDataGridElement extends IkaElement {
     }
     table.append(head, body);
     root.append(table);
-    if (this.#model && this.#rows.length === 0 && !this.#requestController)
-      void this.loadModelRows(this.#rowRequest);
-  }
-
-  private commitGridCell(rowId: string, columnId: string, next: string): void {
-    this.#rows = this.#rows.map((row) => {
-      if (row.id !== rowId) return row;
-      return {
-        ...row,
-        cells: {
-          ...row.cells,
-          [columnId]: { value: next, state: "modified" },
-        },
-      };
-    });
-    this.#editing = undefined;
-    this.dataset.clipboard = "idle";
-    this.render();
-    this.dispatchEvent(
-      new CustomEvent("ika-edit-commit", {
-        bubbles: true,
-        composed: true,
-        detail: { row: rowId, column: columnId, value: next },
-      }),
-    );
-  }
-
-  async loadModelRows(
-    request: IkaRowRequest = this.#rowRequest,
-  ): Promise<void> {
-    if (!this.#model) return;
-    this.#requestController?.abort();
-    const controller = new AbortController();
-    this.#requestController = controller;
-    try {
-      const page = assertIkaRowPage(
-        await this.#model.requestRows(request, { signal: controller.signal }),
-      );
-      if (controller.signal.aborted) return;
-      this.#rows = page.rows;
-      this.#total = page.total;
-      this.render();
-    } catch (error) {
-      if (controller.signal.aborted) return;
-      this.dispatchModelError(error);
-    } finally {
-      if (this.#requestController === controller)
-        this.#requestController = undefined;
+    if (this.#loading) {
+      appendInternal(root, "div", (element) => {
+        element.part = "loading";
+        element.setAttribute("role", "status");
+        element.textContent = "Loading";
+      });
+    }
+    if (this.#error) {
+      appendInternal(root, "div", (element) => {
+        element.part = "error";
+        element.setAttribute("role", "alert");
+        element.textContent = this.#error ?? "";
+      });
     }
   }
 
-  private dispatchModelError(error: unknown): void {
-    const modelError =
-      typeof error === "object" && error !== null
-        ? (error as { readonly code?: unknown; readonly details?: unknown })
-        : {};
+  private commitGridCell(rowId: string, columnId: string, next: string): void {
+    this.#editing = undefined;
+    this.dataset.clipboard = "idle";
+    this.render();
+    const detail: IkaDataGridEdit = {
+      row: rowId,
+      column: columnId,
+      value: next,
+    };
+    if (!isIkaDataGridEdit(detail)) {
+      this.reportInvalidContract();
+      return;
+    }
     this.dispatchEvent(
-      new CustomEvent("ika-error", {
+      new CustomEvent("ika-edit", {
         bubbles: true,
         composed: true,
-        detail: {
-          code:
-            typeof modelError.code === "string"
-              ? modelError.code
-              : "model-error",
-          message:
-            error instanceof Error ? error.message : "model request failed",
-          ...(isIkaJsonValue(modelError.details)
-            ? { details: modelError.details }
-            : {}),
-        },
+        detail,
       }),
     );
   }
